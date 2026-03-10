@@ -2,7 +2,60 @@ import Orchestrator from '../../../orchestrator';
 
 export class TaskDefinitionFormation {
   public static readonly description: string = `Game CI Orchestrator Task Stack`;
+
+  private static get useEphemeralStorage(): boolean {
+    return Orchestrator.buildParameters?.awsUseEphemeralStorage === true;
+  }
+
+  private static get workingDirectory(): string {
+    return TaskDefinitionFormation.useEphemeralStorage ? '/tmp/game-ci/' : '/efsdata/';
+  }
+
+  private static get volumesSection(): string {
+    if (TaskDefinitionFormation.useEphemeralStorage) {
+      return '';
+    }
+    return `      Volumes:
+        - Name: efs-data
+          EFSVolumeConfiguration:
+            FilesystemId:
+              'Fn::ImportValue': !Sub '\${'$'{EnvironmentName}'}:EfsFileStorageId'
+            TransitEncryption: DISABLED`;
+  }
+
+  private static get ephemeralStorageSection(): string {
+    if (!TaskDefinitionFormation.useEphemeralStorage) {
+      return '';
+    }
+    return `      EphemeralStorage:
+        SizeInGiB: 200`;
+  }
+
+  private static get mountPointsSection(): string {
+    if (TaskDefinitionFormation.useEphemeralStorage) {
+      return '';
+    }
+    return `          MountPoints:
+            - SourceVolume: efs-data
+              ContainerPath: !Ref EFSMountDirectory
+              ReadOnly: false`;
+  }
+
+  private static get efsParameters(): string {
+    if (TaskDefinitionFormation.useEphemeralStorage) {
+      return '';
+    }
+    return `  EFSMountDirectory:
+    Type: String
+    Default: '/efsdata'`;
+  }
+
   public static get formation(): string {
+    const volumesYaml = TaskDefinitionFormation.volumesSection;
+    const ephemeralYaml = TaskDefinitionFormation.ephemeralStorageSection;
+    const mountPointsYaml = TaskDefinitionFormation.mountPointsSection;
+    const efsParamsYaml = TaskDefinitionFormation.efsParameters;
+
     return `AWSTemplateFormatVersion: 2010-09-09
 Description: ${TaskDefinitionFormation.description}
 Parameters:
@@ -47,16 +100,14 @@ Parameters:
     Default: '/bin/sh'
   WorkingDirectory:
     Type: String
-    Default: '/efsdata/'
+    Default: '${TaskDefinitionFormation.workingDirectory}'
   Role:
     Type: String
     Default: ''
     Description: >-
       (Optional) An IAM role to give the service's containers if the code within
       needs to access other AWS resources like S3 buckets, DynamoDB tables, etc
-  EFSMountDirectory:
-    Type: String
-    Default: '/efsdata'
+${efsParamsYaml}
   # template secrets p1 - input
 Mappings:
   SubnetConfig:
@@ -90,12 +141,8 @@ Resources:
       Cpu: !Ref ContainerCpu
       Memory: !Ref ContainerMemory
       NetworkMode: awsvpc
-      Volumes:
-        - Name: efs-data
-          EFSVolumeConfiguration:
-            FilesystemId:
-              'Fn::ImportValue': !Sub '${'${EnvironmentName}'}:EfsFileStorageId'
-            TransitEncryption: DISABLED
+${volumesYaml}
+${ephemeralYaml}
       RequiresCompatibilities:
         - FARGATE
       ExecutionRoleArn:
@@ -123,10 +170,7 @@ Resources:
             - Name: ALLOW_EMPTY_PASSWORD
               Value: 'yes'
             # template - env vars
-          MountPoints:
-            - SourceVolume: efs-data
-              ContainerPath: !Ref EFSMountDirectory
-              ReadOnly: false
+${mountPointsYaml}
           # template secrets p3 - container def
           LogConfiguration:
             LogDriver: awslogs

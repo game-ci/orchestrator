@@ -1,6 +1,87 @@
+import Orchestrator from '../../../orchestrator';
+
 export class BaseStackFormation {
   public static readonly baseStackDecription = `Game-CI base stack`;
-  public static readonly formation: string = `AWSTemplateFormatVersion: '2010-09-09'
+
+  private static get useEphemeralStorage(): boolean {
+    return Orchestrator.buildParameters?.awsUseEphemeralStorage === true;
+  }
+
+  private static get efsSecurityGroupResource(): string {
+    if (BaseStackFormation.useEphemeralStorage) {
+      return '';
+    }
+    return `
+  EFSServerSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: 'efs-server-endpoints'
+      GroupDescription: Which client ip addrs are allowed to access EFS server
+      VpcId: !Ref 'VPC'
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 2049
+          ToPort: 2049
+          SourceSecurityGroupId: !Ref ContainerSecurityGroup
+          #CidrIp: !FindInMap ['SubnetConfig', 'VPC', 'CIDR']`;
+  }
+
+  private static get efsResources(): string {
+    if (BaseStackFormation.useEphemeralStorage) {
+      return '';
+    }
+    return `
+  #####################EFS#####################
+  EfsFileStorage:
+    Type: 'AWS::EFS::FileSystem'
+    Properties:
+      BackupPolicy:
+        Status: ENABLED
+      PerformanceMode: maxIO
+      Encrypted: false
+
+      FileSystemPolicy:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: 'Allow'
+            Action:
+              - 'elasticfilesystem:ClientMount'
+              - 'elasticfilesystem:ClientWrite'
+              - 'elasticfilesystem:ClientRootAccess'
+            Principal:
+              AWS: '*'
+
+  MountTargetResource1:
+    Type: AWS::EFS::MountTarget
+    Properties:
+      FileSystemId: !Ref EfsFileStorage
+      SubnetId: !Ref PublicSubnetOne
+      SecurityGroups:
+        - !Ref EFSServerSecurityGroup
+
+  MountTargetResource2:
+    Type: AWS::EFS::MountTarget
+    Properties:
+      FileSystemId: !Ref EfsFileStorage
+      SubnetId: !Ref PublicSubnetTwo
+      SecurityGroups:
+        - !Ref EFSServerSecurityGroup`;
+  }
+
+  private static get efsOutputs(): string {
+    if (BaseStackFormation.useEphemeralStorage) {
+      return '';
+    }
+    return `
+  EfsFileStorageId:
+    Description: 'The connection endpoint for the database.'
+    Value: !Ref EfsFileStorage
+    Export:
+      Name: !Sub \${EnvironmentName}:EfsFileStorageId`;
+  }
+
+  public static get formation(): string {
+    return `AWSTemplateFormatVersion: '2010-09-09'
 Description: ${BaseStackFormation.baseStackDecription}
 Parameters:
   EnvironmentName:
@@ -51,19 +132,7 @@ Resources:
     Type: "AWS::S3::Bucket"
     Properties:
       BucketName: !Ref EnvironmentName
-
-  EFSServerSecurityGroup:
-    Type: AWS::EC2::SecurityGroup
-    Properties:
-      GroupName: 'efs-server-endpoints'
-      GroupDescription: Which client ip addrs are allowed to access EFS server
-      VpcId: !Ref 'VPC'
-      SecurityGroupIngress:
-        - IpProtocol: tcp
-          FromPort: 2049
-          ToPort: 2049
-          SourceSecurityGroupId: !Ref ContainerSecurityGroup
-          #CidrIp: !FindInMap ['SubnetConfig', 'VPC', 'CIDR']
+${BaseStackFormation.efsSecurityGroupResource}
   # A security group for the containers we will run in Fargate.
   # Rules are added to this security group based on what ingress you
   # add for the cluster.
@@ -298,100 +367,62 @@ Resources:
                 Action:
                   - 'kinesis:PutRecord'
                 Resource: '*'
-
-  #####################EFS#####################
-  EfsFileStorage:
-    Type: 'AWS::EFS::FileSystem'
-    Properties:
-      BackupPolicy:
-        Status: ENABLED
-      PerformanceMode: maxIO
-      Encrypted: false
-
-      FileSystemPolicy:
-        Version: '2012-10-17'
-        Statement:
-          - Effect: 'Allow'
-            Action:
-              - 'elasticfilesystem:ClientMount'
-              - 'elasticfilesystem:ClientWrite'
-              - 'elasticfilesystem:ClientRootAccess'
-            Principal:
-              AWS: '*'
-
-  MountTargetResource1:
-    Type: AWS::EFS::MountTarget
-    Properties:
-      FileSystemId: !Ref EfsFileStorage
-      SubnetId: !Ref PublicSubnetOne
-      SecurityGroups:
-        - !Ref EFSServerSecurityGroup
-
-  MountTargetResource2:
-    Type: AWS::EFS::MountTarget
-    Properties:
-      FileSystemId: !Ref EfsFileStorage
-      SubnetId: !Ref PublicSubnetTwo
-      SecurityGroups:
-        - !Ref EFSServerSecurityGroup
+${BaseStackFormation.efsResources}
 
 Outputs:
-  EfsFileStorageId:
-    Description: 'The connection endpoint for the database.'
-    Value: !Ref EfsFileStorage
-    Export:
-      Name: !Sub ${'${EnvironmentName}'}:EfsFileStorageId
+${BaseStackFormation.efsOutputs}
   ClusterName:
     Description: The name of the ECS cluster
     Value: !Ref 'ECSCluster'
     Export:
-      Name: !Sub${' ${EnvironmentName}'}:ClusterName
+      Name: !Sub \${EnvironmentName}:ClusterName
   AutoscalingRole:
     Description: The ARN of the role used for autoscaling
     Value: !GetAtt 'AutoscalingRole.Arn'
     Export:
-      Name: !Sub ${'${EnvironmentName}'}:AutoscalingRole
+      Name: !Sub \${EnvironmentName}:AutoscalingRole
   ECSRole:
     Description: The ARN of the ECS role
     Value: !GetAtt 'ECSRole.Arn'
     Export:
-      Name: !Sub ${'${EnvironmentName}'}:ECSRole
+      Name: !Sub \${EnvironmentName}:ECSRole
   ECSTaskExecutionRole:
     Description: The ARN of the ECS role tsk execution role
     Value: !GetAtt 'ECSTaskExecutionRole.Arn'
     Export:
-      Name: !Sub ${'${EnvironmentName}'}:ECSTaskExecutionRole
+      Name: !Sub \${EnvironmentName}:ECSTaskExecutionRole
 
   DeleteCFNLambdaExecutionRole:
     Description: Lambda execution role for cleaning up cloud formations
     Value: !GetAtt 'DeleteCFNLambdaExecutionRole.Arn'
     Export:
-      Name: !Sub ${'${EnvironmentName}'}:DeleteCFNLambdaExecutionRole
+      Name: !Sub \${EnvironmentName}:DeleteCFNLambdaExecutionRole
 
   CloudWatchIAMRole:
     Description: The ARN of the CloudWatch role for subscription filter
     Value: !GetAtt 'CloudWatchIAMRole.Arn'
     Export:
-      Name: !Sub ${'${EnvironmentName}'}:CloudWatchIAMRole
+      Name: !Sub \${EnvironmentName}:CloudWatchIAMRole
   VpcId:
     Description: The ID of the VPC that this stack is deployed in
     Value: !Ref 'VPC'
     Export:
-      Name: !Sub ${'${EnvironmentName}'}:VpcId
+      Name: !Sub \${EnvironmentName}:VpcId
   PublicSubnetOne:
     Description: Public subnet one
     Value: !Ref 'PublicSubnetOne'
     Export:
-      Name: !Sub ${'${EnvironmentName}'}:PublicSubnetOne
+      Name: !Sub \${EnvironmentName}:PublicSubnetOne
   PublicSubnetTwo:
     Description: Public subnet two
     Value: !Ref 'PublicSubnetTwo'
     Export:
-      Name: !Sub ${'${EnvironmentName}'}:PublicSubnetTwo
+      Name: !Sub \${EnvironmentName}:PublicSubnetTwo
   ContainerSecurityGroup:
     Description: A security group used to allow Fargate containers to receive traffic
     Value: !Ref 'ContainerSecurityGroup'
     Export:
-      Name: !Sub ${'${EnvironmentName}'}:ContainerSecurityGroup
+      Name: !Sub \${EnvironmentName}:ContainerSecurityGroup
 `;
+  }
 }

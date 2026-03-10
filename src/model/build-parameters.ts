@@ -73,6 +73,9 @@ class BuildParameters {
   containerCpu!: string;
   readTimeout!: number;
   awsBaseStackName!: string;
+  awsUseSpot!: boolean;
+  awsSpotFallback!: boolean;
+  awsUseEphemeralStorage!: boolean;
   cloudRunnerCluster!: string;
   cloudRunnerCpu!: string;
   cloudRunnerMemory!: string;
@@ -199,6 +202,9 @@ class BuildParameters {
     p.skipLfs = false;
     p.skipCache = false;
     p.lockedWorkspace = '';
+    p.awsUseSpot = Input.getInput('awsUseSpot') === 'true';
+    p.awsSpotFallback = Input.getInput('awsSpotFallback') !== 'false';
+    p.awsUseEphemeralStorage = Input.getInput('awsUseEphemeralStorage') === 'true';
     p.dockerWorkspacePath = Input.dockerWorkspacePath || '/github/workspace';
     p.dockerCpuLimit = '';
     p.dockerMemoryLimit = '';

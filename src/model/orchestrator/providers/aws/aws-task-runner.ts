@@ -73,7 +73,16 @@ class AWSTaskRunner {
     // Transform localhost endpoints for container environment
     const transformedEnvironment = AWSTaskRunner.transformEndpointsForContainer(environment);
 
-    const runParameters = {
+    const useSpot = Orchestrator.buildParameters.awsUseSpot;
+    const spotFallback = Orchestrator.buildParameters.awsSpotFallback;
+    const useEphemeralStorage = Orchestrator.buildParameters.awsUseEphemeralStorage;
+
+    const storageEnvironment: OrchestratorEnvironmentVariable[] = [
+      { name: 'STORAGE_MODE', value: useEphemeralStorage ? 'ephemeral' : 'efs' },
+      { name: 'WORKSPACE_ROOT', value: useEphemeralStorage ? '/tmp/game-ci' : '/efsdata' },
+    ];
+
+    const runParameters: Record<string, any> = {
       cluster,
       taskDefinition,
       platformVersion: '1.4.0',
@@ -81,12 +90,11 @@ class AWSTaskRunner {
         containerOverrides: [
           {
             name: taskDef.taskDefStackName,
-            environment: transformedEnvironment,
+            environment: [...transformedEnvironment, ...storageEnvironment],
             command: ['-c', CommandHookService.ApplyHooksToCommands(commands, Orchestrator.buildParameters)],
           },
         ],
       },
-      launchType: 'FARGATE',
       networkConfiguration: {
         awsvpcConfiguration: {
           subnets: [SubnetOne, SubnetTwo],
@@ -95,6 +103,15 @@ class AWSTaskRunner {
         },
       },
     };
+
+    if (useSpot) {
+      runParameters.capacityProviderStrategy = [
+        { capacityProvider: 'FARGATE_SPOT', weight: 1 },
+        ...(spotFallback ? [{ capacityProvider: 'FARGATE', weight: 0, base: 1 }] : []),
+      ];
+    } else {
+      runParameters.launchType = 'FARGATE';
+    }
 
     if (JSON.stringify(runParameters.overrides.containerOverrides).length > 8192) {
       OrchestratorLogger.log(JSON.stringify(runParameters.overrides.containerOverrides, undefined, 4));
