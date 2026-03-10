@@ -1,4 +1,4 @@
-name: orchestrator-integrity
+name: Integration Tests
 
 on:
   schedule:
