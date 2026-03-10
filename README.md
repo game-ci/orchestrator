@@ -107,6 +107,45 @@ console.log(result.BuildSucceeded); // true
 | GitLab CI | `gitlab-ci` | Trigger builds on GitLab CI pipelines. |
 | Ansible | `ansible` | Orchestrate builds via Ansible playbooks. |
 | Remote PowerShell | `remote-powershell` | Run builds on remote Windows machines. |
+| **Custom (CLI protocol)** | — | Write your own provider in any language. See below. |
+
+### Custom Providers via CLI Protocol
+
+Write providers in **any language** — Go, Python, Rust, shell, or anything that reads stdin and writes stdout. The orchestrator communicates with your executable via JSON over stdin/stdout:
+
+```
+  Orchestrator                          Your executable
+ ┌──────────────────────┐              ┌──────────────────────┐
+ │ Spawns your binary   │   argv[1]   │                      │
+ │ per subcommand       │────────────►│  setup-workflow      │
+ │                      │  JSON stdin │  run-task            │
+ │                      │────────────►│  cleanup-workflow    │
+ │                      │ JSON stdout │  garbage-collect     │
+ │                      │◄────────────│  list-resources      │
+ └──────────────────────┘  stderr→log └──────────────────────┘
+```
+
+Point `providerExecutable` at your binary:
+
+```yaml
+- uses: game-ci/unity-builder@v4
+  with:
+    providerExecutable: ./my-provider
+    targetPlatform: StandaloneLinux64
+```
+
+Or from the CLI:
+
+```bash
+game-ci build \
+  --providerExecutable ./my-provider \
+  --projectPath ./my-unity-project \
+  --targetPlatform StandaloneLinux64
+```
+
+Your executable receives a subcommand as `argv[1]` (`setup-workflow`, `run-task`, `cleanup-workflow`, etc.) and a JSON payload on stdin. Respond with JSON on stdout. Log to stderr.
+
+See the [CLI Provider Protocol docs](https://game.ci/docs/github-orchestrator/providers/cli-provider-protocol) for the full specification and a working example.
 
 ## Project Structure
 
