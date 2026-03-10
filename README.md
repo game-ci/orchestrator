@@ -1,57 +1,186 @@
 # @game-ci/orchestrator
 
-Standalone orchestrator for game-ci, handling remote build orchestration across AWS, Kubernetes, Docker, GitHub Actions, GitLab CI, Ansible, and Remote PowerShell providers. This package provides a unified interface for dispatching and managing CI/CD build jobs across multiple infrastructure backends, with built-in support for enterprise-grade reliability, caching, and artifact management.
+Build orchestration engine for [Game CI](https://game.ci). Dispatches Unity builds to cloud infrastructure (AWS, Kubernetes, GCP, Azure), manages their lifecycle, and streams results back to your CI pipeline or terminal.
+
+```
+  GitHub Actions / CLI
+         │
+         ▼
+  ┌─────────────────┐
+  │   Orchestrator   │
+  │  ┌─────────────┐ │     ┌──────────────────────┐
+  │  │  Provider    │─┼────►│  AWS ECS Fargate      │
+  │  │  Selection   │ │     ├──────────────────────┤
+  │  └─────────────┘ │     │  Kubernetes Jobs      │
+  │  ┌─────────────┐ │     ├──────────────────────┤
+  │  │  Hooks &     │ │     │  Local Docker         │
+  │  │  Middleware  │ │     ├──────────────────────┤
+  │  └─────────────┘ │     │  GCP Cloud Run        │
+  │  ┌─────────────┐ │     ├──────────────────────┤
+  │  │  Services    │ │     │  Azure ACI            │
+  │  │  (cache,     │ │     ├──────────────────────┤
+  │  │   sync,      │ │     │  GitHub Actions       │
+  │  │   output)    │ │     ├──────────────────────┤
+  │  └─────────────┘ │     │  GitLab CI            │
+  └─────────────────┘     └──────────────────────┘
+```
+
+## Features
+
+- **Multi-provider** — AWS Fargate, Kubernetes, GCP Cloud Run, Azure ACI, GitHub Actions dispatch, GitLab CI, Ansible, Remote PowerShell, local Docker
+- **CLI** — `game-ci build`, `game-ci orchestrate`, `game-ci status` from your terminal
+- **GitHub Actions integration** — use as a step in any workflow via [game-ci/unity-builder](https://github.com/game-ci/unity-builder)
+- **Container hooks** — composable pre/post-build scripts (S3 upload, Steam deploy, rclone sync)
+- **Middleware pipeline** — trigger-aware composable hooks for advanced build customization
+- **Caching** — S3-backed Library caching, retained workspaces, local cache layer
+- **Incremental sync** — transfer only changed files to build containers
+- **Hot runner** — keep build environments warm for sub-minute iteration
+- **Build reliability** — automatic retries, health checks, failure recovery
+- **Test workflows** — structured test execution with result parsing and reporting
+- **LFS support** — efficient Git LFS handling for large assets
+- **Artifact management** — collect, upload, and distribute build outputs
+- **Log streaming** — real-time build logs via Kinesis (AWS) or pod logs (K8s)
+
+## Install
+
+```bash
+# As a package dependency
+yarn add @game-ci/orchestrator
+
+# Or install the CLI globally
+npm install -g @game-ci/orchestrator
+```
 
 ## Quick Start
 
-Install the package:
+### GitHub Actions
 
-```bash
-yarn add @game-ci/orchestrator
+Add to your workflow via [game-ci/unity-builder](https://github.com/game-ci/unity-builder):
+
+```yaml
+- uses: game-ci/unity-builder@v4
+  with:
+    providerStrategy: aws          # or k8s, local-docker, etc.
+    targetPlatform: StandaloneLinux64
+    gitPrivateToken: ${{ secrets.GITHUB_TOKEN }}
+    containerCpu: 2048
+    containerMemory: 8192
 ```
 
-Basic usage:
+### CLI
+
+```bash
+game-ci build \
+  --providerStrategy aws \
+  --projectPath ./my-unity-project \
+  --targetPlatform StandaloneLinux64
+
+game-ci status --providerStrategy aws
+
+game-ci orchestrate \
+  --providerStrategy k8s \
+  --projectPath ./my-unity-project \
+  --targetPlatform StandaloneLinux64
+```
+
+### Programmatic
 
 ```typescript
-import { Orchestrator } from '@game-ci/orchestrator';
+import { Orchestrator, BuildParameters } from '@game-ci/orchestrator';
 
-await Orchestrator.run(buildParameters, baseImage);
+const buildParameters = await BuildParameters.create();
+const result = await Orchestrator.run(buildParameters, baseImage);
+
+console.log(result.BuildSucceeded); // true
 ```
 
 ## Providers
 
-- **AWS ECS** -- Run builds on Amazon ECS Fargate or EC2 tasks
-- **Kubernetes** -- Schedule builds as Kubernetes Jobs
-- **Docker** -- Execute builds in local or remote Docker containers
-- **GitHub Actions** -- Dispatch builds to GitHub Actions workflows
-- **GitLab CI** -- Trigger builds on GitLab CI pipelines
-- **Ansible** -- Orchestrate builds via Ansible playbooks
-- **Remote PowerShell** -- Run builds on remote Windows machines via PowerShell
-- **CLI** -- Local command-line interface for development and testing
+| Provider | Strategy flag | Description |
+| --- | --- | --- |
+| AWS ECS Fargate | `aws` | Serverless containers on AWS. Auto-provisions CloudFormation stacks, S3, Kinesis log streaming. |
+| Kubernetes | `k8s` | Schedules builds as K8s Jobs with persistent volumes. Works with any cluster. |
+| GCP Cloud Run | `gcp-cloud-run` | Serverless containers on Google Cloud. |
+| Azure ACI | `azure-aci` | Azure Container Instances. |
+| Local Docker | `local-docker` | Run builds in Docker on the current machine. No cloud account needed. |
+| GitHub Actions | `github-actions` | Dispatch builds to GitHub Actions workflows. |
+| GitLab CI | `gitlab-ci` | Trigger builds on GitLab CI pipelines. |
+| Ansible | `ansible` | Orchestrate builds via Ansible playbooks. |
+| Remote PowerShell | `remote-powershell` | Run builds on remote Windows machines. |
 
-## Enterprise Services
+## Project Structure
 
-- **Build Reliability** -- Automatic retries, health checks, and failure recovery
-- **Test Workflows** -- Structured test execution and reporting
-- **Hot Runner** -- Keep build environments warm for faster iteration
-- **Incremental Sync** -- Sync only changed files to reduce transfer time
-- **LFS Agent** -- Efficient Git LFS handling for large assets
-- **Submodule Profiles** -- Configurable submodule checkout strategies
-- **Child Workspaces** -- Nested workspace support for monorepos
-- **Local Cache** -- Local caching layer for dependencies and intermediate artifacts
-- **Output/Artifact Management** -- Collect, store, and distribute build outputs
+```
+src/
+├── cli/                    # CLI entry point and commands
+│   └── commands/           #   build, orchestrate, status, activate, version, update
+├── model/
+│   ├── orchestrator/
+│   │   ├── providers/      # Provider implementations
+│   │   │   ├── aws/        #   ECS Fargate, CloudFormation, S3
+│   │   │   ├── k8s/        #   Kubernetes Jobs, PVCs, RBAC
+│   │   │   ├── docker/     #   Local Docker
+│   │   │   ├── gcp-cloud-run/
+│   │   │   ├── azure-aci/
+│   │   │   ├── github-actions/
+│   │   │   ├── gitlab-ci/
+│   │   │   ├── ansible/
+│   │   │   ├── remote-powershell/
+│   │   │   └── cli/        #   CLI provider protocol
+│   │   ├── services/       # Core services
+│   │   │   ├── cache/      #   Local cache, child workspaces
+│   │   │   ├── hooks/      #   Container hooks, command hooks, middleware
+│   │   │   ├── hot-runner/ #   Hot runner protocol
+│   │   │   ├── lfs/        #   Git LFS agent
+│   │   │   ├── output/     #   Artifact management, upload handlers
+│   │   │   ├── reliability/#   Build retry, health checks
+│   │   │   ├── sync/       #   Incremental file sync
+│   │   │   ├── test-workflow/ # Test execution and reporting
+│   │   │   └── core/       #   Logging, resource tracking, workspace locking
+│   │   └── workflows/      # Workflow composition
+│   ├── cli/                # CLI adapter layer
+│   └── input-readers/      # Input parsing (GitHub Actions, CLI, env)
+└── test-utils/             # Shared test helpers
+```
 
 ## Development
 
 ```bash
-yarn install
-yarn test
-yarn build
+yarn install          # Install dependencies
+yarn test             # Run tests
+yarn build            # Compile TypeScript
+yarn game-ci --help   # Run CLI locally
+yarn format           # Format with prettier
 ```
 
-## Note
+Requires Node.js >= 18 and Yarn 1.x.
 
-This package was extracted from [game-ci/unity-builder](https://github.com/game-ci/unity-builder). See PR #819 for the extraction plan.
+## How It Works
+
+1. **Input parsing** — reads build parameters from GitHub Actions inputs, CLI flags, or environment variables
+2. **Provider selection** — picks the infrastructure backend based on `providerStrategy`
+3. **Resource provisioning** — creates cloud resources (CloudFormation stacks, K8s Jobs, etc.)
+4. **Build execution** — launches the Unity build container with the project mounted
+5. **Hook execution** — runs pre/post-build container hooks (caching, artifact upload, Steam deploy)
+6. **Log streaming** — streams build output back to the CI runner in real time
+7. **Result collection** — gathers build results, test output, and artifacts
+8. **Cleanup** — tears down ephemeral resources (or retains workspaces if configured)
+
+## Documentation
+
+Full documentation at [game.ci/docs/github-orchestrator](https://game.ci/docs/github-orchestrator/introduction):
+
+- [Getting Started](https://game.ci/docs/github-orchestrator/getting-started)
+- [AWS Examples](https://game.ci/docs/github-orchestrator/examples/aws)
+- [Kubernetes Examples](https://game.ci/docs/github-orchestrator/examples/kubernetes)
+- [CLI Guide](https://game.ci/docs/github-orchestrator/cli/getting-started)
+- [API Reference](https://game.ci/docs/github-orchestrator/api-reference)
+- [Provider Setup Guides](https://game.ci/docs/github-orchestrator/providers/overview)
+
+## Related
+
+- [game-ci/unity-builder](https://github.com/game-ci/unity-builder) — GitHub Action that uses this package as an optional dependency ([extraction PR #819](https://github.com/game-ci/unity-builder/pull/819))
+- [game-ci/documentation](https://github.com/game-ci/documentation) — Docusaurus docs site ([docs update PR #541](https://github.com/game-ci/documentation/pull/541))
 
 ## License
 
