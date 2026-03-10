@@ -34,7 +34,7 @@ yarn game-ci --help   # Run CLI locally via ts-node
 - **Provider loader**: `providers/provider-loader.ts` selects provider by `providerStrategy` string
 - **Container hooks**: composable shell scripts run inside build containers (pre/post build)
 - **Middleware pipeline**: trigger-aware hooks in `services/hooks/middleware.ts`
-- **Services export lazily**: enterprise services (cache, LFS, submodules, git hooks) are exported from `src/index.ts` for unity-builder's plugin interface to consume on-demand
+- **Services export lazily**: advanced services (cache, LFS, submodules, git hooks) are exported from `src/index.ts` for unity-builder's plugin interface to consume on-demand
 - **@actions/core dependency**: used for logging even outside GitHub Actions (shimmed in CLI mode)
 
 ## Testing

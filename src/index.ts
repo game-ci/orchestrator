@@ -40,7 +40,7 @@ export { OutputTypeRegistry } from './model/orchestrator/services/output/output-
 export { ArtifactUploadHandler } from './model/orchestrator/services/output/artifact-upload-handler';
 export { IncrementalSyncService } from './model/orchestrator/services/sync';
 
-// Enterprise services (lazy-loaded by unity-builder plugin interface)
+// Advanced services (lazy-loaded by unity-builder plugin interface)
 export { ChildWorkspaceService } from './model/orchestrator/services/cache/child-workspace-service';
 export { LocalCacheService } from './model/orchestrator/services/cache/local-cache-service';
 export { SubmoduleProfileService } from './model/orchestrator/services/submodule/submodule-profile-service';
