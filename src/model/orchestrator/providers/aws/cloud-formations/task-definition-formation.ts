@@ -27,8 +27,9 @@ export class TaskDefinitionFormation {
     if (!TaskDefinitionFormation.useEphemeralStorage) {
       return '';
     }
+    const sizeGiB = Orchestrator.buildParameters?.awsEphemeralStorageSize || 25;
     return `      EphemeralStorage:
-        SizeInGiB: 200`;
+        SizeInGiB: ${sizeGiB}`;
   }
 
   private static get mountPointsSection(): string {

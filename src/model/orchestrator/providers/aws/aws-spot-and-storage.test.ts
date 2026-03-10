@@ -80,16 +80,28 @@ describe('AWS Ephemeral Storage (replace EFS)', () => {
       expect(yaml).not.toContain('EphemeralStorage');
     });
 
-    it('uses ephemeral storage when enabled', () => {
+    it('uses ephemeral storage with default size when enabled', () => {
       setBuildParameters({ awsUseEphemeralStorage: true });
       const yaml = TaskDefinitionFormation.formation;
       expect(yaml).toContain('EphemeralStorage');
-      expect(yaml).toContain('SizeInGiB: 200');
+      expect(yaml).toContain('SizeInGiB: 25');
       expect(yaml).toContain("Default: '/tmp/game-ci/'");
       expect(yaml).not.toContain('EFSVolumeConfiguration');
       expect(yaml).not.toContain('efs-data');
       expect(yaml).not.toContain('MountPoints');
       expect(yaml).not.toContain('EFSMountDirectory');
+    });
+
+    it('uses configurable ephemeral storage size', () => {
+      setBuildParameters({ awsUseEphemeralStorage: true, awsEphemeralStorageSize: 100 });
+      const yaml = TaskDefinitionFormation.formation;
+      expect(yaml).toContain('SizeInGiB: 100');
+    });
+
+    it('supports maximum ephemeral storage size of 200 GiB', () => {
+      setBuildParameters({ awsUseEphemeralStorage: true, awsEphemeralStorageSize: 200 });
+      const yaml = TaskDefinitionFormation.formation;
+      expect(yaml).toContain('SizeInGiB: 200');
     });
   });
 
