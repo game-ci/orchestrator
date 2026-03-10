@@ -43,13 +43,33 @@ Build orchestration engine for [Game CI](https://game.ci). Dispatches Unity buil
 
 ## Install
 
-```bash
-# As a package dependency
-yarn add @game-ci/orchestrator
+### Quick Install (Linux / macOS)
 
-# Or install the CLI globally
-npm install -g @game-ci/orchestrator
+```bash
+curl -fsSL https://raw.githubusercontent.com/game-ci/unity-builder/main/install.sh | sh
 ```
+
+### Quick Install (Windows PowerShell)
+
+```powershell
+irm https://raw.githubusercontent.com/game-ci/unity-builder/main/install.ps1 | iex
+```
+
+### Options
+
+| Environment variable | Description |
+| --- | --- |
+| `GAME_CI_VERSION` | Pin a specific release (e.g. `v2.0.0`). Defaults to latest. |
+| `GAME_CI_INSTALL` | Override install directory. Defaults to `~/.game-ci/bin`. |
+
+```bash
+# Example: install a specific version
+GAME_CI_VERSION=v2.0.0 curl -fsSL https://raw.githubusercontent.com/game-ci/unity-builder/main/install.sh | sh
+```
+
+### Manual Download
+
+Pre-built binaries for every platform are published on the [GitHub Releases](https://github.com/game-ci/unity-builder/releases) page. Download the binary for your OS/arch, make it executable, and place it on your `PATH`.
 
 ## Quick Start
 
@@ -81,17 +101,6 @@ game-ci orchestrate \
   --providerStrategy k8s \
   --projectPath ./my-unity-project \
   --targetPlatform StandaloneLinux64
-```
-
-### Programmatic
-
-```typescript
-import { Orchestrator, BuildParameters } from '@game-ci/orchestrator';
-
-const buildParameters = await BuildParameters.create();
-const result = await Orchestrator.run(buildParameters, baseImage);
-
-console.log(result.BuildSucceeded); // true
 ```
 
 ## Providers
