@@ -47,13 +47,13 @@ Build orchestration engine for [Game CI](https://game.ci). Dispatches Unity buil
 ### Quick Install (Linux / macOS)
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/game-ci/unity-builder/main/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/game-ci/orchestrator/main/install.sh | sh
 ```
 
 ### Quick Install (Windows PowerShell)
 
 ```powershell
-irm https://raw.githubusercontent.com/game-ci/unity-builder/main/install.ps1 | iex
+irm https://raw.githubusercontent.com/game-ci/orchestrator/main/install.ps1 | iex
 ```
 
 ### Options
@@ -65,12 +65,12 @@ irm https://raw.githubusercontent.com/game-ci/unity-builder/main/install.ps1 | i
 
 ```bash
 # Example: install a specific version
-GAME_CI_VERSION=v2.0.0 curl -fsSL https://raw.githubusercontent.com/game-ci/unity-builder/main/install.sh | sh
+GAME_CI_VERSION=v2.0.0 curl -fsSL https://raw.githubusercontent.com/game-ci/orchestrator/main/install.sh | sh
 ```
 
 ### Manual Download
 
-Pre-built binaries for every platform are published on the [GitHub Releases](https://github.com/game-ci/unity-builder/releases) page. Download the binary for your OS/arch, make it executable, and place it on your `PATH`.
+Pre-built binaries for every platform are published on the [GitHub Releases](https://github.com/game-ci/orchestrator/releases) page. Download the binary for your OS/arch, make it executable, and place it on your `PATH`.
 
 ## Quick Start
 
