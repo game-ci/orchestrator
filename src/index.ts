@@ -8,6 +8,16 @@
  *   await Orchestrator.run(buildParameters, baseImage);
  */
 
+export type {
+  OrchestratorConfig,
+  InputProvider,
+  CIFeedbackProvider,
+  ContainerRunner,
+  CliContext,
+  RuntimeEnvironment,
+  OrchestratorResult,
+  OrchestratorRunFn,
+} from './model/orchestrator/interfaces';
 export { default as Orchestrator } from './model/orchestrator/orchestrator';
 export { default as loadProvider } from './model/orchestrator/providers/provider-loader';
 export { ProviderLoader } from './model/orchestrator/providers/provider-loader';
