@@ -202,7 +202,7 @@ yarn game-ci --help   # Run CLI locally
 yarn format           # Format with prettier
 ```
 
-Requires Node.js >= 18 and Yarn 1.x.
+Requires Node.js >= 20 and Yarn 1.x.
 
 ## How It Works
 

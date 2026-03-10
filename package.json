@@ -19,7 +19,7 @@
     "game-ci": "ts-node src/cli.ts"
   },
   "engines": {
-    "node": ">=18.x"
+    "node": ">=20.x"
   },
   "dependencies": {
     "@actions/core": "^1.11.1",
