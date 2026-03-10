@@ -230,6 +230,7 @@ jobs:
           fi
 
       - run: yarn install --frozen-lockfile
+      - run: yarn build
       # ==========================================
       # FAST UNIT TESTS (no infra required, fast-fail gate)
       # ==========================================
@@ -591,6 +592,7 @@ jobs:
           fi
 
       - run: yarn install --frozen-lockfile
+      - run: yarn build
 
       # --- AWS Test 1: orchestrator-image ---
       - name: Run orchestrator-image test (AWS)
@@ -907,6 +909,7 @@ jobs:
           fi
 
       - run: yarn install --frozen-lockfile
+      - run: yarn build
 
       # --- Docker Test 1: orchestrator-image ---
       - name: Run orchestrator-image test (local-docker)
@@ -1230,6 +1233,7 @@ jobs:
           echo "Rclone configured successfully"
 
       - run: yarn install --frozen-lockfile
+      - run: yarn build
 
       # --- Rclone Test 1: orchestrator-rclone-steps ---
       - name: Run orchestrator-rclone-steps test
