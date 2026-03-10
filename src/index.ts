@@ -1,0 +1,31 @@
+/**
+ * @game-ci/orchestrator — entry point
+ *
+ * Exports the Orchestrator.run() function and supporting types so that
+ * unity-builder (or any host) can plug it in:
+ *
+ *   import { Orchestrator } from '@game-ci/orchestrator';
+ *   await Orchestrator.run(buildParameters, baseImage);
+ */
+
+export { default as Orchestrator } from './model/orchestrator/orchestrator';
+export { default as loadProvider } from './model/orchestrator/providers/provider-loader';
+export { ProviderLoader } from './model/orchestrator/providers/provider-loader';
+export { BuildParameters } from './model/build-parameters';
+export { GitHub } from './model/github';
+export { Input } from './model/input';
+export { Cli } from './model/cli/cli';
+export { Docker } from './model/docker';
+export { ImageTag } from './model/image-tag';
+export { Action } from './model/action';
+export { Platform } from './model/platform';
+export { StringKeyValuePair, DockerParameters } from './model/shared-types';
+
+// Re-export services for direct access
+export { BuildReliabilityService } from './model/orchestrator/services/reliability';
+export { TestWorkflowService } from './model/orchestrator/services/test-workflow';
+export { HotRunnerService } from './model/orchestrator/services/hot-runner';
+export { OutputService } from './model/orchestrator/services/output/output-service';
+export { OutputTypeRegistry } from './model/orchestrator/services/output/output-type-registry';
+export { ArtifactUploadHandler } from './model/orchestrator/services/output/artifact-upload-handler';
+export { IncrementalSyncService } from './model/orchestrator/services/sync';

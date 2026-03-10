@@ -1,0 +1,10 @@
+node_modules/
+dist/
+*.js.map
+*.d.ts
+!jest.config.js
+coverage/
+.idea/
+.vscode/
+*.tgz
+temp/
