@@ -1,6 +1,15 @@
 name: orchestrator-integrity
 
 on:
+  schedule:
+    - cron: '0 3 * * *' # Nightly at 3 AM UTC
+  workflow_dispatch:
+    inputs:
+      runGithubIntegrationTests:
+        description: 'Run GitHub Checks integration tests'
+        required: false
+        default: 'false'
+        type: string
   workflow_call:
     inputs:
       runGithubIntegrationTests:
