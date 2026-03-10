@@ -28,6 +28,7 @@ Build orchestration engine for [Game CI](https://game.ci). Dispatches Unity buil
 ## Features
 
 - **Multi-provider** — AWS Fargate, Kubernetes, GCP Cloud Run, Azure ACI, GitHub Actions dispatch, GitLab CI, Ansible, Remote PowerShell, local Docker
+- **Custom providers** — write your own provider in any language via the [CLI provider protocol](#custom-providers-via-cli-protocol)
 - **CLI** — `game-ci build`, `game-ci orchestrate`, `game-ci status` from your terminal
 - **GitHub Actions integration** — use as a step in any workflow via [game-ci/unity-builder](https://github.com/game-ci/unity-builder)
 - **Container hooks** — composable pre/post-build scripts (S3 upload, Steam deploy, rclone sync)
