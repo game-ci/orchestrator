@@ -29,6 +29,15 @@ describe('Orchestrator Sync Environments', () => {
 
   if (OrchestratorOptions.orchestratorDebug) {
     it('All build parameters sent to orchestrator as env vars', async () => {
+      // Skip when running against LocalStack — ECS containers don't actually execute,
+      // so the customJob printenv output is never captured in build results.
+      const awsEndpoint = process.env.AWS_ENDPOINT || process.env.AWS_ENDPOINT_URL || '';
+      if (awsEndpoint.includes('localhost') || awsEndpoint.includes('127.0.0.1')) {
+        console.log('Skipping environment test on LocalStack (ECS containers do not execute)');
+
+        return;
+      }
+
       // Setup parameters
       const buildParameter = await CreateParameters({
         versioning: 'None',

@@ -16,6 +16,12 @@ class Input {
       return Cli.query(query, Input.ToEnvVarFormat(query));
     }
 
+    // Check Cli.options as a fallback (used by tests that set overrides without CLI mode)
+    const cliResult = Cli.query(query, Input.ToEnvVarFormat(query));
+    if (cliResult !== undefined) {
+      return cliResult;
+    }
+
     return core.getInput(query) || undefined;
   }
 
