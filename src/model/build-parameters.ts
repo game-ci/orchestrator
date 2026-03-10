@@ -207,6 +207,19 @@ class BuildParameters {
     p.buildGuid = '';
     p.branch = '';
     p.gitSha = '';
+    p.customJob = '';
+    p.preBuildContainerHooks = '';
+    p.postBuildContainerHooks = '';
+    p.commandHooks = '';
+
+    // Pass through any CLI overrides not explicitly handled above
+    if (Cli.options) {
+      for (const [key, value] of Object.entries(Cli.options)) {
+        if (value !== undefined && !(key in p && p[key] !== undefined)) {
+          p[key] = value;
+        }
+      }
+    }
 
     return p;
   }
