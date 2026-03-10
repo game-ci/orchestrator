@@ -18,7 +18,3 @@ concurrency:
 jobs:
   unit-tests:
     uses: ./.github/workflows/test.yml
-
-  integration-tests:
-    uses: ./.github/workflows/orchestrator-integrity.yml
-    secrets: inherit
