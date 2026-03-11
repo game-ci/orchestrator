@@ -1,12 +1,12 @@
 /**
- * Bridge file — stub for Docker.
+ * Docker runner — executes container builds via `docker run`.
  *
- * The orchestrator's docker provider delegates the actual container
- * execution to this class.  In the standalone repo this is a thin stub
- * that will be replaced by a proper DockerRunner interface.
+ * Used by the local-docker provider (and the LocalStack auto-fallback)
+ * to run builds inside Docker containers.
  */
 
 import * as core from '@actions/core';
+import { spawn } from 'node:child_process';
 import { StringKeyValuePair } from './shared-types';
 
 class Docker {
@@ -15,19 +15,75 @@ class Docker {
     parameters: { [key: string]: any },
     silent = false,
     overrideCommands = '',
-    _additionalVariables: StringKeyValuePair[] = [],
-    _options?: any,
-    _entrypointBash = false,
+    additionalVariables: StringKeyValuePair[] = [],
+    options?: any,
+    entrypointBash = false,
   ): Promise<number> {
+    const workspace = parameters.workspace || process.env.GITHUB_WORKSPACE || process.cwd();
+
+    const args: string[] = ['run', '--rm'];
+
+    // Volume mounts: workspace → /github/workspace and /data
+    args.push('-v', `${workspace}:/github/workspace`);
+    args.push('-v', `${workspace}:/data`);
+
+    // Working directory
+    args.push('-w', '/github/workspace');
+
+    // Environment variables
+    for (const envVar of additionalVariables) {
+      if (envVar && envVar.name && envVar.value !== undefined) {
+        args.push('-e', `${envVar.name}=${envVar.value}`);
+      }
+    }
+
+    // Image
+    args.push(image);
+
+    // Override commands
+    if (overrideCommands) {
+      if (entrypointBash) {
+        args.push('/bin/sh', '-c', overrideCommands);
+      } else {
+        args.push(overrideCommands);
+      }
+    }
+
     if (!silent) {
       core.info(`[Docker] run: image=${image}, overrideCommands=${overrideCommands}`);
     }
 
-    // Stub: the real implementation builds a docker run command and executes it.
-    // In the standalone orchestrator this is injected by the host.
-    throw new Error(
-      'Docker.run is a bridge stub. The host application must supply a real Docker runner.',
-    );
+    return new Promise<number>((resolve, reject) => {
+      const child = spawn('docker', args, {
+        stdio: ['pipe', 'pipe', 'pipe'],
+      });
+
+      child.stdout.on('data', (data: Buffer) => {
+        if (!silent) {
+          process.stdout.write(data);
+        }
+        if (options?.listeners?.stdout) {
+          options.listeners.stdout(data);
+        }
+      });
+
+      child.stderr.on('data', (data: Buffer) => {
+        if (!silent) {
+          process.stderr.write(data);
+        }
+        if (options?.listeners?.stderr) {
+          options.listeners.stderr(data);
+        }
+      });
+
+      child.on('error', (error) => {
+        reject(new Error(`Docker process failed to start: ${error.message}`));
+      });
+
+      child.on('close', (code) => {
+        resolve(code ?? 1);
+      });
+    });
   }
 }
 
