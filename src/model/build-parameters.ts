@@ -200,7 +200,7 @@ class BuildParameters {
 
     // Orchestrator fields
     p.providerStrategy = Input.providerStrategy || 'local';
-    p.maxRetainedWorkspaces = 0;
+    p.maxRetainedWorkspaces = Number(Input.getInput('maxRetainedWorkspaces')) || 0;
     p.githubChecks = false;
     p.asyncWorkflow = false;
     p.githubCheckId = '';
