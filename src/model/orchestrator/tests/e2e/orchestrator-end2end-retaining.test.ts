@@ -17,10 +17,11 @@ describe('Orchestrator Retain Workspace', () => {
   setups();
   if (OrchestratorOptions.orchestratorDebug) {
     it('Run one build it should not already be retained, run subsequent build which should use retained workspace', async () => {
+      const unityVersion = await UnityVersioning.determineUnityVersion('test-project', UnityVersioning.read('test-project'));
       const overrides: any = {
         versioning: 'None',
         projectPath: 'test-project',
-        unityVersion: UnityVersioning.determineUnityVersion('test-project', UnityVersioning.read('test-project')),
+        unityVersion,
         targetPlatform: 'StandaloneLinux64',
         cacheKey: `test-case-${uuidv4()}`,
         maxRetainedWorkspaces: 1,

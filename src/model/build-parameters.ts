@@ -188,7 +188,7 @@ class BuildParameters {
     p.buildMethod = '';
     p.buildVersion = '1.0.0';
     p.androidVersionCode = '';
-    p.customImage = Input.customImage || '';
+    p.customImage = Input.customImage || Input.getInput('image') || '';
     p.unitySerial = '';
     p.unityLicensingServer = '';
     p.skipActivation = '';

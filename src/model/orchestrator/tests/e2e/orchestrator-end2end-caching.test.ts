@@ -22,11 +22,12 @@ describe('Orchestrator Caching', () => {
   setups();
   if (OrchestratorOptions.orchestratorDebug) {
     it('Run one build it should not use cache, run subsequent build which should use cache', async () => {
+      const unityVersion = await UnityVersioning.determineUnityVersion('test-project', UnityVersioning.read('test-project'));
       const overrides: any = {
         versioning: 'None',
         image: 'ubuntu',
         projectPath: 'test-project',
-        unityVersion: UnityVersioning.determineUnityVersion('test-project', UnityVersioning.read('test-project')),
+        unityVersion,
         targetPlatform: 'StandaloneLinux64',
         cacheKey: `test-case-${uuidv4()}`,
         containerHookFiles: `debug-cache`,

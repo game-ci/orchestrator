@@ -21,10 +21,11 @@ describe('Orchestrator Locking', () => {
   it('Responds', () => {});
   if (OrchestratorOptions.orchestratorDebug) {
     it(`Simple Locking End2End Flow`, async () => {
+      const unityVersion = await UnityVersioning.determineUnityVersion('test-project', UnityVersioning.read('test-project'));
       const overrides: any = {
         versioning: 'None',
         projectPath: 'test-project',
-        unityVersion: UnityVersioning.determineUnityVersion('test-project', UnityVersioning.read('test-project')),
+        unityVersion,
         targetPlatform: 'StandaloneLinux64',
         cacheKey: `test-case-${uuidv4()}`,
         maxRetainedWorkspaces: 3,

@@ -28,10 +28,11 @@ describe('Orchestrator Kubernetes', () => {
         return;
       }
       process.env.USE_IL2CPP = 'false';
+      const unityVersion = await UnityVersioning.determineUnityVersion('test-project', UnityVersioning.read('test-project'));
       const overrides = {
         versioning: 'None',
         projectPath: 'test-project',
-        unityVersion: UnityVersioning.determineUnityVersion('test-project', UnityVersioning.read('test-project')),
+        unityVersion,
         targetPlatform: 'StandaloneLinux64',
         cacheKey: `test-case-${uuidv4()}`,
         providerStrategy: 'k8s',
