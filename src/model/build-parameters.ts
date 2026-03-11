@@ -219,7 +219,12 @@ class BuildParameters {
     p.dockerCpuLimit = '';
     p.dockerMemoryLimit = '';
     p.dockerIsolationMode = '';
-    p.gitPrivateToken = '';
+    p.gitPrivateToken = Input.getInput('gitPrivateToken') || process.env.GIT_PRIVATE_TOKEN || '';
+    p.orchestratorRepoName =
+      Input.getInput('orchestratorRepoName') || process.env.GITHUB_REPOSITORY || 'game-ci/unity-builder';
+    p.orchestratorBranch = Input.getInput('orchestratorBranch') || 'main';
+    p.githubRepo = Input.getInput('githubRepo') || process.env.GITHUB_REPOSITORY || '';
+    p.gitAuthMode = Input.getInput('gitAuthMode') || 'header';
     p.buildGuid = '';
     p.branch = '';
     p.gitSha = '';
