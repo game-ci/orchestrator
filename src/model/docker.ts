@@ -37,13 +37,18 @@ class Docker {
       }
     }
 
+    // Override entrypoint to shell when entrypointBash is set
+    if (overrideCommands && entrypointBash) {
+      args.push('--entrypoint', '/bin/sh');
+    }
+
     // Image
     args.push(image);
 
     // Override commands
     if (overrideCommands) {
       if (entrypointBash) {
-        args.push('/bin/sh', '-c', overrideCommands);
+        args.push('-c', overrideCommands);
       } else {
         args.push(overrideCommands);
       }

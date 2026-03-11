@@ -20,6 +20,7 @@ describe('Orchestrator Retain Workspace', () => {
       const unityVersion = await UnityVersioning.determineUnityVersion('test-project', UnityVersioning.read('test-project'));
       const overrides: any = {
         versioning: 'None',
+        image: 'ubuntu',
         projectPath: 'test-project',
         unityVersion,
         targetPlatform: 'StandaloneLinux64',
