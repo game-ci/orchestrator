@@ -72,6 +72,7 @@ class BuildParameters {
   containerMemory!: string;
   containerCpu!: string;
   readTimeout!: number;
+  awsStackName!: string;
   awsBaseStackName!: string;
   awsUseSpot!: boolean;
   awsSpotFallback!: boolean;
@@ -80,6 +81,10 @@ class BuildParameters {
   cloudRunnerCluster!: string;
   cloudRunnerCpu!: string;
   cloudRunnerMemory!: string;
+
+  // ── storage ───────────────────────────────────────────────────────────
+  storageProvider!: string;
+  rcloneRemote!: string;
 
   // ── caching / workspace isolation ───────────────────────────────────
   localCacheEnabled!: boolean;
@@ -203,6 +208,9 @@ class BuildParameters {
     p.skipLfs = false;
     p.skipCache = false;
     p.lockedWorkspace = '';
+    p.awsStackName = Input.getInput('awsStackName') || process.env.AWS_STACK_NAME || 'game-ci';
+    p.storageProvider = Input.getInput('storageProvider') || process.env.STORAGE_PROVIDER || 's3';
+    p.rcloneRemote = Input.getInput('rcloneRemote') || process.env.RCLONE_REMOTE || '';
     p.awsUseSpot = Input.getInput('awsUseSpot') === 'true';
     p.awsSpotFallback = Input.getInput('awsSpotFallback') !== 'false';
     p.awsUseEphemeralStorage = Input.getInput('awsUseEphemeralStorage') === 'true';
