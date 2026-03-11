@@ -25,7 +25,7 @@ describe('Orchestrator Caching', () => {
       const unityVersion = await UnityVersioning.determineUnityVersion('test-project', UnityVersioning.read('test-project'));
       const overrides: any = {
         versioning: 'None',
-        image: 'ubuntu',
+        image: 'node:20',
         projectPath: 'test-project',
         unityVersion,
         targetPlatform: 'StandaloneLinux64',
