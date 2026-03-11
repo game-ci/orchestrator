@@ -17,7 +17,7 @@ describe('Orchestrator Retain Workspace', () => {
   setups();
   if (OrchestratorOptions.orchestratorDebug) {
     it('Run one build it should not already be retained, run subsequent build which should use retained workspace', async () => {
-      const overrides = {
+      const overrides: any = {
         versioning: 'None',
         projectPath: 'test-project',
         unityVersion: UnityVersioning.determineUnityVersion('test-project', UnityVersioning.read('test-project')),
@@ -26,6 +26,16 @@ describe('Orchestrator Retain Workspace', () => {
         maxRetainedWorkspaces: 1,
         orchestratorDebug: true,
       };
+
+      // For AWS LocalStack tests, set provider strategy to 'aws' so the orchestrator's
+      // built-in LocalStack auto-fallback routes to local-docker for container execution
+      // while S3 locking/caching still uses LocalStack.
+      const awsEndpoint = process.env.AWS_S3_ENDPOINT || process.env.AWS_ENDPOINT || process.env.AWS_ENDPOINT_URL || '';
+      const isLocalStack = /localhost|127\.0\.0\.1|localstack/i.test(awsEndpoint);
+      if (isLocalStack && OrchestratorOptions.providerStrategy !== 'k8s') {
+        overrides.providerStrategy = 'aws';
+      }
+
       const buildParameter = await CreateParameters(overrides);
       expect(buildParameter.projectPath).toEqual(overrides.projectPath);
 

@@ -199,7 +199,7 @@ class BuildParameters {
     p.allowDirtyBuild = Input.allowDirtyBuild;
 
     // Orchestrator fields
-    p.providerStrategy = Input.getInput('providerStrategy') || process.env.PROVIDER_STRATEGY || 'local';
+    p.providerStrategy = Input.providerStrategy || 'local';
     p.maxRetainedWorkspaces = Number(Input.getInput('maxRetainedWorkspaces')) || 0;
     p.githubChecks = false;
     p.asyncWorkflow = false;
