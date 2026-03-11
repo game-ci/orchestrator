@@ -19,18 +19,6 @@ describe('Orchestrator Locking Get Locked Workspace', () => {
   setups();
   it('Responds', () => {});
   if (OrchestratorOptions.orchestratorDebug) {
-    // Skip all locking tests when running against LocalStack — the AWS SDK S3 client
-    // expects XML responses but LocalStack returns JSON, causing deserialization errors.
-    const awsEndpoint = process.env.AWS_ENDPOINT || process.env.AWS_ENDPOINT_URL || '';
-    const isLocalStack = awsEndpoint.includes('localhost') || awsEndpoint.includes('127.0.0.1');
-    if (isLocalStack) {
-      it('Skipping locking tests on LocalStack (S3 XML/JSON incompatibility)', () => {
-        console.log('Skipping locking tests on LocalStack (S3 returns JSON, SDK expects XML)');
-      });
-    }
-
-    // eslint-disable-next-line jest/no-conditional-in-test
-    if (!isLocalStack) {
     it(`Get locked workspace From No Workspace`, async () => {
       const overrides: any = {
         versioning: 'None',
@@ -164,6 +152,5 @@ describe('Orchestrator Locking Get Locked Workspace', () => {
       expect(await SharedWorkspaceLocking.GetLockedWorkspace(newWorkspaceName, runId, buildParameters)).toBeTruthy();
       expect(Orchestrator.lockedWorkspace).toMatch(newWorkspaceName);
     }, 300000);
-    } // end if (!isLocalStack)
   }
 });

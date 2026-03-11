@@ -21,19 +21,6 @@ describe('Orchestrator Caching', () => {
   it('Responds', () => {});
   setups();
   if (OrchestratorOptions.orchestratorDebug) {
-    // Skip e2e caching tests on LocalStack — S3 caching hooks fail because LocalStack
-    // returns JSON but the AWS SDK expects XML, and ECS containers don't actually execute.
-    const awsEndpoint =
-      process.env.AWS_ENDPOINT || process.env.AWS_ENDPOINT_URL || process.env.AWS_S3_ENDPOINT || '';
-    const isLocalStack = awsEndpoint.includes('localhost') || awsEndpoint.includes('127.0.0.1');
-    if (isLocalStack) {
-      it('Skipping e2e caching tests on LocalStack (S3 XML/JSON incompatibility)', () => {
-        console.log('Skipping e2e caching tests on LocalStack (S3 returns JSON, SDK expects XML)');
-      });
-    }
-
-    // eslint-disable-next-line jest/no-conditional-in-test
-    if (!isLocalStack) {
     it('Run one build it should not use cache, run subsequent build which should use cache', async () => {
       const overrides: any = {
         versioning: 'None',
@@ -112,7 +99,6 @@ describe('Orchestrator Caching', () => {
       expect(build2NotContainsZeroLibraryCacheFilesMessage).toBeTruthy();
       expect(build2NotContainsZeroLFSCacheFilesMessage).toBeTruthy();
     }, 1_000_000_000);
-    } // end if (!isLocalStack)
     afterAll(async () => {
       // Clean up cache files to prevent disk space issues
       if (OrchestratorOptions.providerStrategy === `local-docker` || OrchestratorOptions.providerStrategy === `aws`) {

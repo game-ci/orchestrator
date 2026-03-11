@@ -16,19 +16,6 @@ describe('Orchestrator Retain Workspace', () => {
   it('Responds', () => {});
   setups();
   if (OrchestratorOptions.orchestratorDebug) {
-    // Skip e2e retaining tests on LocalStack — S3 workspace locking fails because LocalStack
-    // returns JSON but the AWS SDK expects XML, and ECS containers don't actually execute.
-    const awsEndpoint =
-      process.env.AWS_ENDPOINT || process.env.AWS_ENDPOINT_URL || process.env.AWS_S3_ENDPOINT || '';
-    const isLocalStack = awsEndpoint.includes('localhost') || awsEndpoint.includes('127.0.0.1');
-    if (isLocalStack) {
-      it('Skipping e2e retaining tests on LocalStack (S3 XML/JSON incompatibility)', () => {
-        console.log('Skipping e2e retaining tests on LocalStack (S3 returns JSON, SDK expects XML)');
-      });
-    }
-
-    // eslint-disable-next-line jest/no-conditional-in-test
-    if (!isLocalStack) {
     it('Run one build it should not already be retained, run subsequent build which should use retained workspace', async () => {
       const overrides = {
         versioning: 'None',
@@ -113,12 +100,8 @@ describe('Orchestrator Retain Workspace', () => {
       const splitResults = results2.split('Activation successful');
       expect(splitResults[splitResults.length - 1]).not.toContain(libraryString);
     }, 1_000_000_000);
-    } // end if (!isLocalStack)
     afterAll(async () => {
-      // Skip S3 cleanup on LocalStack — same XML/JSON deserialization issue
-      if (!isLocalStack) {
-        await SharedWorkspaceLocking.CleanupWorkspace(Orchestrator.lockedWorkspace || ``, Orchestrator.buildParameters);
-      }
+      await SharedWorkspaceLocking.CleanupWorkspace(Orchestrator.lockedWorkspace || ``, Orchestrator.buildParameters);
       if (
         fs.existsSync(`./orchestrator-cache/${path.basename(OrchestratorFolders.uniqueOrchestratorJobFolderAbsolute)}`)
       ) {
