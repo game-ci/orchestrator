@@ -66,7 +66,7 @@ jobs:
         run: node dist/cli.js version
 
       - name: Build standalone binary
-        run: npx pkg dist/cli.js --target ${{ matrix.pkg-target }} --output ${{ matrix.binary-name }} --compress GZip
+        run: npx @yao-pkg/pkg dist/cli.js --target ${{ matrix.pkg-target }} --output ${{ matrix.binary-name }} --compress GZip
 
       - name: Verify standalone binary (non-cross-compiled)
         if: |
