@@ -63,10 +63,10 @@ jobs:
         run: yarn build
 
       - name: Verify CLI before packaging
-        run: node lib/cli.js version
+        run: node dist/cli.js version
 
       - name: Build standalone binary
-        run: npx pkg lib/cli.js --target ${{ matrix.pkg-target }} --output ${{ matrix.binary-name }} --compress GZip
+        run: npx pkg dist/cli.js --target ${{ matrix.pkg-target }} --output ${{ matrix.binary-name }} --compress GZip
 
       - name: Verify standalone binary (non-cross-compiled)
         if: |
@@ -161,8 +161,8 @@ jobs:
 
       - name: Verify CLI
         run: |
-          node lib/cli.js version
-          node lib/cli.js --help
+          node dist/cli.js version
+          node dist/cli.js --help
 
       - name: Publish to npm
         run: npm publish --provenance --access public

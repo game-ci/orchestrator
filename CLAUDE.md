@@ -58,7 +58,7 @@ yarn game-ci --help   # Run CLI locally via ts-node
 - Prettier for formatting (no ESLint)
 - No semicolons enforcement — existing code uses both styles
 - Template literals with backticks for string interpolation throughout
-- `dist/` is the build output directory, `lib/` is used by pkg for CLI binaries
+- `dist/` is the build output directory (also used by pkg for CLI binaries)
 
 ## Related Repositories
 
