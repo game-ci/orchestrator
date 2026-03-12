@@ -2,6 +2,7 @@ import YAML from 'yaml';
 import Orchestrator from '../../orchestrator';
 import { CustomWorkflow } from '../../workflows/custom-workflow';
 import { RemoteClientLogger } from '../../remote-client/remote-client-logger';
+import OrchestratorLogger from '../core/orchestrator-logger';
 import path from 'node:path';
 import fs from 'node:fs';
 import Input from '../../../input';
@@ -27,7 +28,7 @@ export class ContainerHookService {
         }
       }
     } catch (error) {
-      RemoteClientLogger.log(`Failed Getting: ${hookLifecycle} \n ${JSON.stringify(error, undefined, 4)}`);
+      RemoteClientLogger.log(`Failed Getting: ${hookLifecycle} \n ${OrchestratorLogger.stringifyError(error)}`);
     }
 
     // RemoteClientLogger.log(`Active Steps From Files: \n ${JSON.stringify(results, undefined, 4)}`);

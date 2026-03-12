@@ -185,8 +185,8 @@ class AWSTaskRunner {
       const taskAfterError = await AWSTaskRunner.describeTasks(cluster, taskArn);
       OrchestratorLogger.log(`Orchestrator job has ended ${taskAfterError?.containers?.[0]?.lastStatus}`);
 
-      core.setFailed(error);
-      core.error(error);
+      core.setFailed(error.message || String(error));
+      core.error(OrchestratorLogger.stringifyError(error));
     }
   }
 

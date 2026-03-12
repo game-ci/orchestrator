@@ -41,7 +41,7 @@ class KubernetesStorage {
       return (await kubeClient.readNamespacedPersistentVolumeClaim(name, namespace)).body.status?.phase;
     } catch (error) {
       core.error('Failed to get PVC phase');
-      core.error(JSON.stringify(error, undefined, 4));
+      core.error(OrchestratorLogger.stringifyError(error));
       throw error;
     }
   }

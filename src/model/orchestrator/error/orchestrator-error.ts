@@ -6,8 +6,8 @@ import BuildParameters from '../../build-parameters';
 
 export class OrchestratorError {
   public static async handleException(error: unknown, buildParameters: BuildParameters, secrets: OrchestratorSecret[]) {
-    OrchestratorLogger.error(JSON.stringify(error, undefined, 4));
-    core.setFailed('Orchestrator failed');
+    OrchestratorLogger.error(OrchestratorLogger.stringifyError(error));
+    core.setFailed(`Orchestrator failed: ${error instanceof Error ? error.message : String(error)}`);
     if (Orchestrator.Provider !== undefined) {
       await Orchestrator.Provider.cleanupWorkflow(buildParameters, buildParameters.branch, secrets);
     }

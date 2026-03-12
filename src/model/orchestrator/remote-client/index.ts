@@ -249,7 +249,7 @@ export class RemoteClient {
         }
       }
     } catch (error) {
-      RemoteClientLogger.log(JSON.stringify(error, undefined, 4));
+      RemoteClientLogger.log(OrchestratorLogger.stringifyError(error));
     }
   }
 

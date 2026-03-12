@@ -6,7 +6,7 @@ import Orchestrator from '../../orchestrator';
 export class AWSError {
   static async handleStackCreationFailure(error: any, CF: CloudFormation, taskDefStackName: string) {
     OrchestratorLogger.log('aws error: ');
-    core.error(JSON.stringify(error, undefined, 4));
+    core.error(OrchestratorLogger.stringifyError(error));
     if (Orchestrator.buildParameters.orchestratorDebug) {
       OrchestratorLogger.log('Getting events and resources for task stack');
       const events = (await CF.send(new DescribeStackEventsCommand({ StackName: taskDefStackName }))).StackEvents;

@@ -322,7 +322,7 @@ class Kubernetes implements ProviderInterface {
       return output;
     } catch (error) {
       OrchestratorLogger.log('Running job failed');
-      core.error(JSON.stringify(error, undefined, 4));
+      core.error(OrchestratorLogger.stringifyError(error));
 
       // await this.cleanupTaskResources();
       throw error;
@@ -442,7 +442,7 @@ class Kubernetes implements ProviderInterface {
       await this.kubeClient.deleteNamespacedServiceAccount(this.serviceAccountName, this.namespace);
       OrchestratorLogger.log('cleaned up PVC and Service Account');
     } catch (error: any) {
-      OrchestratorLogger.log(`Cleanup failed ${JSON.stringify(error, undefined, 4)}`);
+      OrchestratorLogger.log(`Cleanup failed ${OrchestratorLogger.stringifyError(error)}`);
       throw error;
     }
   }

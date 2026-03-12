@@ -61,7 +61,7 @@ echo "---${buildParameters.logId}"`;
         }
       }
     } catch (error) {
-      RemoteClientLogger.log(`Failed Getting: ${hookLifecycle} \n ${JSON.stringify(error, undefined, 4)}`);
+      RemoteClientLogger.log(`Failed Getting: ${hookLifecycle} \n ${OrchestratorLogger.stringifyError(error)}`);
     }
 
     // RemoteClientLogger.log(`Active Steps From Hooks: \n ${JSON.stringify(results, undefined, 4)}`);

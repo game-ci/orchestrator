@@ -357,7 +357,7 @@ class Orchestrator {
 
       return new OrchestratorResult(buildParameters, output, true, true, false);
     } catch (error: any) {
-      OrchestratorLogger.log(JSON.stringify(error, undefined, 4));
+      OrchestratorLogger.log(OrchestratorLogger.stringifyError(error));
       await GitHub.updateGitHubCheck(
         Orchestrator.buildParameters.buildGuid,
         `Failed - Error ${error?.message || error}`,

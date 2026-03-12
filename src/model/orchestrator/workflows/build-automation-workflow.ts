@@ -68,7 +68,7 @@ export class BuildAutomationWorkflow implements WorkflowInterface {
       }
       ${
         isContainerized && Orchestrator.buildParameters.providerStrategy !== 'local-docker'
-          ? 'apt-get install -y curl tar tree npm git-lfs jq git > /dev/null || true\n      npm --version || true\n      npm i -g n > /dev/null || true\n      npm i -g semver > /dev/null || true\n      npm install --global yarn > /dev/null || true\n      n 20.8.0 || true\n      node --version || true'
+          ? 'apt-get install -y curl tar tree npm git-lfs jq git > /dev/null || true\n      npm --version || true\n      npm i -g n > /dev/null || true\n      npm i -g semver > /dev/null || true\n      command -v yarn > /dev/null 2>&1 || npm install --global yarn > /dev/null || true\n      n 20.8.0 || true\n      node --version || true'
           : '# skipping toolchain setup in local-docker or non-container provider'
       }
       ${setupHooks.filter((x) => x.hook.includes(`before`)).map((x) => x.commands) || ' '}

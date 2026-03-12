@@ -36,6 +36,32 @@ class OrchestratorLogger {
     this.timestamp = newTimestamp;
   }
 
+  /**
+   * Serialize an unknown error into a readable string.
+   * JSON.stringify(error) on Error objects produces '{}' because Error properties
+   * (message, stack, name) are non-enumerable. This method extracts them properly.
+   */
+  public static stringifyError(error: unknown): string {
+    if (error instanceof Error) {
+      return JSON.stringify(
+        {
+          name: error.name,
+          message: error.message,
+          stack: error.stack,
+          ...error,
+        },
+        undefined,
+        4,
+      );
+    }
+    const serialized = JSON.stringify(error, undefined, 4);
+    if (serialized === '{}' || serialized === undefined) {
+      return String(error);
+    }
+
+    return serialized;
+  }
+
   private static calculateTimeDiff(x: number, y: number) {
     return Math.floor((x - y) / 1000);
   }
