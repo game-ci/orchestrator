@@ -31,6 +31,11 @@ export { Action } from './model/action';
 export { Platform } from './model/platform';
 export { StringKeyValuePair, DockerParameters } from './model/shared-types';
 
+// Engine plugin system
+export type { EnginePlugin } from './model/engine';
+export { getEngine, setEngine, initEngine, UnityPlugin } from './model/engine';
+export { loadEngineFromModule, loadEngineFromCli, loadEngineFromDocker } from './model/engine';
+
 // Re-export services for direct access
 export { BuildReliabilityService } from './model/orchestrator/services/reliability';
 export { TestWorkflowService } from './model/orchestrator/services/test-workflow';
