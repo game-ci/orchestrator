@@ -1,39 +1,34 @@
 # @game-ci/orchestrator
 
-Build orchestration engine for [Game CI](https://game.ci). Dispatches Unity builds to cloud infrastructure (AWS, Kubernetes, GCP, Azure), manages their lifecycle, and streams results back to your CI pipeline or terminal.
+Build orchestration engine for [Game CI](https://game.ci). Dispatches game engine builds to cloud infrastructure (AWS, Kubernetes, GCP, Azure), manages their lifecycle, and streams results back to your CI pipeline or terminal.
 
-```
-  GitHub Actions / Any CI or Automation System / CLI
-         │
-         ▼
-  ┌──────────────────┐
-  │   Orchestrator    │
-  │  ┌─────────────┐  │     ┌──────────────────────┐
-  │  │  Provider    │──┼────►│  AWS ECS Fargate      │
-  │  │  Selection   │  │     ├──────────────────────┤
-  │  └─────────────┘  │     │  Kubernetes Jobs      │
-  │  ┌─────────────┐  │     ├──────────────────────┤
-  │  │  Hooks &     │  │     │  Local Docker         │
-  │  │  Middleware  │  │     ├──────────────────────┤
-  │  └─────────────┘  │     │  GCP Cloud Run        │
-  │  ┌─────────────┐  │     ├──────────────────────┤
-  │  │  Services    │  │     │  Azure ACI            │
-  │  │  (cache,     │  │     ├──────────────────────┤
-  │  │   sync,      │  │     │  GitHub Actions       │
-  │  │   output)    │  │     ├──────────────────────┤
-  │  └─────────────┘  │     │  GitLab CI            │
-  └──────────────────┘     └──────────────────────┘
+Engine agnostic — Unity is built-in, with a plugin system for Godot, Unreal, and custom engines.
+
+```mermaid
+flowchart LR
+  subgraph trigger["Trigger"]
+    A["GitHub Actions\nGitLab CI\nCLI\nAny CI System"]
+  end
+  subgraph orchestrator["Orchestrator"]
+    B["Engine Plugin\nProvider Selection\nHooks & Middleware\nServices\n(cache, sync, output)"]
+  end
+  subgraph targets["Build Target"]
+    C["AWS ECS Fargate\nKubernetes\nLocal Docker\nGCP Cloud Run\nAzure ACI\nGitHub Actions\nGitLab CI"]
+  end
+  A --> B --> C
+  C -- "artifacts + logs" --> A
 ```
 
 ## Features
 
+- **Engine agnostic** — Unity built-in, with a [plugin system](#engine-plugins) for Godot, Unreal, and custom engines
 - **Multi-provider** — AWS Fargate, Kubernetes, GCP Cloud Run, Azure ACI, GitHub Actions dispatch, GitLab CI, Ansible, Remote PowerShell, local Docker
 - **Custom providers** — write your own provider in any language via the [CLI provider protocol](#custom-providers-via-cli-protocol)
 - **CLI** — `game-ci build`, `game-ci orchestrate`, `game-ci status` from your terminal
 - **GitHub Actions integration** — use as a step in any workflow via [game-ci/unity-builder](https://github.com/game-ci/unity-builder)
 - **Container hooks** — composable pre/post-build scripts (S3 upload, Steam deploy, rclone sync)
 - **Middleware pipeline** — trigger-aware composable hooks for advanced build customization
-- **Caching** — S3-backed Library caching, retained workspaces, local cache layer
+- **Caching** — engine-aware asset caching, retained workspaces, local cache layer
 - **Incremental sync** — transfer only changed files to build containers
 - **Hot runner** — keep build environments warm for sub-minute iteration
 - **Build reliability** — automatic retries, health checks, failure recovery
@@ -104,6 +99,80 @@ game-ci orchestrate \
   --targetPlatform StandaloneLinux64
 ```
 
+## Engine Plugins
+
+The orchestrator is engine agnostic. Unity ships as a built-in plugin, and other engines plug in via the `EnginePlugin` interface — a minimal config that tells the orchestrator which folders to cache and what to run on container shutdown.
+
+```mermaid
+flowchart TD
+  subgraph plugins["Engine Plugins"]
+    U["Unity (built-in)\ncacheFolders: Library"]
+    G["Godot\ncacheFolders: .godot/imported"]
+    X["Your Engine\ncacheFolders: ..."]
+  end
+  subgraph orch["Orchestrator"]
+    O["Caching\nContainer lifecycle\nProvider dispatch"]
+  end
+  U --> O
+  G --> O
+  X --> O
+```
+
+### EnginePlugin Interface
+
+```typescript
+interface EnginePlugin {
+  name: string;            // 'unity', 'godot', 'unreal', etc.
+  cacheFolders: string[];  // folders to cache between builds
+  preStopCommand?: string; // shell command for container shutdown (optional)
+}
+```
+
+### Using a Non-Unity Engine
+
+```yaml
+# GitHub Actions
+- uses: game-ci/unity-builder@v4
+  with:
+    engine: godot
+    enginePlugin: '@game-ci/godot-engine'
+    targetPlatform: StandaloneLinux64
+```
+
+```bash
+# CLI
+game-ci build \
+  --engine godot \
+  --engine-plugin @game-ci/godot-engine \
+  --target-platform linux
+```
+
+### Plugin Sources
+
+Plugins can be loaded from three sources:
+
+| Source | Format | Example |
+| --- | --- | --- |
+| NPM module | Package name or local path | `@game-ci/godot-engine`, `./my-plugin.js` |
+| CLI executable | `cli:<path>` | `cli:/usr/local/bin/my-engine-plugin` |
+| Docker image | `docker:<image>` | `docker:gameci/godot-engine-plugin` |
+
+### Writing a Plugin
+
+A complete engine plugin is typically 3-5 lines:
+
+```typescript
+// NPM package: index.ts
+export default {
+  name: 'godot',
+  cacheFolders: ['.godot/imported', '.godot/shader_cache'],
+};
+```
+
+For CLI executables, print JSON on stdout when called with `get-engine-config`. For Docker images, `docker run --rm <image> get-engine-config` must print JSON config.
+
+See the [Engine Plugins documentation](https://game.ci/docs/github-orchestrator/advanced-topics/engine-plugins) for the full guide.
+
 ## Providers
 
 | Provider | Strategy flag | Description |
@@ -123,16 +192,17 @@ game-ci orchestrate \
 
 Write providers in **any language** — Go, Python, Rust, shell, or anything that reads stdin and writes stdout. The orchestrator communicates with your executable via JSON over stdin/stdout:
 
-```
-  Orchestrator                          Your executable
- ┌──────────────────────┐              ┌──────────────────────┐
- │ Spawns your binary   │   argv[1]   │                      │
- │ per subcommand       │────────────►│  setup-workflow      │
- │                      │  JSON stdin │  run-task            │
- │                      │────────────►│  cleanup-workflow    │
- │                      │ JSON stdout │  garbage-collect     │
- │                      │◄────────────│  list-resources      │
- └──────────────────────┘  stderr→log └──────────────────────┘
+```mermaid
+flowchart LR
+  subgraph orch["Orchestrator"]
+    O["Spawns your binary\nper subcommand"]
+  end
+  subgraph exec["Your Executable"]
+    E["setup-workflow\nrun-task\ncleanup-workflow\ngarbage-collect\nlist-resources"]
+  end
+  O -- "argv[1] + JSON stdin" --> E
+  E -- "JSON stdout" --> O
+  E -. "stderr → log" .-> O
 ```
 
 Point `providerExecutable` at your binary:
@@ -157,6 +227,20 @@ Your executable receives a subcommand as `argv[1]` (`setup-workflow`, `run-task`
 
 See the [CLI Provider Protocol docs](https://game.ci/docs/github-orchestrator/providers/cli-provider-protocol) for the full specification and a working example.
 
+## How It Works
+
+```mermaid
+flowchart TD
+  A["Input Parsing\nGitHub Actions / CLI / env"] --> B["Engine Plugin\nResolve cache folders & hooks"]
+  B --> C["Provider Selection\nproviderStrategy → backend"]
+  C --> D["Resource Provisioning\nCloudFormation / K8s Jobs / Docker"]
+  D --> E["Build Execution\nLaunch container with project"]
+  E --> F["Hook Execution\npre/post-build hooks"]
+  F --> G["Log Streaming\nReal-time output"]
+  G --> H["Result Collection\nArtifacts, test output"]
+  H --> I["Cleanup\nTear down or retain workspace"]
+```
+
 ## Project Structure
 
 ```
@@ -164,6 +248,12 @@ src/
 ├── cli/                    # CLI entry point and commands
 │   └── commands/           #   build, orchestrate, status, activate, version, update
 ├── model/
+│   ├── engine/             # Engine plugin system
+│   │   ├── engine-plugin.ts    # EnginePlugin interface
+│   │   ├── unity-plugin.ts     # Built-in Unity plugin
+│   │   ├── module-engine-loader.ts  # Load plugins from NPM/local modules
+│   │   ├── cli-engine-loader.ts     # Load plugins from CLI executables
+│   │   └── docker-engine-loader.ts  # Load plugins from Docker images
 │   ├── orchestrator/
 │   │   ├── providers/      # Provider implementations
 │   │   │   ├── aws/        #   ECS Fargate, CloudFormation, S3
@@ -177,7 +267,7 @@ src/
 │   │   │   ├── remote-powershell/
 │   │   │   └── cli/        #   CLI provider protocol
 │   │   ├── services/       # Core services
-│   │   │   ├── cache/      #   Local cache, child workspaces
+│   │   │   ├── cache/      #   Engine-aware cache, child workspaces
 │   │   │   ├── hooks/      #   Container hooks, command hooks, middleware
 │   │   │   ├── hot-runner/ #   Hot runner protocol
 │   │   │   ├── lfs/        #   Git LFS agent
@@ -204,17 +294,6 @@ yarn format           # Format with prettier
 
 Requires Node.js >= 20 and Yarn 1.x.
 
-## How It Works
-
-1. **Input parsing** — reads build parameters from GitHub Actions inputs, CLI flags, or environment variables
-2. **Provider selection** — picks the infrastructure backend based on `providerStrategy`
-3. **Resource provisioning** — creates cloud resources (CloudFormation stacks, K8s Jobs, etc.)
-4. **Build execution** — launches the Unity build container with the project mounted
-5. **Hook execution** — runs pre/post-build container hooks (caching, artifact upload, Steam deploy)
-6. **Log streaming** — streams build output back to the CI runner in real time
-7. **Result collection** — gathers build results, test output, and artifacts
-8. **Cleanup** — tears down ephemeral resources (or retains workspaces if configured)
-
 ## Documentation
 
 Full documentation at [game.ci/docs/github-orchestrator](https://game.ci/docs/github-orchestrator/introduction):
@@ -225,6 +304,7 @@ Full documentation at [game.ci/docs/github-orchestrator](https://game.ci/docs/gi
 - [CLI Guide](https://game.ci/docs/github-orchestrator/cli/getting-started)
 - [API Reference](https://game.ci/docs/github-orchestrator/api-reference)
 - [Provider Setup Guides](https://game.ci/docs/github-orchestrator/providers/overview)
+- [Engine Plugins](https://game.ci/docs/github-orchestrator/advanced-topics/engine-plugins)
 
 ## Related
 
