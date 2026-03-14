@@ -3,7 +3,7 @@
 Build orchestration engine for [Game CI](https://game.ci). Dispatches Unity builds to cloud infrastructure (AWS, Kubernetes, GCP, Azure), manages their lifecycle, and streams results back to your CI pipeline or terminal.
 
 ```
-  GitHub Actions / CLI
+  GitHub Actions / Any CI or Automation System / CLI
          │
          ▼
   ┌──────────────────┐
