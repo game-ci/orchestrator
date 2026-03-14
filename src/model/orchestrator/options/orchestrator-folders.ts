@@ -2,6 +2,7 @@ import path from 'node:path';
 import OrchestratorOptions from './orchestrator-options';
 import Orchestrator from '../orchestrator';
 import BuildParameters from '../../build-parameters';
+import { getEngine } from '../../engine';
 
 export class OrchestratorFolders {
   public static readonly repositoryFolder = 'repo';
@@ -48,8 +49,13 @@ export class OrchestratorFolders {
     return path.join(OrchestratorFolders.repoPathAbsolute, Orchestrator.buildParameters.projectPath);
   }
 
+  public static engineCacheFolderAbsolute(folder: string): string {
+    return path.join(OrchestratorFolders.projectPathAbsolute, folder);
+  }
+
+  /** @deprecated Use engineCacheFolderAbsolute(folder) — kept for backward compatibility */
   public static get libraryFolderAbsolute(): string {
-    return path.join(OrchestratorFolders.projectPathAbsolute, `Library`);
+    return OrchestratorFolders.engineCacheFolderAbsolute(getEngine().cacheFolders[0] || 'Library');
   }
 
   public static get projectBuildFolderAbsolute(): string {
@@ -68,8 +74,13 @@ export class OrchestratorFolders {
     return path.join(OrchestratorFolders.cacheFolderForCacheKeyFull, `lfs`);
   }
 
+  public static engineCacheFolderFull(folder: string) {
+    return path.join(OrchestratorFolders.cacheFolderForCacheKeyFull, folder);
+  }
+
+  /** @deprecated Use engineCacheFolderFull(folder) — kept for backward compatibility */
   public static get libraryCacheFolderFull() {
-    return path.join(OrchestratorFolders.cacheFolderForCacheKeyFull, `Library`);
+    return OrchestratorFolders.engineCacheFolderFull(getEngine().cacheFolders[0] || 'Library');
   }
 
   /**

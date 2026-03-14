@@ -227,6 +227,18 @@ const buildCommand: CommandModule<object, BuildArguments> = {
         description: 'Path to a directory containing SSH public keys to forward to the container',
         default: '',
       })
+      .option('engine', {
+        type: 'string',
+        description: 'Game engine name (unity, godot, unreal, etc.)',
+        default: 'unity',
+      })
+      .option('engine-plugin', {
+        alias: 'enginePlugin',
+        type: 'string',
+        description:
+          'Engine plugin source: module:<npm-pkg>, cli:<executable>, docker:<image>, or an npm package name',
+        default: '',
+      })
       .option('cache-unity-installation-on-mac', {
         alias: 'cacheUnityInstallationOnMac',
         type: 'boolean',

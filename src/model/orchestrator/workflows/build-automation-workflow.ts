@@ -6,6 +6,7 @@ import { CommandHookService } from '../services/hooks/command-hook-service';
 import path from 'node:path';
 import Orchestrator from '../orchestrator';
 import { ContainerHookService } from '../services/hooks/container-hook-service';
+import { getEngine } from '../../engine';
 
 export class BuildAutomationWorkflow implements WorkflowInterface {
   async run(orchestratorStepState: OrchestratorStepParameters) {
@@ -170,10 +171,7 @@ echo "CACHE_KEY=$CACHE_KEY"`;
     if ! command -v yarn > /dev/null 2>&1; then printf '#!/bin/sh\nexit 0\n' > /usr/local/bin/yarn && chmod +x /usr/local/bin/yarn; fi
     # Pipe entrypoint.sh output through log stream to capture Unity build output (including "Build succeeded")
     { echo "game ci start"; echo "game ci start" >> /home/job-log.txt; echo "CACHE_KEY=$CACHE_KEY"; echo "$CACHE_KEY"; if [ -n "$LOCKED_WORKSPACE" ]; then echo "Retained Workspace: true"; fi; if [ -n "$LOCKED_WORKSPACE" ] && [ -d "$GITHUB_WORKSPACE/.git" ]; then echo "Retained Workspace Already Exists!"; fi; /entrypoint.sh; } | node ${builderPath} -m remote-cli-log-stream --logFile /home/job-log.txt
-    mkdir -p "/data/cache/$CACHE_KEY/Library"
-    if [ ! -f "/data/cache/$CACHE_KEY/Library/lib-$BUILD_GUID.tar" ] && [ ! -f "/data/cache/$CACHE_KEY/Library/lib-$BUILD_GUID.tar.lz4" ]; then
-      tar -cf "/data/cache/$CACHE_KEY/Library/lib-$BUILD_GUID.tar" --files-from /dev/null || touch "/data/cache/$CACHE_KEY/Library/lib-$BUILD_GUID.tar"
-    fi
+    ${BuildAutomationWorkflow.engineCacheCommands()}
     if [ ! -f "/data/cache/$CACHE_KEY/build/build-$BUILD_GUID.tar" ] && [ ! -f "/data/cache/$CACHE_KEY/build/build-$BUILD_GUID.tar.lz4" ]; then
       tar -cf "/data/cache/$CACHE_KEY/build/build-$BUILD_GUID.tar" --files-from /dev/null || touch "/data/cache/$CACHE_KEY/build/build-$BUILD_GUID.tar"
     fi
@@ -203,9 +201,8 @@ echo "CACHE_KEY=$CACHE_KEY"`;
     # Don't restore set -e - keep set +e to prevent script from exiting on error
     # This ensures the script completes successfully even if some operations fail
     # Mirror cache back into workspace for test assertions
-    mkdir -p "$GITHUB_WORKSPACE/orchestrator-cache/cache/$CACHE_KEY/Library"
+    ${BuildAutomationWorkflow.engineCacheMirrorCommands()}
     mkdir -p "$GITHUB_WORKSPACE/orchestrator-cache/cache/$CACHE_KEY/build"
-    cp -a "/data/cache/$CACHE_KEY/Library/." "$GITHUB_WORKSPACE/orchestrator-cache/cache/$CACHE_KEY/Library/" || true
     cp -a "/data/cache/$CACHE_KEY/build/." "$GITHUB_WORKSPACE/orchestrator-cache/cache/$CACHE_KEY/build/" || true`;
       }
 
@@ -243,5 +240,30 @@ echo "CACHE_KEY=$CACHE_KEY"`;
     echo "game ci start" >> "$LOG_FILE"
     timeout 3s node ${builderPath} -m remote-cli-log-stream --logFile "$LOG_FILE" || true
     node ${builderPath} -m remote-cli-post-build`;
+  }
+
+  /**
+   * Generate shell commands to create empty cache tar files for each engine cache folder.
+   * For Unity, this produces the same commands that were previously hardcoded for 'Library'.
+   */
+  private static engineCacheCommands(): string {
+    return getEngine().cacheFolders.map(folder => {
+      const prefix = folder.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase();
+
+      return `mkdir -p "/data/cache/$CACHE_KEY/${folder}"
+    if [ ! -f "/data/cache/$CACHE_KEY/${folder}/${prefix}-$BUILD_GUID.tar" ] && [ ! -f "/data/cache/$CACHE_KEY/${folder}/${prefix}-$BUILD_GUID.tar.lz4" ]; then
+      tar -cf "/data/cache/$CACHE_KEY/${folder}/${prefix}-$BUILD_GUID.tar" --files-from /dev/null || touch "/data/cache/$CACHE_KEY/${folder}/${prefix}-$BUILD_GUID.tar"
+    fi`;
+    }).join('\n    ');
+  }
+
+  /**
+   * Generate shell commands to mirror engine cache folders back into workspace for test assertions.
+   */
+  private static engineCacheMirrorCommands(): string {
+    return getEngine().cacheFolders.map(folder =>
+      `mkdir -p "$GITHUB_WORKSPACE/orchestrator-cache/cache/$CACHE_KEY/${folder}"
+    cp -a "/data/cache/$CACHE_KEY/${folder}/." "$GITHUB_WORKSPACE/orchestrator-cache/cache/$CACHE_KEY/${folder}/" || true`
+    ).join('\n    ');
   }
 }

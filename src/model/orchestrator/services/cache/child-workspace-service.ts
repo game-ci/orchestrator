@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import OrchestratorLogger from '../core/orchestrator-logger';
+import { getEngine } from '../../../engine';
 
 export interface ChildWorkspaceConfig {
   enabled: boolean;
@@ -144,91 +145,92 @@ export class ChildWorkspaceService {
   }
 
   /**
-   * Restore Library folder from separate cache location.
+   * Restore engine cache folders from separate cache locations.
+   * Iterates over getEngine().cacheFolders (e.g. ['Library'] for Unity).
    *
-   * @param projectPath - Path to the workspace where Library should be restored
+   * @param projectPath - Path to the workspace where cache should be restored
    * @param config - Child workspace configuration
-   * @returns true if Library was restored from cache
+   * @returns true if any cache was restored
    */
   static restoreLibraryCache(projectPath: string, config: ChildWorkspaceConfig): boolean {
-    const libraryBackup = ChildWorkspaceService.resolveLibraryBackupPath(config);
-    const libraryDestination = path.join(projectPath, 'Library');
+    let restored = false;
+    for (const folder of getEngine().cacheFolders) {
+      const backupPath = ChildWorkspaceService.resolveCacheFolderBackupPath(config, folder);
+      const destination = path.join(projectPath, folder);
 
-    try {
-      if (!fs.existsSync(libraryBackup)) {
-        OrchestratorLogger.log(`[ChildWorkspace] No Library cache found at ${libraryBackup}`);
+      try {
+        if (!fs.existsSync(backupPath)) {
+          OrchestratorLogger.log(`[ChildWorkspace] No ${folder} cache found at ${backupPath}`);
+          continue;
+        }
 
-        return false;
+        const entries = fs.readdirSync(backupPath);
+        if (entries.length === 0) {
+          OrchestratorLogger.log(`[ChildWorkspace] ${folder} cache at ${backupPath} is empty`);
+          fs.rmSync(backupPath, { recursive: true, force: true });
+          continue;
+        }
+
+        // Remove existing directory if present
+        if (fs.existsSync(destination)) {
+          fs.rmSync(destination, { recursive: true, force: true });
+        }
+
+        // Atomic move
+        OrchestratorLogger.log(`[ChildWorkspace] Restoring ${folder} cache: ${backupPath} -> ${destination}`);
+        fs.renameSync(backupPath, destination);
+        OrchestratorLogger.log(`[ChildWorkspace] ${folder} cache restored`);
+        restored = true;
+      } catch (error: any) {
+        OrchestratorLogger.logWarning(`[ChildWorkspace] ${folder} cache restore failed: ${error.message}`);
       }
-
-      const entries = fs.readdirSync(libraryBackup);
-      if (entries.length === 0) {
-        OrchestratorLogger.log(`[ChildWorkspace] Library cache at ${libraryBackup} is empty`);
-        fs.rmSync(libraryBackup, { recursive: true, force: true });
-
-        return false;
-      }
-
-      // Remove existing Library directory if present
-      if (fs.existsSync(libraryDestination)) {
-        fs.rmSync(libraryDestination, { recursive: true, force: true });
-      }
-
-      // Atomic move
-      OrchestratorLogger.log(`[ChildWorkspace] Restoring Library cache: ${libraryBackup} -> ${libraryDestination}`);
-      fs.renameSync(libraryBackup, libraryDestination);
-      OrchestratorLogger.log(`[ChildWorkspace] Library cache restored`);
-
-      return true;
-    } catch (error: any) {
-      OrchestratorLogger.logWarning(`[ChildWorkspace] Library cache restore failed: ${error.message}`);
-
-      return false;
     }
+
+    return restored;
   }
 
   /**
-   * Save Library folder to a separate cache location for independent restore.
-   * Moves Library/ out of the workspace before workspace save.
+   * Save engine cache folders to separate cache locations.
+   * Moves each folder out of the workspace before workspace save.
    *
-   * @param projectPath - Path to the workspace containing Library/
+   * @param projectPath - Path to the workspace containing cache folders
    * @param config - Child workspace configuration
    */
   private static saveLibraryCache(projectPath: string, config: ChildWorkspaceConfig): void {
-    const libraryPath = path.join(projectPath, 'Library');
-    const libraryBackup = ChildWorkspaceService.resolveLibraryBackupPath(config);
+    for (const folder of getEngine().cacheFolders) {
+      const folderPath = path.join(projectPath, folder);
+      const backupPath = ChildWorkspaceService.resolveCacheFolderBackupPath(config, folder);
 
-    try {
-      if (!fs.existsSync(libraryPath)) {
-        OrchestratorLogger.log(`[ChildWorkspace] No Library folder to cache`);
+      try {
+        if (!fs.existsSync(folderPath)) {
+          OrchestratorLogger.log(`[ChildWorkspace] No ${folder} folder to cache`);
+          continue;
+        }
 
-        return;
+        const entries = fs.readdirSync(folderPath);
+        if (entries.length === 0) {
+          OrchestratorLogger.log(`[ChildWorkspace] ${folder} folder is empty, skipping cache`);
+          continue;
+        }
+
+        // Ensure parent of backup path exists
+        const backupParent = path.dirname(backupPath);
+        if (!fs.existsSync(backupParent)) {
+          fs.mkdirSync(backupParent, { recursive: true });
+        }
+
+        // Remove existing backup
+        if (fs.existsSync(backupPath)) {
+          fs.rmSync(backupPath, { recursive: true, force: true });
+        }
+
+        // Atomic move
+        OrchestratorLogger.log(`[ChildWorkspace] Caching ${folder}: ${folderPath} -> ${backupPath}`);
+        fs.renameSync(folderPath, backupPath);
+        OrchestratorLogger.log(`[ChildWorkspace] ${folder} cached separately`);
+      } catch (error: any) {
+        OrchestratorLogger.logWarning(`[ChildWorkspace] ${folder} cache save failed: ${error.message}`);
       }
-
-      const entries = fs.readdirSync(libraryPath);
-      if (entries.length === 0) {
-        OrchestratorLogger.log(`[ChildWorkspace] Library folder is empty, skipping cache`);
-
-        return;
-      }
-
-      // Ensure parent of backup path exists
-      const backupParent = path.dirname(libraryBackup);
-      if (!fs.existsSync(backupParent)) {
-        fs.mkdirSync(backupParent, { recursive: true });
-      }
-
-      // Remove existing Library backup
-      if (fs.existsSync(libraryBackup)) {
-        fs.rmSync(libraryBackup, { recursive: true, force: true });
-      }
-
-      // Atomic move
-      OrchestratorLogger.log(`[ChildWorkspace] Caching Library: ${libraryPath} -> ${libraryBackup}`);
-      fs.renameSync(libraryPath, libraryBackup);
-      OrchestratorLogger.log(`[ChildWorkspace] Library cached separately`);
-    } catch (error: any) {
-      OrchestratorLogger.logWarning(`[ChildWorkspace] Library cache save failed: ${error.message}`);
     }
   }
 
@@ -324,14 +326,18 @@ export class ChildWorkspaceService {
   }
 
   /**
-   * Resolve the Library backup path from config, using a default if not overridden.
+   * Resolve the backup path for a specific cache folder.
+   * Uses libraryBackupPath from config for backward compatibility with the first cache folder.
    */
-  private static resolveLibraryBackupPath(config: ChildWorkspaceConfig): string {
-    if (config.libraryBackupPath) {
+  private static resolveCacheFolderBackupPath(config: ChildWorkspaceConfig, folder: string): string {
+    // For backward compat: if libraryBackupPath is set and this is the first cache folder, use it
+    if (config.libraryBackupPath && folder === getEngine().cacheFolders[0]) {
       return config.libraryBackupPath;
     }
 
-    return path.join(config.parentCacheRoot, `${config.workspaceName}-Library`);
+    const safeName = folder.replace(/[^a-zA-Z0-9]/g, '-');
+
+    return path.join(config.parentCacheRoot, `${config.workspaceName}-${safeName}`);
   }
 
   /**

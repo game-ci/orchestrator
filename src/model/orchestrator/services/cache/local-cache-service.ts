@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { OrchestratorSystem } from '../core/orchestrator-system';
 import OrchestratorLogger from '../core/orchestrator-logger';
+import { getEngine } from '../../../engine';
 
 export class LocalCacheService {
   /**
@@ -31,22 +32,59 @@ export class LocalCacheService {
   }
 
   /**
-   * Restore Unity Library cache from the local filesystem.
-   * Returns true if cache was restored, false on cache miss.
+   * Restore engine-specific cache folders from the local filesystem.
+   * Iterates over getEngine().cacheFolders (e.g. ['Library'] for Unity).
+   * Returns true if any cache was restored.
    */
+  static async restoreEngineCache(projectPath: string, cacheRoot: string, cacheKey: string): Promise<boolean> {
+    let restored = false;
+    for (const folder of getEngine().cacheFolders) {
+      if (await LocalCacheService.restoreCacheFolder(projectPath, cacheRoot, cacheKey, folder)) {
+        restored = true;
+      }
+    }
+
+    return restored;
+  }
+
+  /** @deprecated Use restoreEngineCache() — kept for backward compatibility */
   static async restoreLibraryCache(projectPath: string, cacheRoot: string, cacheKey: string): Promise<boolean> {
-    const cachePath = path.join(cacheRoot, cacheKey, 'Library');
+    return LocalCacheService.restoreEngineCache(projectPath, cacheRoot, cacheKey);
+  }
+
+  /**
+   * Save engine-specific cache folders to the local cache.
+   * Iterates over getEngine().cacheFolders (e.g. ['Library'] for Unity).
+   */
+  static async saveEngineCache(projectPath: string, cacheRoot: string, cacheKey: string): Promise<void> {
+    for (const folder of getEngine().cacheFolders) {
+      await LocalCacheService.saveCacheFolder(projectPath, cacheRoot, cacheKey, folder);
+    }
+  }
+
+  /** @deprecated Use saveEngineCache() — kept for backward compatibility */
+  static async saveLibraryCache(projectPath: string, cacheRoot: string, cacheKey: string): Promise<void> {
+    return LocalCacheService.saveEngineCache(projectPath, cacheRoot, cacheKey);
+  }
+
+  private static async restoreCacheFolder(
+    projectPath: string,
+    cacheRoot: string,
+    cacheKey: string,
+    folder: string,
+  ): Promise<boolean> {
+    const cachePath = path.join(cacheRoot, cacheKey, folder);
 
     try {
       if (!fs.existsSync(cachePath)) {
-        OrchestratorLogger.log(`[LocalCache] Library cache miss: ${cachePath}`);
+        OrchestratorLogger.log(`[LocalCache] ${folder} cache miss: ${cachePath}`);
 
         return false;
       }
 
       const files = fs.readdirSync(cachePath).filter((f) => f.endsWith('.tar'));
       if (files.length === 0) {
-        OrchestratorLogger.log(`[LocalCache] Library cache miss (no tar files): ${cachePath}`);
+        OrchestratorLogger.log(`[LocalCache] ${folder} cache miss (no tar files): ${cachePath}`);
 
         return false;
       }
@@ -63,59 +101,61 @@ export class LocalCacheService {
       }
 
       const tarPath = path.join(cachePath, latestFile);
-      const libraryDest = path.join(projectPath, 'Library');
+      const dest = path.join(projectPath, folder);
 
       // Ensure destination exists
-      fs.mkdirSync(libraryDest, { recursive: true });
+      fs.mkdirSync(dest, { recursive: true });
 
-      OrchestratorLogger.log(`[LocalCache] Library cache hit: restoring from ${tarPath}`);
+      OrchestratorLogger.log(`[LocalCache] ${folder} cache hit: restoring from ${tarPath}`);
       await OrchestratorSystem.Run(`tar -xf "${tarPath}" -C "${projectPath}"`, true);
-      OrchestratorLogger.log(`[LocalCache] Library cache restored successfully`);
+      OrchestratorLogger.log(`[LocalCache] ${folder} cache restored successfully`);
 
       return true;
     } catch (error: any) {
-      OrchestratorLogger.logWarning(`[LocalCache] Library cache restore failed: ${error.message}`);
+      OrchestratorLogger.logWarning(`[LocalCache] ${folder} cache restore failed: ${error.message}`);
 
       return false;
     }
   }
 
-  /**
-   * Save Unity Library folder to the local cache as a tar archive.
-   * Keeps only the latest 2 cache entries.
-   */
-  static async saveLibraryCache(projectPath: string, cacheRoot: string, cacheKey: string): Promise<void> {
-    const libraryPath = path.join(projectPath, 'Library');
+  private static async saveCacheFolder(
+    projectPath: string,
+    cacheRoot: string,
+    cacheKey: string,
+    folder: string,
+  ): Promise<void> {
+    const folderPath = path.join(projectPath, folder);
 
     try {
-      if (!fs.existsSync(libraryPath)) {
-        OrchestratorLogger.log(`[LocalCache] Library folder does not exist, skipping save`);
+      if (!fs.existsSync(folderPath)) {
+        OrchestratorLogger.log(`[LocalCache] ${folder} folder does not exist, skipping save`);
 
         return;
       }
 
-      const entries = fs.readdirSync(libraryPath);
+      const entries = fs.readdirSync(folderPath);
       if (entries.length === 0) {
-        OrchestratorLogger.log(`[LocalCache] Library folder is empty, skipping save`);
+        OrchestratorLogger.log(`[LocalCache] ${folder} folder is empty, skipping save`);
 
         return;
       }
 
-      const cachePath = path.join(cacheRoot, cacheKey, 'Library');
+      const cachePath = path.join(cacheRoot, cacheKey, folder);
       fs.mkdirSync(cachePath, { recursive: true });
 
       const timestamp = Date.now();
-      const tarName = `lib-${timestamp}.tar`;
+      const prefix = folder.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase();
+      const tarName = `${prefix}-${timestamp}.tar`;
       const tarPath = path.join(cachePath, tarName);
 
-      OrchestratorLogger.log(`[LocalCache] Saving Library cache to ${tarPath}`);
-      await OrchestratorSystem.Run(`tar -cf "${tarPath}" -C "${projectPath}" Library`, true);
-      OrchestratorLogger.log(`[LocalCache] Library cache saved successfully`);
+      OrchestratorLogger.log(`[LocalCache] Saving ${folder} cache to ${tarPath}`);
+      await OrchestratorSystem.Run(`tar -cf "${tarPath}" -C "${projectPath}" "${folder}"`, true);
+      OrchestratorLogger.log(`[LocalCache] ${folder} cache saved successfully`);
 
       // Clean up old entries - keep latest 2
       await LocalCacheService.cleanupOldEntries(cachePath, 2);
     } catch (error: any) {
-      OrchestratorLogger.logWarning(`[LocalCache] Library cache save failed: ${error.message}`);
+      OrchestratorLogger.logWarning(`[LocalCache] ${folder} cache save failed: ${error.message}`);
     }
   }
 

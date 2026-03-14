@@ -5,6 +5,7 @@ import OrchestratorEnvironmentVariable from '../../options/orchestrator-environm
 import OrchestratorSecret from '../../options/orchestrator-secret';
 import Orchestrator from '../../orchestrator';
 import OrchestratorLogger from '../../services/core/orchestrator-logger';
+import { getEngine } from '../../../engine';
 
 class KubernetesJobSpecFactory {
   static getJobSpec(
@@ -157,7 +158,7 @@ class KubernetesJobSpecFactory {
                     command: [
                       '/bin/sh',
                       '-c',
-                      'sleep 60; cd /data/builder/action/steps && chmod +x /steps/return_license.sh 2>/dev/null || true; /steps/return_license.sh 2>/dev/null || true',
+                      `sleep 60; ${getEngine().preStopCommand || 'true'}`,
                     ],
                   },
                 },

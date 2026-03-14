@@ -49,7 +49,7 @@ yarn game-ci --help   # Run CLI locally via ts-node
 - `.github/workflows/test.yml` — unit tests
 - `.github/workflows/ci.yml` — caller workflow for test + integrity
 - `.github/workflows/orchestrator-integrity.yml` — integration tests (AWS via LocalStack, K8s via k3d)
-- `.github/workflows/release-cli.yml` — CLI binary releases
+- `.github/workflows/release-cli.yml` — CLI binary releases (npm publish is not yet active — no `NPM_TOKEN` secret configured)
 
 ## Conventions
 

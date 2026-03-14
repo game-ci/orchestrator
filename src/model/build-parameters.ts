@@ -12,8 +12,13 @@
 import * as core from '@actions/core';
 import { Cli } from './cli/cli';
 import Input from './input';
+import { initEngine } from './engine';
 
 class BuildParameters {
+  // ── engine ─────────────────────────────────────────────────────────
+  engine!: string;
+  enginePlugin!: string;
+
   // ── identity ────────────────────────────────────────────────────────
   editorVersion!: string;
   customImage!: string;
@@ -220,6 +225,12 @@ class BuildParameters {
     p.dockerMemoryLimit = '';
     p.dockerIsolationMode = '';
     p.gitPrivateToken = Input.getInput('gitPrivateToken') || process.env.GIT_PRIVATE_TOKEN || '';
+    p.engine = Input.getInput('engine') || 'unity';
+    p.enginePlugin = Input.getInput('enginePlugin') || '';
+
+    // Initialize the engine plugin (Unity is built-in, others require enginePlugin source)
+    initEngine(p.engine, p.enginePlugin || undefined);
+
     p.orchestratorRepoName =
       Input.getInput('orchestratorRepoName') || process.env.GITHUB_REPOSITORY || 'game-ci/unity-builder';
     p.orchestratorBranch = Input.getInput('orchestratorBranch') || 'main';
