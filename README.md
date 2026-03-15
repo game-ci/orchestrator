@@ -2,7 +2,7 @@
 
 Build orchestration engine for [Game CI](https://game.ci). Dispatches game engine builds to cloud infrastructure, manages their lifecycle, and streams results back to your CI pipeline or terminal.
 
-**Engine agnostic** — Unity is built-in, with a plugin system for Godot, Unreal, and custom engines. **Infrastructure agnostic** — choose from 9 built-in providers or write your own in any language.
+**Engine agnostic** — Unity is built-in, with a plugin system for Godot, Unreal, and custom engines. **Infrastructure agnostic** — choose from 10 built-in providers or write your own in any language.
 
 ```mermaid
 flowchart LR
@@ -15,7 +15,7 @@ flowchart LR
     P --> S["Services<br/>(cache, sync, hooks, output)"]
   end
   subgraph targets["Build Target"]
-    C["AWS ECS Fargate<br/>Kubernetes<br/>Local Docker<br/>GCP Cloud Run<br/>Azure ACI<br/>GitHub Actions<br/>GitLab CI<br/>Custom (CLI protocol)"]
+    C["AWS ECS Fargate<br/>Kubernetes<br/>Local Docker<br/>Local System<br/>GCP Cloud Run<br/>Azure ACI<br/>GitHub Actions<br/>GitLab CI<br/>Custom (CLI protocol)"]
   end
   A --> E
   S --> C
@@ -26,7 +26,7 @@ flowchart LR
 
 **Engine & Provider Agnosticism**
 - **Engine agnostic** — Unity built-in, with a [plugin system](#engine-agnosticism) for Godot, Unreal, and custom engines
-- **Multi-provider** — AWS Fargate, Kubernetes, GCP Cloud Run, Azure ACI, GitHub Actions, GitLab CI, Ansible, Remote PowerShell, local Docker
+- **Multi-provider** — AWS Fargate, Kubernetes, GCP Cloud Run, Azure ACI, GitHub Actions, GitLab CI, Ansible, Remote PowerShell, local Docker, local system
 - **Custom providers** — write your own provider in any language via the [CLI provider protocol](#custom-providers-via-cli-protocol)
 
 **Build Orchestration**
@@ -293,6 +293,7 @@ See the [Engine Plugins documentation](https://game.ci/docs/github-orchestrator/
 | GCP Cloud Run | `gcp-cloud-run` | Serverless containers on Google Cloud. |
 | Azure ACI | `azure-aci` | Azure Container Instances. |
 | Local Docker | `local-docker` | Run builds in Docker on the current machine. No cloud account needed. |
+| Local System | `local-system` | Run builds directly on the host machine. No Docker or cloud account needed. |
 | GitHub Actions | `github-actions` | Dispatch builds to GitHub Actions workflows. |
 | GitLab CI | `gitlab-ci` | Trigger builds on GitLab CI pipelines. |
 | Ansible | `ansible` | Orchestrate builds via Ansible playbooks. |
@@ -388,6 +389,7 @@ src/
 │   │   │   ├── aws/        #   ECS Fargate, CloudFormation, S3
 │   │   │   ├── k8s/        #   Kubernetes Jobs, PVCs, RBAC
 │   │   │   ├── docker/     #   Local Docker
+│   │   │   ├── local/      #   Local system (no Docker)
 │   │   │   ├── gcp-cloud-run/
 │   │   │   ├── azure-aci/
 │   │   │   ├── github-actions/
