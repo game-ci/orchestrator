@@ -1,37 +1,47 @@
 # @game-ci/orchestrator
 
-Build orchestration engine for [Game CI](https://game.ci). Dispatches game engine builds to cloud infrastructure (AWS, Kubernetes, GCP, Azure), manages their lifecycle, and streams results back to your CI pipeline or terminal.
+Build orchestration engine for [Game CI](https://game.ci). Dispatches game engine builds to cloud infrastructure, manages their lifecycle, and streams results back to your CI pipeline or terminal.
 
-Engine agnostic — Unity is built-in, with a plugin system for Godot, Unreal, and custom engines.
+**Engine agnostic** — Unity is built-in, with a plugin system for Godot, Unreal, and custom engines. **Infrastructure agnostic** — choose from 9 built-in providers or write your own in any language.
 
 ```mermaid
 flowchart LR
-  subgraph trigger["Trigger"]
-    A["GitHub Actions\nGitLab CI\nCLI\nAny CI System"]
+  subgraph input["Input"]
+    A["GitHub Actions<br/>GitLab CI<br/>CLI<br/>Any CI System"]
   end
   subgraph orchestrator["Orchestrator"]
-    B["Engine Plugin\nProvider Selection\nHooks & Middleware\nServices\n(cache, sync, output)"]
+    direction TB
+    E["Engine Plugin"] --> P["Provider Selection"]
+    P --> S["Services<br/>(cache, sync, hooks, output)"]
   end
   subgraph targets["Build Target"]
-    C["AWS ECS Fargate\nKubernetes\nLocal Docker\nGCP Cloud Run\nAzure ACI\nGitHub Actions\nGitLab CI"]
+    C["AWS ECS Fargate<br/>Kubernetes<br/>Local Docker<br/>GCP Cloud Run<br/>Azure ACI<br/>GitHub Actions<br/>GitLab CI<br/>Custom (CLI protocol)"]
   end
-  A --> B --> C
+  A --> E
+  S --> C
   C -- "artifacts + logs" --> A
 ```
 
 ## Features
 
-- **Engine agnostic** — Unity built-in, with a [plugin system](#engine-plugins) for Godot, Unreal, and custom engines
-- **Multi-provider** — AWS Fargate, Kubernetes, GCP Cloud Run, Azure ACI, GitHub Actions dispatch, GitLab CI, Ansible, Remote PowerShell, local Docker
+**Engine & Provider Agnosticism**
+- **Engine agnostic** — Unity built-in, with a [plugin system](#engine-agnosticism) for Godot, Unreal, and custom engines
+- **Multi-provider** — AWS Fargate, Kubernetes, GCP Cloud Run, Azure ACI, GitHub Actions, GitLab CI, Ansible, Remote PowerShell, local Docker
 - **Custom providers** — write your own provider in any language via the [CLI provider protocol](#custom-providers-via-cli-protocol)
+
+**Build Orchestration**
 - **CLI** — `game-ci build`, `game-ci orchestrate`, `game-ci status` from your terminal
 - **GitHub Actions integration** — use as a step in any workflow via [game-ci/unity-builder](https://github.com/game-ci/unity-builder)
 - **Container hooks** — composable pre/post-build scripts (S3 upload, Steam deploy, rclone sync)
-- **Middleware pipeline** — trigger-aware composable hooks for advanced build customization
+- **Middleware pipeline** — trigger-aware composable hooks with phase, provider, and platform filters
+
+**Performance & Reliability**
 - **Caching** — engine-aware asset caching, retained workspaces, local cache layer
 - **Incremental sync** — transfer only changed files to build containers
 - **Hot runner** — keep build environments warm for sub-minute iteration
-- **Build reliability** — automatic retries, health checks, failure recovery
+- **Build reliability** — automatic retries, health checks, provider fallback, failure recovery
+
+**Outputs & Observability**
 - **Test workflows** — structured test execution with result parsing and reporting
 - **LFS support** — efficient Git LFS handling for large assets
 - **Artifact management** — collect, upload, and distribute build outputs
@@ -99,36 +109,100 @@ game-ci orchestrate \
   --targetPlatform StandaloneLinux64
 ```
 
-## Engine Plugins
+## Engine Agnosticism
 
-The orchestrator is engine agnostic. Unity ships as a built-in plugin, and other engines plug in via the `EnginePlugin` interface — a minimal config that tells the orchestrator which folders to cache and what to run on container shutdown.
+The orchestrator is fully engine agnostic. No game engine logic is hardcoded into the core — instead, engine-specific behavior is provided through a plugin system. Unity ships as a built-in plugin, and other engines (Godot, Unreal, custom) plug in through the same `EnginePlugin` interface.
 
 ```mermaid
 flowchart TD
   subgraph plugins["Engine Plugins"]
-    U["Unity (built-in)\ncacheFolders: Library"]
-    G["Godot\ncacheFolders: .godot/imported"]
-    X["Your Engine\ncacheFolders: ..."]
+    U["Unity (built-in)<br/>cacheFolders: Library<br/>preStop: return license"]
+    G["Godot<br/>cacheFolders: .godot/imported,<br/>.godot/shader_cache"]
+    R["Unreal<br/>cacheFolders: DerivedDataCache,<br/>Intermediate"]
+    X["Your Engine<br/>cacheFolders: ..."]
   end
-  subgraph orch["Orchestrator"]
-    O["Caching\nContainer lifecycle\nProvider dispatch"]
+  subgraph core["Orchestrator Core"]
+    C["Cache Service"]
+    L["Container Lifecycle"]
+    W["Build Workflow"]
+    P["Provider Dispatch"]
   end
-  U --> O
-  G --> O
-  X --> O
+  U & G & R & X --> C & L & W
+  W --> P
 ```
+
+### Why Engine Agnostic?
+
+Game CI started as a Unity-only tool. As the project grew, users wanted support for Godot, Unreal, and custom engines. Rather than hardcoding each engine, the orchestrator delegates all engine-specific behavior to plugins. The core handles what's universal — caching, container lifecycle, provider dispatch, hooks, and artifact management — while plugins supply the engine-specific details.
+
+This means:
+- **Adding a new engine** doesn't require changing the orchestrator
+- **Engine-specific caching** is automatic — each plugin declares its own cache folders
+- **Container lifecycle hooks** (like Unity license cleanup) are engine-configurable
+- **All orchestrator services** (sync, hot runner, reliability, etc.) work with any engine
 
 ### EnginePlugin Interface
 
+The interface is intentionally minimal — typically 3-5 lines:
+
 ```typescript
 interface EnginePlugin {
-  name: string;            // 'unity', 'godot', 'unreal', etc.
-  cacheFolders: string[];  // folders to cache between builds
-  preStopCommand?: string; // shell command for container shutdown (optional)
+  /** Engine identifier: 'unity', 'godot', 'unreal', etc. */
+  name: string;
+
+  /** Folders to cache between builds, relative to projectPath */
+  cacheFolders: string[];
+
+  /** Shell command for container shutdown — e.g. license cleanup (optional) */
+  preStopCommand?: string;
 }
 ```
 
-### Using a Non-Unity Engine
+| Field | Purpose | Example |
+| --- | --- | --- |
+| `name` | Identifies the engine throughout the orchestrator | `'godot'` |
+| `cacheFolders` | Folders preserved between builds to speed up iteration | `['.godot/imported', '.godot/shader_cache']` |
+| `preStopCommand` | Runs during container shutdown (e.g. Kubernetes preStop hook, 90s grace period) | `'cleanup-license.sh'` |
+
+### How Plugins Integrate
+
+Engine plugins feed into multiple orchestrator services:
+
+```mermaid
+flowchart LR
+  EP["EnginePlugin<br/>(name, cacheFolders,<br/>preStopCommand)"]
+  EP --> CS["Cache Service<br/>Save/restore engine<br/>cache folders"]
+  EP --> CW["Child Workspaces<br/>Isolated builds with<br/>per-engine caching"]
+  EP --> BW["Build Workflow<br/>Cache tar commands<br/>per folder"]
+  EP --> K8["K8s Job Spec<br/>preStop lifecycle<br/>hook"]
+```
+
+- **Cache Service** — iterates `cacheFolders` to save/restore between builds
+- **Child Workspaces** — creates isolated workspaces with engine-specific caches
+- **Build Workflow** — generates cache initialization commands for each folder
+- **Kubernetes preStop** — executes `preStopCommand` during pod shutdown (90s grace period)
+
+### Built-in: Unity
+
+Unity ships as the default plugin. No configuration needed:
+
+```typescript
+// Built into the orchestrator
+const UnityPlugin: EnginePlugin = {
+  name: 'unity',
+  cacheFolders: ['Library'],
+  preStopCommand: 'return_license.sh',
+};
+```
+
+```bash
+# Unity is the default — just build
+game-ci build --targetPlatform StandaloneLinux64
+```
+
+### Using Other Engines
+
+Specify `--engine` and `--engine-plugin` to use a non-Unity engine:
 
 ```yaml
 # GitHub Actions
@@ -149,7 +223,24 @@ game-ci build \
 
 ### Plugin Sources
 
-Plugins can be loaded from three sources:
+Plugins can be loaded from three sources, so you can write them in any language:
+
+```mermaid
+flowchart LR
+  subgraph sources["Plugin Sources"]
+    direction TB
+    NPM["NPM Module<br/>TypeScript / JavaScript"]
+    CLI["CLI Executable<br/>Any language"]
+    DOC["Docker Image<br/>Any language"]
+  end
+  subgraph loader["Engine Loader"]
+    L["initEngine()"]
+  end
+  NPM -- "require()" --> L
+  CLI -- "spawn + JSON stdout" --> L
+  DOC -- "docker run + JSON stdout" --> L
+  L --> EP["Active EnginePlugin"]
+```
 
 | Source | Format | Example |
 | --- | --- | --- |
@@ -159,17 +250,37 @@ Plugins can be loaded from three sources:
 
 ### Writing a Plugin
 
-A complete engine plugin is typically 3-5 lines:
+**NPM module** (TypeScript/JavaScript) — export an `EnginePlugin` object:
 
 ```typescript
-// NPM package: index.ts
+// index.ts
 export default {
   name: 'godot',
   cacheFolders: ['.godot/imported', '.godot/shader_cache'],
 };
 ```
 
-For CLI executables, print JSON on stdout when called with `get-engine-config`. For Docker images, `docker run --rm <image> get-engine-config` must print JSON config.
+**CLI executable** (any language) — print JSON on stdout when called with `get-engine-config`:
+
+```bash
+#!/bin/bash
+echo '{"name":"godot","cacheFolders":[".godot/imported",".godot/shader_cache"]}'
+```
+
+```python
+#!/usr/bin/env python3
+import json, sys
+if sys.argv[1] == "get-engine-config":
+    json.dump({"name": "godot", "cacheFolders": [".godot/imported"]}, sys.stdout)
+```
+
+**Docker image** — `docker run --rm <image> get-engine-config` must print JSON config:
+
+```dockerfile
+FROM alpine
+COPY engine-config.sh /usr/local/bin/
+ENTRYPOINT ["engine-config.sh"]
+```
 
 See the [Engine Plugins documentation](https://game.ci/docs/github-orchestrator/advanced-topics/engine-plugins) for the full guide.
 
@@ -186,7 +297,9 @@ See the [Engine Plugins documentation](https://game.ci/docs/github-orchestrator/
 | GitLab CI | `gitlab-ci` | Trigger builds on GitLab CI pipelines. |
 | Ansible | `ansible` | Orchestrate builds via Ansible playbooks. |
 | Remote PowerShell | `remote-powershell` | Run builds on remote Windows machines. |
-| **Custom (CLI protocol)** | — | Write your own provider in any language. See below. |
+| **Custom (CLI protocol)** | &mdash; | Write your own provider in any language. See below. |
+
+All providers implement the same `ProviderInterface`, which the orchestrator calls at each phase of the build lifecycle. This means every provider gets the same capabilities — caching, hooks, middleware, artifact management — for free.
 
 ### Custom Providers via CLI Protocol
 
@@ -195,10 +308,10 @@ Write providers in **any language** — Go, Python, Rust, shell, or anything tha
 ```mermaid
 flowchart LR
   subgraph orch["Orchestrator"]
-    O["Spawns your binary\nper subcommand"]
+    O["Spawns your binary<br/>per subcommand"]
   end
   subgraph exec["Your Executable"]
-    E["setup-workflow\nrun-task\ncleanup-workflow\ngarbage-collect\nlist-resources"]
+    E["setup-workflow<br/>run-task<br/>cleanup-workflow<br/>garbage-collect<br/>list-resources"]
   end
   O -- "argv[1] + JSON stdin" --> E
   E -- "JSON stdout" --> O
@@ -231,15 +344,31 @@ See the [CLI Provider Protocol docs](https://game.ci/docs/github-orchestrator/pr
 
 ```mermaid
 flowchart TD
-  A["Input Parsing\nGitHub Actions / CLI / env"] --> B["Engine Plugin\nResolve cache folders & hooks"]
-  B --> C["Provider Selection\nproviderStrategy → backend"]
-  C --> D["Resource Provisioning\nCloudFormation / K8s Jobs / Docker"]
-  D --> E["Build Execution\nLaunch container with project"]
-  E --> F["Hook Execution\npre/post-build hooks"]
-  F --> G["Log Streaming\nReal-time output"]
-  G --> H["Result Collection\nArtifacts, test output"]
-  H --> I["Cleanup\nTear down or retain workspace"]
+  A["Input Parsing<br/>GitHub Actions / CLI / env"] --> B["Engine Plugin<br/>Resolve cache folders & hooks"]
+  B --> C["Provider Selection<br/>providerStrategy → backend"]
+  C --> D["Resource Provisioning<br/>CloudFormation / K8s Jobs / Docker"]
+  D --> E["Build Execution<br/>Launch container with project"]
+  E --> F["Hook Execution<br/>pre/post-build hooks & middleware"]
+  F --> G["Log Streaming<br/>Real-time output"]
+  G --> H["Result Collection<br/>Artifacts, test results"]
+  H --> I["Cleanup<br/>Tear down or retain workspace"]
 ```
+
+### Services
+
+The orchestrator provides composable services that work with any engine and any provider:
+
+| Service | Description |
+| --- | --- |
+| **Cache** | Engine-aware asset caching with local cache layer and retained workspaces |
+| **Hooks** | Container hooks (pre/post-build), command hooks, and trigger-aware middleware pipeline |
+| **Sync** | Incremental file sync — transfer only changed files to build containers |
+| **Hot Runner** | Keep build environments warm between builds for sub-minute iteration |
+| **Reliability** | Automatic retries, health checks, git integrity verification, provider fallback |
+| **Output** | Artifact collection with pluggable upload handlers |
+| **Test Workflow** | Structured test execution with result parsing and reporting |
+| **LFS** | Git LFS tracking, hashing, and storage path mapping |
+| **Core** | Logging, resource tracking, workspace locking, log streaming |
 
 ## Project Structure
 
