@@ -1,6 +1,6 @@
 # @game-ci/orchestrator
 
-Build orchestration engine for [Game CI](https://game.ci). Takes whatever hardware you give it and provides the flexibility, control, and tools to manage all your build workflows across it. Works with any infrastructure — from a local machine to a Kubernetes cluster.
+Workflow orchestration engine for [Game CI](https://game.ci). Takes whatever hardware you give it and provides the flexibility, control, and tools to manage your workloads across it. Builds and testing are first-class, but it can handle any resource-intensive workflow your game or application requires. Works with any infrastructure, any game engine, and any CI system.
 
 ```mermaid
 flowchart LR
