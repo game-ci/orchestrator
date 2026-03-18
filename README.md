@@ -114,21 +114,21 @@ game-ci orchestrate \
 The orchestrator is fully engine agnostic. No game engine logic is hardcoded into the core — instead, engine-specific behavior is provided through a plugin system. Unity ships as a built-in plugin, and other engines (Godot, Unreal, custom) plug in through the same `EnginePlugin` interface.
 
 ```mermaid
-flowchart TD
+flowchart LR
   subgraph plugins["Engine Plugins"]
-    U["Unity (built-in)<br/>cacheFolders: Library<br/>preStop: return license"]
-    G["Godot<br/>cacheFolders: .godot/imported,<br/>.godot/shader_cache"]
-    R["Unreal<br/>cacheFolders: DerivedDataCache,<br/>Intermediate"]
-    X["Your Engine<br/>cacheFolders: ..."]
+    direction TB
+    U["Unity (built-in)"]
+    G["Godot"]
+    R["Unreal"]
+    X["Your Engine"]
   end
   subgraph core["Orchestrator Core"]
-    C["Cache Service"]
-    L["Container Lifecycle"]
-    W["Build Workflow"]
+    direction TB
+    EP["EnginePlugin Interface"]
+    S["Cache · Lifecycle · Workflow · Hooks"]
     P["Provider Dispatch"]
   end
-  U & G & R & X --> C & L & W
-  W --> P
+  plugins --> EP --> S --> P
 ```
 
 ### Why Engine Agnostic?
