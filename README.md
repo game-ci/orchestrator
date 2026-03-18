@@ -102,7 +102,7 @@ game-ci build --targetPlatform StandaloneLinux64
 game-ci build --engine godot --engine-plugin @game-ci/godot-engine
 ```
 
-Plugins can be loaded from NPM packages, CLI executables (any language), or Docker images. See the [Engine Plugins guide](https://game.ci/docs/github-orchestrator/advanced-topics/engine-plugins) for details on writing your own.
+Plugins can be loaded from NPM packages, CLI executables (any language), or Docker images. See the [Engine Plugins guide](docs/engine-plugins.md) for details on writing your own.
 
 ## Providers
 
@@ -145,7 +145,7 @@ game-ci build \
   --targetPlatform StandaloneLinux64
 ```
 
-See the [CLI Provider Protocol docs](https://game.ci/docs/github-orchestrator/providers/cli-provider-protocol) for the full specification.
+See the [CLI Provider Protocol docs](docs/cli-provider-protocol.md) for the full specification.
 
 ## Development
 
@@ -161,12 +161,10 @@ Requires Node.js >= 20 and Yarn 1.x.
 
 ## Documentation
 
-- [Getting Started](https://game.ci/docs/github-orchestrator/getting-started)
-- [AWS Examples](https://game.ci/docs/github-orchestrator/examples/aws)
-- [Kubernetes Examples](https://game.ci/docs/github-orchestrator/examples/kubernetes)
-- [CLI Guide](https://game.ci/docs/github-orchestrator/cli/getting-started)
-- [Provider Setup Guides](https://game.ci/docs/github-orchestrator/providers/overview)
-- [Engine Plugins](https://game.ci/docs/github-orchestrator/advanced-topics/engine-plugins)
+- [Engine Plugins](docs/engine-plugins.md)
+- [CLI Provider Protocol](docs/cli-provider-protocol.md)
+- [Services](docs/services.md)
+- [Provider Loader & Dynamic Loading](src/model/orchestrator/providers/README.md)
 
 ## Related
 
