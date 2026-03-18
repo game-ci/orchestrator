@@ -1,6 +1,6 @@
 # @game-ci/orchestrator
 
-Build orchestration engine for [Game CI](https://game.ci). Dispatches game engine builds to cloud infrastructure, manages their lifecycle, and streams results back to your CI pipeline or terminal.
+Build orchestration engine for [Game CI](https://game.ci). Dispatches game engine builds to any infrastructure (cloud, self-hosted, or local), manages their lifecycle, and streams results back to your CI pipeline or terminal.
 
 ```mermaid
 flowchart LR
