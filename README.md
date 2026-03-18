@@ -2,6 +2,8 @@
 
 Workflow orchestration engine for [Game CI](https://game.ci). Takes whatever machines you give it and provides the flexibility, control, and tools to manage your workloads across it. Builds and testing are first-class, but it can handle any resource-intensive workflow your game or application requires. Works with any infrastructure, any game engine, and any CI system.
 
+Massive time savings are possible — especially for large projects — through engine-aware caching, incremental sync, and retained workspaces. Tools that don't work effortlessly together out of the box (S3, Docker, Kubernetes, Git LFS, rclone, cloud providers) come pre-integrated so you don't have to glue them together yourself.
+
 ```mermaid
 flowchart LR
   subgraph input["Input"]
