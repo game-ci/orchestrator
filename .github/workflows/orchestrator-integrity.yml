@@ -3,6 +3,14 @@ name: Integration Tests
 on:
   schedule:
     - cron: '0 3 * * *' # Nightly at 3 AM UTC
+  push:
+    branches: [main]
+    paths:
+      - 'src/model/orchestrator/providers/**'
+      - 'src/model/orchestrator/orchestrator.ts'
+      - 'src/model/orchestrator/workflows/**'
+      - 'src/model/orchestrator/services/**'
+      - '.github/workflows/orchestrator-integrity.yml'
   workflow_dispatch:
     inputs:
       runGithubIntegrationTests:
