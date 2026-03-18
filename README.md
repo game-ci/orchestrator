@@ -2,7 +2,7 @@
 
 Build orchestration engine for [Game CI](https://game.ci). Dispatches game engine builds to cloud infrastructure, manages their lifecycle, and streams results back to your CI pipeline or terminal.
 
-**Engine agnostic** — Unity is built-in, with a plugin system for Godot, Unreal, and custom engines. **Infrastructure agnostic** — choose from 10 built-in providers or write your own in any language.
+**Engine agnostic**: Unity is built-in, with a plugin system for Godot, Unreal, and custom engines. **Infrastructure agnostic**: choose from 10 built-in providers or write your own in any language.
 
 ```mermaid
 flowchart LR
@@ -25,27 +25,27 @@ flowchart LR
 ## Features
 
 **Engine & Provider Agnosticism**
-- **Engine agnostic** — Unity built-in, with a [plugin system](#engine-agnosticism) for Godot, Unreal, and custom engines
-- **Multi-provider** — AWS Fargate, Kubernetes, GCP Cloud Run, Azure ACI, GitHub Actions, GitLab CI, Ansible, Remote PowerShell, local Docker, local system
-- **Custom providers** — write your own provider in any language via the [CLI provider protocol](#custom-providers-via-cli-protocol)
+- **Engine agnostic**: Unity built-in, with a [plugin system](#engine-agnosticism) for Godot, Unreal, and custom engines
+- **Multi-provider**: AWS Fargate, Kubernetes, GCP Cloud Run, Azure ACI, GitHub Actions, GitLab CI, Ansible, Remote PowerShell, local Docker, local system
+- **Custom providers**: write your own provider in any language via the [CLI provider protocol](#custom-providers-via-cli-protocol)
 
 **Build Orchestration**
-- **CLI** — `game-ci build`, `game-ci orchestrate`, `game-ci status` from your terminal
-- **GitHub Actions integration** — use as a step in any workflow via [game-ci/unity-builder](https://github.com/game-ci/unity-builder)
-- **Container hooks** — composable pre/post-build scripts (S3 upload, Steam deploy, rclone sync)
-- **Middleware pipeline** — trigger-aware composable hooks with phase, provider, and platform filters
+- **CLI**: `game-ci build`, `game-ci orchestrate`, `game-ci status` from your terminal
+- **GitHub Actions integration**: use as a step in any workflow via [game-ci/unity-builder](https://github.com/game-ci/unity-builder)
+- **Container hooks**: composable pre/post-build scripts (S3 upload, Steam deploy, rclone sync)
+- **Middleware pipeline**: trigger-aware composable hooks with phase, provider, and platform filters
 
 **Performance & Reliability**
-- **Caching** — engine-aware asset caching, retained workspaces, local cache layer
-- **Incremental sync** — transfer only changed files to build containers
-- **Hot runner** — keep build environments warm for sub-minute iteration
-- **Build reliability** — automatic retries, health checks, provider fallback, failure recovery
+- **Caching**: engine-aware asset caching, retained workspaces, local cache layer
+- **Incremental sync**: transfer only changed files to build containers
+- **Hot runner**: keep build environments warm for sub-minute iteration
+- **Build reliability**: automatic retries, health checks, provider fallback, failure recovery
 
 **Outputs & Observability**
-- **Test workflows** — structured test execution with result parsing and reporting
-- **LFS support** — efficient Git LFS handling for large assets
-- **Artifact management** — collect, upload, and distribute build outputs
-- **Log streaming** — real-time build logs via Kinesis (AWS) or pod logs (K8s)
+- **Test workflows**: structured test execution with result parsing and reporting
+- **LFS support**: efficient Git LFS handling for large assets
+- **Artifact management**: collect, upload, and distribute build outputs
+- **Log streaming**: real-time build logs via Kinesis (AWS) or pod logs (K8s)
 
 ## Install
 
@@ -133,13 +133,14 @@ flowchart TD
 
 ### Why Engine Agnostic?
 
-Game CI started as a Unity-only tool. As the project grew, users wanted support for Godot, Unreal, and custom engines. Rather than hardcoding each engine, the orchestrator delegates all engine-specific behavior to plugins. The core handles what's universal — caching, container lifecycle, provider dispatch, hooks, and artifact management — while plugins supply the engine-specific details.
+Game CI started as a Unity-only tool. The orchestrator's Docker-based workflow model naturally generalizes to any engine: builds run in isolated containers with deterministic environments, engine-aware caching, incremental sync, and composable hooks. Rather than hardcoding each engine, the orchestrator delegates all engine-specific behavior to plugins. The core handles what's universal (caching, container lifecycle, provider dispatch, hooks, artifact management) while plugins supply engine-specific details.
 
 This means:
 - **Adding a new engine** doesn't require changing the orchestrator
-- **Engine-specific caching** is automatic — each plugin declares its own cache folders
+- **Engine-specific caching** is automatic: each plugin declares its own cache folders
 - **Container lifecycle hooks** (like Unity license cleanup) are engine-configurable
-- **All orchestrator services** (sync, hot runner, reliability, etc.) work with any engine
+- **All orchestrator services** (sync, hot runner, reliability, middleware) work with any engine
+- **Workflow flexibility**: the same build pipeline supports local Docker, cloud containers, and bare-metal execution across any CI system
 
 ### EnginePlugin Interface
 
