@@ -5,6 +5,7 @@ import { hideBin } from 'yargs/helpers';
 import buildCommand from './cli/commands/build';
 import activateCommand from './cli/commands/activate';
 import orchestrateCommand from './cli/commands/orchestrate';
+import serveCommand from './cli/commands/serve';
 import statusCommand from './cli/commands/status';
 import versionCommand from './cli/commands/version';
 import updateCommand from './cli/commands/update';
@@ -16,6 +17,7 @@ const cli = yargs(hideBin(process.argv))
   .command(buildCommand)
   .command(activateCommand)
   .command(orchestrateCommand)
+  .command(serveCommand)
   .command(statusCommand)
   .command(versionCommand)
   .command(updateCommand)
