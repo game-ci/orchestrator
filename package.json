@@ -4,6 +4,16 @@
   "description": "Orchestrator for game-ci — remote build orchestration, provider management, and enterprise services.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./cli-plugin": {
+      "types": "./dist/cli-plugin/index.d.ts",
+      "default": "./dist/cli-plugin/index.js"
+    }
+  },
   "bin": {
     "game-ci": "./dist/cli.js"
   },
