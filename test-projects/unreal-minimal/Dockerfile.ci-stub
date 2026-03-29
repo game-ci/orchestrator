@@ -1,0 +1,53 @@
+# Lightweight stub that mimics the UE build interface for CI validation.
+# This does NOT contain Unreal Engine — it validates that the orchestrator
+# and CLI can correctly invoke UE build commands and produce artifacts.
+#
+# For real UE builds, use a proper UE image via workflow_dispatch.
+FROM alpine:3.19
+
+RUN apk add --no-cache bash jq
+
+# Create a stub RunUAT.sh that validates the build pipeline
+RUN mkdir -p /home/ue4/UnrealEngine/Engine/Build/BatchFiles && \
+    cat > /home/ue4/UnrealEngine/Engine/Build/BatchFiles/RunUAT.sh <<'SCRIPT'
+#!/bin/bash
+echo "=== UE Build Automation Tool (CI Stub) ==="
+echo "Arguments: $@"
+
+# Parse arguments to find project path
+PROJECT=""
+for arg in "$@"; do
+  case "$arg" in
+    -project=*) PROJECT="${arg#-project=}" ;;
+  esac
+done
+
+if [ -n "$PROJECT" ] && [ -f "$PROJECT" ]; then
+  echo "Project file found: $PROJECT"
+  cat "$PROJECT"
+  VERSION=$(cat "$PROJECT" | grep -o '"EngineAssociation"[[:space:]]*:[[:space:]]*"[^"]*"' | grep -o '[0-9.]*')
+  echo "Engine version: ${VERSION:-unknown}"
+else
+  echo "Warning: Project file not found at '$PROJECT' (expected in CI stub mode)"
+fi
+
+# Create a fake build artifact to prove the pipeline works
+ARCHIVE_DIR=""
+for arg in "$@"; do
+  case "$arg" in
+    -archivedirectory=*) ARCHIVE_DIR="${arg#-archivedirectory=}" ;;
+  esac
+done
+
+if [ -n "$ARCHIVE_DIR" ]; then
+  mkdir -p "$ARCHIVE_DIR"
+  echo '{"engine":"unreal","version":"'"${VERSION:-5.4}"'","stub":true,"timestamp":"'"$(date -Iseconds)"'"}' > "$ARCHIVE_DIR/build-manifest.json"
+  echo "Build artifact written to $ARCHIVE_DIR/build-manifest.json"
+fi
+
+echo "=== Build completed (stub) ==="
+SCRIPT
+    chmod +x /home/ue4/UnrealEngine/Engine/Build/BatchFiles/RunUAT.sh
+
+WORKDIR /build
+CMD ["bash"]
