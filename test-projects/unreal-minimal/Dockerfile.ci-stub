@@ -1,53 +1,39 @@
-# Lightweight stub that mimics the UE build interface for CI validation.
-# This does NOT contain Unreal Engine — it validates that the orchestrator
-# and CLI can correctly invoke UE build commands and produce artifacts.
+# ─────────────────────────────────────────────────────────────────
+# Mock Unreal Engine Runtime for CI
 #
-# For real UE builds, use a proper UE image via workflow_dispatch.
+# Replicates the real UE container filesystem layout and build tool
+# interfaces (RunUAT.sh, UnrealBuildTool) so game-ci can develop
+# and test against the full UE build pipeline on standard GitHub
+# runners without the 50GB+ real UE image.
+#
+# Matches: UE 5.4 directory layout + AutomationTool CLI interface
+# ─────────────────────────────────────────────────────────────────
 FROM alpine:3.19
 
-RUN apk add --no-cache bash jq
+RUN apk add --no-cache bash jq coreutils findutils
 
-# Create a stub RunUAT.sh that validates the build pipeline
-RUN mkdir -p /home/ue4/UnrealEngine/Engine/Build/BatchFiles && \
-    cat > /home/ue4/UnrealEngine/Engine/Build/BatchFiles/RunUAT.sh <<'SCRIPT'
-#!/bin/bash
-echo "=== UE Build Automation Tool (CI Stub) ==="
-echo "Arguments: $@"
+# Replicate UE directory structure (matches official Epic layout)
+RUN mkdir -p \
+  /home/ue4/UnrealEngine/Engine/Build/BatchFiles \
+  /home/ue4/UnrealEngine/Engine/Binaries/Linux \
+  /home/ue4/UnrealEngine/Engine/Content \
+  /home/ue4/UnrealEngine/Engine/Programs/AutomationTool/Saved/Logs \
+  /home/ue4/UnrealEngine/Engine/Saved
 
-# Parse arguments to find project path
-PROJECT=""
-for arg in "$@"; do
-  case "$arg" in
-    -project=*) PROJECT="${arg#-project=}" ;;
-  esac
-done
+# Copy mock build tools
+COPY mock-ue/RunUAT.sh /home/ue4/UnrealEngine/Engine/Build/BatchFiles/RunUAT.sh
+COPY mock-ue/UnrealBuildTool.sh /home/ue4/UnrealEngine/Engine/Binaries/Linux/UnrealBuildTool
 
-if [ -n "$PROJECT" ] && [ -f "$PROJECT" ]; then
-  echo "Project file found: $PROJECT"
-  cat "$PROJECT"
-  VERSION=$(cat "$PROJECT" | grep -o '"EngineAssociation"[[:space:]]*:[[:space:]]*"[^"]*"' | grep -o '[0-9.]*')
-  echo "Engine version: ${VERSION:-unknown}"
-else
-  echo "Warning: Project file not found at '$PROJECT' (expected in CI stub mode)"
-fi
+RUN chmod +x \
+  /home/ue4/UnrealEngine/Engine/Build/BatchFiles/RunUAT.sh \
+  /home/ue4/UnrealEngine/Engine/Binaries/Linux/UnrealBuildTool
 
-# Create a fake build artifact to prove the pipeline works
-ARCHIVE_DIR=""
-for arg in "$@"; do
-  case "$arg" in
-    -archivedirectory=*) ARCHIVE_DIR="${arg#-archivedirectory=}" ;;
-  esac
-done
-
-if [ -n "$ARCHIVE_DIR" ]; then
-  mkdir -p "$ARCHIVE_DIR"
-  echo '{"engine":"unreal","version":"'"${VERSION:-5.4}"'","stub":true,"timestamp":"'"$(date -Iseconds)"'"}' > "$ARCHIVE_DIR/build-manifest.json"
-  echo "Build artifact written to $ARCHIVE_DIR/build-manifest.json"
-fi
-
-echo "=== Build completed (stub) ==="
-SCRIPT
-    chmod +x /home/ue4/UnrealEngine/Engine/Build/BatchFiles/RunUAT.sh
+# Version marker (matches real UE convention)
+RUN echo '{ "MajorVersion": 5, "MinorVersion": 4, "PatchVersion": 0, "IsLicenseeVersion": false, "BranchName": "++UE5+Release-5.4" }' \
+  > /home/ue4/UnrealEngine/Engine/Build/Build.version
 
 WORKDIR /build
-CMD ["bash"]
+
+# Default: run RunUAT.sh like a real UE container
+ENTRYPOINT ["/home/ue4/UnrealEngine/Engine/Build/BatchFiles/RunUAT.sh"]
+CMD ["-help"]
