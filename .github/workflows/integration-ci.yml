@@ -44,6 +44,7 @@ jobs:
         run: |
           docker run -d \
             --name localstack-main \
+            -v /var/run/docker.sock:/var/run/docker.sock \
             -p 4566:4566 \
             -e SERVICES=s3,cloudformation,ecs,kinesis,cloudwatch,logs,iam,secretsmanager \
             -e DEBUG=0 \
@@ -169,6 +170,7 @@ jobs:
             --name localstack-main \
             --network orchestrator-net \
             --add-host=host.docker.internal:host-gateway \
+            -v /var/run/docker.sock:/var/run/docker.sock \
             -p 4566:4566 \
             -e SERVICES=s3,cloudformation,ecs,kinesis,cloudwatch,logs,iam,secretsmanager \
             -e DEBUG=0 \
