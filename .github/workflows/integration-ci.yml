@@ -48,7 +48,7 @@ jobs:
             -p 4566:4566 \
             -e SERVICES=s3,cloudformation,ecs,kinesis,cloudwatch,logs,iam,secretsmanager \
             -e DEBUG=0 \
-            localstack/localstack:latest
+            localstack/localstack:4
           echo "Waiting for LocalStack to be ready..."
           for i in $(seq 1 60); do
             HEALTH=$(curl -s http://localhost:4566/_localstack/health 2>/dev/null || echo "")
@@ -175,7 +175,7 @@ jobs:
             -e SERVICES=s3,cloudformation,ecs,kinesis,cloudwatch,logs,iam,secretsmanager \
             -e DEBUG=0 \
             -e HOSTNAME_EXTERNAL=localstack-main \
-            localstack/localstack:latest
+            localstack/localstack:4
           echo "Waiting for LocalStack to be ready..."
           for i in $(seq 1 60); do
             HEALTH=$(curl -s http://localhost:4566/_localstack/health 2>/dev/null || echo "")
