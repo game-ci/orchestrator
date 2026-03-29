@@ -131,7 +131,7 @@ jobs:
           node -e "
             const m = require('./test-projects/unreal-minimal/output/build-manifest.json');
             if (m.engine !== 'unreal') throw new Error('wrong engine');
-            if (m.version !== '5.4') throw new Error('wrong version');
+            if (m.engineVersion !== '5.4') throw new Error('wrong version');
             console.log('UE stub build verified:', JSON.stringify(m));
           "
 
