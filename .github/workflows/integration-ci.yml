@@ -41,6 +41,8 @@ jobs:
           cache: 'yarn'
 
       - name: Start LocalStack
+        env:
+          LOCALSTACK_AUTH_TOKEN: ${{ secrets.LOCALSTACK_AUTH_TOKEN }}
         run: |
           docker run -d \
             --name localstack-main \
@@ -48,6 +50,7 @@ jobs:
             -p 4566:4566 \
             -e SERVICES=s3,cloudformation,ecs,kinesis,cloudwatch,logs,iam,secretsmanager \
             -e DEBUG=0 \
+            -e LOCALSTACK_AUTH_TOKEN \
             localstack/localstack:4
           echo "Waiting for LocalStack to be ready..."
           for i in $(seq 1 60); do
@@ -165,6 +168,8 @@ jobs:
           docker network create orchestrator-net
 
       - name: Start LocalStack
+        env:
+          LOCALSTACK_AUTH_TOKEN: ${{ secrets.LOCALSTACK_AUTH_TOKEN }}
         run: |
           docker run -d \
             --name localstack-main \
@@ -175,6 +180,7 @@ jobs:
             -e SERVICES=s3,cloudformation,ecs,kinesis,cloudwatch,logs,iam,secretsmanager \
             -e DEBUG=0 \
             -e HOSTNAME_EXTERNAL=localstack-main \
+            -e LOCALSTACK_AUTH_TOKEN \
             localstack/localstack:4
           echo "Waiting for LocalStack to be ready..."
           for i in $(seq 1 60); do

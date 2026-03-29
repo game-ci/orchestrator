@@ -142,6 +142,8 @@ jobs:
           df -h
 
       - name: Start LocalStack
+        env:
+          LOCALSTACK_AUTH_TOKEN: ${{ secrets.LOCALSTACK_AUTH_TOKEN }}
         run: |
           echo "Starting LocalStack..."
           HOST_IP=$(ip route | grep default | awk '{print $3}')
@@ -154,6 +156,7 @@ jobs:
             -e SERVICES=s3,cloudformation,ecs,kinesis,cloudwatch,logs,efs,ec2,iam,elasticfilesystem,secretsmanager,lambda,events,sts \
             -e DEBUG=0 \
             -e HOSTNAME_EXTERNAL=localstack-main \
+            -e LOCALSTACK_AUTH_TOKEN \
             localstack/localstack:latest || true
           echo "Waiting for LocalStack to be ready..."
           MAX_ATTEMPTS=60
@@ -532,6 +535,8 @@ jobs:
           df -h
 
       - name: Start LocalStack
+        env:
+          LOCALSTACK_AUTH_TOKEN: ${{ secrets.LOCALSTACK_AUTH_TOKEN }}
         run: |
           echo "Starting LocalStack..."
           docker run -d \
@@ -539,6 +544,7 @@ jobs:
             -p 4566:4566 \
             -e SERVICES=s3,cloudformation,ecs,kinesis,cloudwatch,logs,efs,ec2,iam,elasticfilesystem,secretsmanager,lambda,events,sts \
             -e DEBUG=0 \
+            -e LOCALSTACK_AUTH_TOKEN \
             localstack/localstack:latest || true
           echo "Waiting for LocalStack to be ready..."
           MAX_ATTEMPTS=60
@@ -861,6 +867,8 @@ jobs:
           df -h
 
       - name: Start LocalStack (for S3-dependent local-docker tests)
+        env:
+          LOCALSTACK_AUTH_TOKEN: ${{ secrets.LOCALSTACK_AUTH_TOKEN }}
         run: |
           echo "Starting LocalStack for S3-dependent tests..."
           docker run -d \
@@ -868,6 +876,7 @@ jobs:
             -p 4566:4566 \
             -e SERVICES=s3,cloudformation \
             -e DEBUG=0 \
+            -e LOCALSTACK_AUTH_TOKEN \
             localstack/localstack:latest || true
           echo "Waiting for LocalStack to be ready..."
           MAX_ATTEMPTS=60
@@ -1167,6 +1176,8 @@ jobs:
           df -h
 
       - name: Start LocalStack
+        env:
+          LOCALSTACK_AUTH_TOKEN: ${{ secrets.LOCALSTACK_AUTH_TOKEN }}
         run: |
           echo "Starting LocalStack for rclone S3 backend..."
           docker run -d \
@@ -1174,6 +1185,7 @@ jobs:
             -p 4566:4566 \
             -e SERVICES=s3 \
             -e DEBUG=0 \
+            -e LOCALSTACK_AUTH_TOKEN \
             localstack/localstack:latest || true
           echo "Waiting for LocalStack to be ready..."
           MAX_ATTEMPTS=60
