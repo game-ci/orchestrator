@@ -18,58 +18,60 @@ export default async function loadProvider(
 ): Promise<ProviderInterface> {
   OrchestratorLogger.log(`Loading provider: ${providerSource}`);
 
-  // Parse the provider source to determine its type
-  const sourceInfo = parseProviderSource(providerSource);
-  logProviderSource(providerSource, sourceInfo);
+  // Built-in provider map — check this FIRST before URL/npm parsing
+  const providerModuleMap: Record<string, string> = {
+    aws: './aws',
+    'mock-aws': './mock-aws',
+    k8s: './k8s',
+    cli: './cli',
+    test: './test',
+    'local-docker': './docker',
+    'local-system': './local',
+    local: './local',
+    'gcp-cloud-run': './gcp-cloud-run',
+    'azure-aci': './azure-aci',
+  };
 
   let modulePath: string;
   let importedModule: any;
 
   try {
-    // Handle different source types
-    switch (sourceInfo.type) {
-      case 'github': {
-        OrchestratorLogger.log(`Processing GitHub repository: ${sourceInfo.owner}/${sourceInfo.repo}`);
+    if (providerModuleMap[providerSource]) {
+      // Built-in provider — resolve relative to this file
+      modulePath = providerModuleMap[providerSource];
+      OrchestratorLogger.log(`Loading built-in provider: ${providerSource} → ${modulePath}`);
+    } else {
+      // Parse the provider source to determine its type
+      const sourceInfo = parseProviderSource(providerSource);
+      logProviderSource(providerSource, sourceInfo);
 
-        // Ensure the repository is available locally
-        const localRepoPath = await ProviderGitManager.ensureRepositoryAvailable(sourceInfo);
+      // Handle different source types
+      switch (sourceInfo.type) {
+        case 'github': {
+          OrchestratorLogger.log(`Processing GitHub repository: ${sourceInfo.owner}/${sourceInfo.repo}`);
 
-        // Get the path to the provider module within the repository
-        modulePath = ProviderGitManager.getProviderModulePath(sourceInfo, localRepoPath);
+          // Ensure the repository is available locally
+          const localRepoPath = await ProviderGitManager.ensureRepositoryAvailable(sourceInfo);
 
-        OrchestratorLogger.log(`Loading provider from: ${modulePath}`);
-        break;
-      }
+          // Get the path to the provider module within the repository
+          modulePath = ProviderGitManager.getProviderModulePath(sourceInfo, localRepoPath);
 
-      case 'local': {
-        modulePath = sourceInfo.path;
-        OrchestratorLogger.log(`Loading provider from local path: ${modulePath}`);
-        break;
-      }
+          OrchestratorLogger.log(`Loading provider from: ${modulePath}`);
+          break;
+        }
 
-      case 'npm': {
-        modulePath = sourceInfo.packageName;
-        OrchestratorLogger.log(`Loading provider from NPM package: ${modulePath}`);
-        break;
-      }
+        case 'local': {
+          modulePath = sourceInfo.path;
+          OrchestratorLogger.log(`Loading provider from local path: ${modulePath}`);
+          break;
+        }
 
-      default: {
-        // Fallback to built-in providers or direct import
-        const providerModuleMap: Record<string, string> = {
-          aws: './aws',
-          k8s: './k8s',
-          cli: './cli',
-          test: './test',
-          'local-docker': './docker',
-          'local-system': './local',
-          local: './local',
-          'gcp-cloud-run': './gcp-cloud-run',
-          'azure-aci': './azure-aci',
-        };
-
-        modulePath = providerModuleMap[providerSource] || providerSource;
-        OrchestratorLogger.log(`Loading provider from module path: ${modulePath}`);
-        break;
+        case 'npm':
+        default: {
+          modulePath = 'packageName' in sourceInfo ? sourceInfo.packageName : providerSource;
+          OrchestratorLogger.log(`Loading provider from NPM package: ${modulePath}`);
+          break;
+        }
       }
     }
 
@@ -139,7 +141,7 @@ export class ProviderLoader {
    * @returns string[] - Array of available provider names
    */
   static getAvailableProviders(): string[] {
-    return ['aws', 'k8s', 'cli', 'test', 'local-docker', 'local-system', 'local', 'gcp-cloud-run', 'azure-aci'];
+    return ['aws', 'mock-aws', 'k8s', 'cli', 'test', 'local-docker', 'local-system', 'local', 'gcp-cloud-run', 'azure-aci'];
   }
 
   /**

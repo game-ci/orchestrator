@@ -1,34 +1,51 @@
 # Minimal Unreal Engine Test Project
 
-This directory is a placeholder for Unreal Engine CI smoke testing.
+This directory contains a minimal `.uproject` and a **mock Unreal Engine runtime** for CI testing.
 
-## Why a placeholder?
+## Why a mock?
 
-Unreal Engine Docker images are **very large** (10-50+ GB) and require:
-- EULA acceptance
-- Epic Games GitHub access (for source-based images)
-- Or a pre-built custom image
+Real UE Docker images are 35-120GB — too large for GitHub-hosted runners (22GB free). See [Unreal Engine CI Strategy](../../docs/unreal-engine-ci.md) for the full analysis.
 
-This makes automated CI testing impractical for public workflows.
+## What's here
 
-## Manual Testing
+```
+unreal-minimal/
+├── MinimalTest.uproject     # Minimal UE 5.4 project file
+├── Dockerfile.ci-stub       # Docker image with mock UE runtime
+├── mock-ue/
+│   ├── RunUAT.sh            # Mock AutomationTool (full CLI interface)
+│   └── UnrealBuildTool.sh   # Mock compiler driver
+└── README.md
+```
 
-To test the orchestrator with Unreal Engine manually:
+## Mock UE runtime
 
-1. Build or pull an Unreal Engine Docker image (e.g., via `ue4-docker`)
-2. Create a minimal `.uproject`:
-   ```json
-   {
-     "FileVersion": 3,
-     "EngineAssociation": "5.4",
-     "Description": "Minimal CI test",
-     "Modules": []
-   }
-   ```
-3. Run: `game-ci serve --provider-strategy local-docker`
-4. Send a run-task request with the UE image and build commands
+The mock replicates real UE's:
+- **CLI interface** — All `BuildCookRun` arguments (`-build`, `-cook`, `-stage`, `-pak`, `-archive`)
+- **Directory layout** — `/home/ue4/UnrealEngine/Engine/Build/BatchFiles/RunUAT.sh`
+- **Output format** — `AutomationTool exiting with ExitCode=0 (Success)`
+- **Build artifacts** — Binaries, cooked assets, .pak files, staged builds, manifests
 
-## Automated Testing (when UE images are available)
+## Running locally
 
-The `engine-smoke-test.yml` workflow supports an optional Unreal test
-that can be triggered manually with a custom image URL.
+```bash
+# Build the mock UE container
+docker build -t game-ci/ue-mock:latest -f Dockerfile.ci-stub .
+
+# Run a full BuildCookRun pipeline
+docker run --rm -v "$(pwd):/build" -w /build game-ci/ue-mock:latest \
+  BuildCookRun \
+  -project=/build/MinimalTest.uproject \
+  -targetplatform=Linux \
+  -clientconfig=Shipping \
+  -build -cook -stage -pak -archive \
+  -archivedirectory=/build/output \
+  -noP4 -unattended
+
+# Verify output
+cat output/build-manifest.json
+```
+
+## Reporting mock drift
+
+If you find that real UE behaves differently from our mock, please [open an issue](https://github.com/game-ci/orchestrator/issues/new) with the `mock-drift` label describing the difference.

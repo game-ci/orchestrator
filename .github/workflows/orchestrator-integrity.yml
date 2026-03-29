@@ -142,6 +142,8 @@ jobs:
           df -h
 
       - name: Start LocalStack
+        env:
+          LOCALSTACK_AUTH_TOKEN: ${{ secrets.LOCALSTACK_AUTH_TOKEN }}
         run: |
           echo "Starting LocalStack..."
           HOST_IP=$(ip route | grep default | awk '{print $3}')
@@ -154,6 +156,7 @@ jobs:
             -e SERVICES=s3,cloudformation,ecs,kinesis,cloudwatch,logs,efs,ec2,iam,elasticfilesystem,secretsmanager,lambda,events,sts \
             -e DEBUG=0 \
             -e HOSTNAME_EXTERNAL=localstack-main \
+            -e LOCALSTACK_AUTH_TOKEN \
             localstack/localstack:latest || true
           echo "Waiting for LocalStack to be ready..."
           MAX_ATTEMPTS=60
@@ -532,6 +535,8 @@ jobs:
           df -h
 
       - name: Start LocalStack
+        env:
+          LOCALSTACK_AUTH_TOKEN: ${{ secrets.LOCALSTACK_AUTH_TOKEN }}
         run: |
           echo "Starting LocalStack..."
           docker run -d \
@@ -539,6 +544,7 @@ jobs:
             -p 4566:4566 \
             -e SERVICES=s3,cloudformation,ecs,kinesis,cloudwatch,logs,efs,ec2,iam,elasticfilesystem,secretsmanager,lambda,events,sts \
             -e DEBUG=0 \
+            -e LOCALSTACK_AUTH_TOKEN \
             localstack/localstack:latest || true
           echo "Waiting for LocalStack to be ready..."
           MAX_ATTEMPTS=60
@@ -861,6 +867,8 @@ jobs:
           df -h
 
       - name: Start LocalStack (for S3-dependent local-docker tests)
+        env:
+          LOCALSTACK_AUTH_TOKEN: ${{ secrets.LOCALSTACK_AUTH_TOKEN }}
         run: |
           echo "Starting LocalStack for S3-dependent tests..."
           docker run -d \
@@ -868,6 +876,7 @@ jobs:
             -p 4566:4566 \
             -e SERVICES=s3,cloudformation \
             -e DEBUG=0 \
+            -e LOCALSTACK_AUTH_TOKEN \
             localstack/localstack:latest || true
           echo "Waiting for LocalStack to be ready..."
           MAX_ATTEMPTS=60
@@ -1167,6 +1176,8 @@ jobs:
           df -h
 
       - name: Start LocalStack
+        env:
+          LOCALSTACK_AUTH_TOKEN: ${{ secrets.LOCALSTACK_AUTH_TOKEN }}
         run: |
           echo "Starting LocalStack for rclone S3 backend..."
           docker run -d \
@@ -1174,6 +1185,7 @@ jobs:
             -p 4566:4566 \
             -e SERVICES=s3 \
             -e DEBUG=0 \
+            -e LOCALSTACK_AUTH_TOKEN \
             localstack/localstack:latest || true
           echo "Waiting for LocalStack to be ready..."
           MAX_ATTEMPTS=60
@@ -1269,3 +1281,90 @@ jobs:
           docker rm localstack-main 2>/dev/null || true
           docker system prune -af --volumes || true
           df -h
+
+  # ============================================================================
+  # MOCK AWS TESTS (sibling to LocalStack — no external dependencies)
+  # ============================================================================
+  mock-aws-tests:
+    name: Mock AWS Provider Tests
+    runs-on: ubuntu-latest
+    env:
+      PROVIDER_STRATEGY: mock-aws
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'yarn'
+      - run: yarn install --frozen-lockfile
+      - run: yarn build
+
+      # --- Mock AWS unit tests (CloudFormation, ECS, S3, Kinesis, CloudWatch) ---
+      - name: Run mock AWS service tests
+        run: npx jest src/model/orchestrator/providers/mock-aws/mock-aws.test.ts --no-coverage --forceExit
+
+      # --- Mock AWS provider integration (exercises full ProviderInterface) ---
+      - name: Validate mock-aws provider loads
+        run: |
+          node -e "
+            const loadProvider = require('./dist/model/orchestrator/providers/provider-loader').default;
+            const BuildParameters = require('./dist/model/build-parameters').default;
+            const bp = new BuildParameters();
+            bp.awsStackName = 'mock-test-stack';
+            loadProvider('mock-aws', bp).then(provider => {
+              console.log('Mock AWS provider loaded successfully');
+              console.log('Methods:', Object.getOwnPropertyNames(Object.getPrototypeOf(provider)).filter(m => m !== 'constructor'));
+            }).catch(err => {
+              console.error('Failed:', err.message);
+              process.exit(1);
+            });
+          "
+
+      # --- Test full workflow: setup → run task → cleanup ---
+      - name: Test mock-aws full workflow
+        run: |
+          node -e "
+            const loadProvider = require('./dist/model/orchestrator/providers/provider-loader').default;
+            const BuildParameters = require('./dist/model/build-parameters').default;
+
+            async function main() {
+              const bp = new BuildParameters();
+              bp.awsStackName = 'game-ci-mock-integration';
+
+              const provider = await loadProvider('mock-aws', bp);
+
+              // Setup
+              await provider.setupWorkflow('test-guid', bp, 'main', []);
+              console.log('setupWorkflow: OK');
+
+              // Run task
+              const output = await provider.runTaskInWorkflow(
+                'test-guid',
+                'barichello/godot-ci:4.3',
+                'echo hello from mock',
+                '/build',
+                '/build',
+                [{ name: 'CI', value: 'true' }],
+                []
+              );
+              console.log('runTaskInWorkflow output:', output.substring(0, 200));
+
+              // List resources
+              const resources = await provider.listResources();
+              console.log('listResources:', resources.length, 'resources');
+
+              // Garbage collect
+              const gcResult = await provider.garbageCollect('', false, 0, false, false);
+              console.log('garbageCollect:', gcResult);
+
+              // Cleanup
+              await provider.cleanupWorkflow(bp, 'main', []);
+              console.log('cleanupWorkflow: OK');
+
+              console.log('=== Mock AWS full workflow test PASSED ===');
+            }
+
+            main().catch(err => { console.error(err); process.exit(1); });
+          "

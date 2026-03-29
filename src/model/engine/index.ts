@@ -1,11 +1,15 @@
 export { EnginePlugin } from './engine-plugin';
 export { UnityPlugin } from './unity-plugin';
+export { GodotPlugin } from './godot-plugin';
+export { UnrealPlugin } from './unreal-plugin';
 export { loadEngineFromModule } from './module-engine-loader';
 export { loadEngineFromCli } from './cli-engine-loader';
 export { loadEngineFromDocker } from './docker-engine-loader';
 
 import { EnginePlugin } from './engine-plugin';
 import { UnityPlugin } from './unity-plugin';
+import { GodotPlugin } from './godot-plugin';
+import { UnrealPlugin } from './unreal-plugin';
 import { loadEngineFromModule } from './module-engine-loader';
 import { loadEngineFromCli } from './cli-engine-loader';
 import { loadEngineFromDocker } from './docker-engine-loader';
@@ -37,11 +41,20 @@ export function setEngine(engine: EnginePlugin): void {
  * UnityPlugin is used — no loading needed.
  */
 export function initEngine(engine: string, enginePlugin?: string): void {
+  // Built-in engines — no external plugin source needed
   if (!enginePlugin) {
-    if (engine === 'unity') {
-      currentEngine = UnityPlugin;
+    const builtinEngines: Record<string, EnginePlugin> = {
+      unity: UnityPlugin,
+      godot: GodotPlugin,
+      unreal: UnrealPlugin,
+    };
+
+    if (engine in builtinEngines) {
+      currentEngine = builtinEngines[engine];
+      OrchestratorLogger.log(`Using built-in ${engine} engine plugin`);
       return;
     }
+
     throw new Error(
       `Engine '${engine}' requires an enginePlugin source. ` +
         `Use one of: module:<npm-package>, cli:<executable-path>, docker:<image>`,
