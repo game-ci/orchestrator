@@ -82,6 +82,112 @@ game-ci build \
 game-ci status --providerStrategy aws
 ```
 
+## Quick Start: Godot & Unreal Engine
+
+The orchestrator supports any engine via `--custom-job`. Use `--provider-strategy local-docker` for local Docker builds or `local-system` to run directly on the host.
+
+### Godot — Local Docker
+
+```bash
+game-ci orchestrate \
+  --engine godot \
+  --provider-strategy local-docker \
+  --target-platform linux \
+  --custom-job '- name: godot-export
+  image: barichello/godot-ci:4.3
+  commands: |
+    godot --headless --export-release "Linux/X11" /build/output/game'
+```
+
+### Godot — Direct Docker (No Orchestrator)
+
+```bash
+docker run --rm \
+  -v "$(pwd):/project" \
+  -w /project \
+  barichello/godot-ci:4.3 \
+  godot --headless --export-release "Linux/X11" /project/build/game
+```
+
+### Godot — Local System
+
+```bash
+game-ci orchestrate \
+  --engine godot \
+  --provider-strategy local-system \
+  --target-platform linux \
+  --custom-job '- name: godot-export
+  image: local
+  commands: |
+    godot --headless --export-release "Linux/X11" ./build/game'
+```
+
+### Unreal Engine — Local Docker
+
+UE Docker images are large (35–120 GB). Choose an image source based on your access:
+
+| Image | Size | Access |
+| --- | --- | --- |
+| `ghcr.io/epicgames/unreal-engine:dev-slim-5.4` | ~35 GB | Requires [Epic Games GitHub org](https://github.com/EpicGames) membership |
+| [adamrehn/ue4-docker](https://github.com/adamrehn/ue4-docker) | ~40 GB | Self-built from your UE license |
+
+```bash
+game-ci orchestrate \
+  --engine unreal \
+  --provider-strategy local-docker \
+  --target-platform linux \
+  --custom-job '- name: ue-build
+  image: ghcr.io/epicgames/unreal-engine:dev-slim-5.4
+  commands: |
+    /home/ue4/UnrealEngine/Engine/Build/BatchFiles/RunUAT.sh \
+      BuildCookRun \
+      -project=/build/MyProject.uproject \
+      -targetplatform=Linux \
+      -clientconfig=Shipping \
+      -build -cook -stage -pak -archive \
+      -archivedirectory=/build/output \
+      -noP4 -unattended'
+```
+
+### Unreal Engine — Direct Docker (No Orchestrator)
+
+```bash
+docker run --rm \
+  -v "$(pwd):/project" \
+  -w /project \
+  ghcr.io/epicgames/unreal-engine:dev-slim-5.4 \
+  /home/ue4/UnrealEngine/Engine/Build/BatchFiles/RunUAT.sh \
+    BuildCookRun \
+    -project=/project/MyProject.uproject \
+    -targetplatform=Linux \
+    -clientconfig=Shipping \
+    -build -cook -stage -pak -archive \
+    -archivedirectory=/project/output \
+    -noP4 -unattended
+```
+
+### Unreal Engine — Local System
+
+Runs directly on the host using your local UE installation:
+
+```bash
+game-ci orchestrate \
+  --engine unreal \
+  --provider-strategy local-system \
+  --target-platform linux \
+  --custom-job '- name: ue-build
+  image: local
+  commands: |
+    /path/to/UnrealEngine/Engine/Build/BatchFiles/RunUAT.sh \
+      BuildCookRun \
+      -project=$(pwd)/MyProject.uproject \
+      -targetplatform=Linux \
+      -clientconfig=Shipping \
+      -build -cook -stage -pak -archive \
+      -archivedirectory=$(pwd)/output \
+      -noP4 -unattended'
+```
+
 ## Engine Plugins
 
 No game engine logic is hardcoded into the core. Engine-specific behavior is provided through plugins. Unity ships as the built-in default; other engines plug in through the same minimal interface:
