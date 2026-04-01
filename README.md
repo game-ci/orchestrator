@@ -99,16 +99,6 @@ game-ci orchestrate \
     godot --headless --export-release "Linux/X11" /build/output/game'
 ```
 
-### Godot — Direct Docker (No Orchestrator)
-
-```bash
-docker run --rm \
-  -v "$(pwd):/project" \
-  -w /project \
-  barichello/godot-ci:4.3 \
-  godot --headless --export-release "Linux/X11" /project/build/game
-```
-
 ### Godot — Local System
 
 ```bash
@@ -147,23 +137,6 @@ game-ci orchestrate \
       -build -cook -stage -pak -archive \
       -archivedirectory=/build/output \
       -noP4 -unattended'
-```
-
-### Unreal Engine — Direct Docker (No Orchestrator)
-
-```bash
-docker run --rm \
-  -v "$(pwd):/project" \
-  -w /project \
-  ghcr.io/epicgames/unreal-engine:dev-slim-5.4 \
-  /home/ue4/UnrealEngine/Engine/Build/BatchFiles/RunUAT.sh \
-    BuildCookRun \
-    -project=/project/MyProject.uproject \
-    -targetplatform=Linux \
-    -clientconfig=Shipping \
-    -build -cook -stage -pak -archive \
-    -archivedirectory=/project/output \
-    -noP4 -unattended
 ```
 
 ### Unreal Engine — Local System
