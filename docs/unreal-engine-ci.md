@@ -9,7 +9,7 @@ Real Unreal Engine Docker images are too large for GitHub-hosted runners. This d
 | Image | Size | Can build? | Notes |
 |-------|------|-----------|-------|
 | `ghcr.io/epicgames/unreal-engine:dev-slim-5.4` | ~35GB | Yes | Requires Epic GitHub org access |
-| `ue4-minimal` ([adamrehn/ue4-docker](https://github.com/adamrehn/ue4-docker)) | ~40GB (from 120GB) | Yes | You build it yourself |
+| Community UE5 images ([ue5-docker](https://github.com/evoverses/ue5-docker), etc.) | ~40GB (from 120GB) | Yes | Self-built from your UE license |
 | Aggressively stripped custom image | ~40GB floor | Yes | Requires manual optimization |
 | Full UE dev image | 50-120GB | Yes | Way too large |
 
@@ -91,7 +91,7 @@ For actual UE compilation and content cooking, use one of:
 ## References
 
 - [Slim down UE5 Docker images](https://edwardbeazer.com/posts/slim-down-unreal-engine-5-docker-build-images/) — Reducing from 120GB to 40GB
-- [ue4-docker image sizes](https://github.com/adamrehn/ue4-docker/issues/11) — Discussion of ue4-minimal
+- [Community UE5 container images](https://unrealcontainers.com/docs/obtaining-images) — Overview of available images
 - [Official UE Container Images](https://unrealcontainers.com/docs/obtaining-images/official-images) — Epic's official images
 - [GitHub runner disk space](https://github.com/actions/runner-images/discussions/9329) — Runner storage constraints
 - [free-disk-space action](https://github.com/jlumbroso/free-disk-space) — Reclaim runner disk space
