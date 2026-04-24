@@ -1,12 +1,19 @@
 /**
  * @game-ci/orchestrator — entry point
  *
- * Exports the Orchestrator.run() function and supporting types so that
- * unity-builder (or any host) can plug it in:
+ * Primary integration point for unity-builder:
+ *   const { createPlugin } = await import('@game-ci/orchestrator');
+ *   const plugin = createPlugin();
+ *   await plugin.initialize(coreParams, workspace);
  *
+ * Legacy / direct usage:
  *   import { Orchestrator } from '@game-ci/orchestrator';
  *   await Orchestrator.run(buildParameters, baseImage);
  */
+
+// Plugin lifecycle — primary integration for unity-builder
+export { createPlugin } from './plugin-lifecycle';
+export type { OrchestratorPlugin } from './plugin-lifecycle';
 
 export type {
   OrchestratorConfig,
