@@ -101,6 +101,12 @@ const serveCommand: CommandModule<object, ServeArguments> = {
         description: 'Base64 encoded Kubernetes config (K8s provider)',
         default: '',
       })
+      .option('dry-run', {
+        alias: 'dryRun',
+        type: 'boolean',
+        description: 'Preview garbage-collect actions without deleting resources',
+        default: false,
+      })
       .example(
         'echo \'{"command":"list-resources","params":{}}\' | game-ci serve --provider-strategy aws',
         'List AWS resources',
@@ -152,7 +158,7 @@ const serveCommand: CommandModule<object, ServeArguments> = {
       const provider = await loadBuiltinProvider(providerStrategy, buildParameters);
 
       // Dispatch the command
-      const response = await dispatchCommand(provider, request);
+      const response = await dispatchCommand(provider, request, mergedArgs);
       writeResponse(response);
 
       // Logging already goes to stderr via core shim
@@ -163,7 +169,7 @@ const serveCommand: CommandModule<object, ServeArguments> = {
   },
 };
 
-async function dispatchCommand(provider: any, request: CliProviderRequest): Promise<CliProviderResponse> {
+async function dispatchCommand(provider: any, request: CliProviderRequest, cliArgs: Record<string, any> = {}): Promise<CliProviderResponse> {
   const { command, params } = request;
 
   switch (command) {
@@ -200,9 +206,10 @@ async function dispatchCommand(provider: any, request: CliProviderRequest): Prom
     }
 
     case 'garbage-collect': {
+      const previewOnly = params.previewOnly ?? cliArgs.dryRun ?? false;
       const output = await provider.garbageCollect(
         params.filter || '',
-        params.previewOnly ?? false,
+        previewOnly,
         params.olderThan ?? 0,
         params.fullCache ?? false,
         params.baseDependencies ?? false,

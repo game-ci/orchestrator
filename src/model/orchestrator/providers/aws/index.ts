@@ -57,14 +57,13 @@ class AWSBuildEnvironment implements ProviderInterface {
   async garbageCollect(
     filter: string,
     previewOnly: boolean,
-    // eslint-disable-next-line no-unused-vars
     olderThan: Number,
     // eslint-disable-next-line no-unused-vars
     fullCache: boolean,
     // eslint-disable-next-line no-unused-vars
     baseDependencies: boolean,
   ): Promise<string> {
-    await GarbageCollectionService.cleanup(!previewOnly);
+    await GarbageCollectionService.cleanup(!previewOnly, olderThan > 0);
 
     return ``;
   }

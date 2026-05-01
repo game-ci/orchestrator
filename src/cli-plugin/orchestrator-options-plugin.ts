@@ -325,6 +325,13 @@ export function configureOrchestratorOptions(yargs: any): void {
     default: 24,
   })
 
+  yargs.option('dryRun', {
+    alias: 'dry-run',
+    description: 'Preview garbage-collect actions without deleting resources (maps to previewOnly)',
+    type: 'boolean',
+    default: false,
+  })
+
   // --- GitHub integration ---
   yargs.option('githubChecks', {
     description: 'Enable GitHub Checks integration',
