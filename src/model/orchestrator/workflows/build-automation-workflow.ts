@@ -172,9 +172,11 @@ echo "CACHE_KEY=$CACHE_KEY"`;
     # Pipe entrypoint.sh output through log stream to capture Unity build output (including "Build succeeded")
     { echo "game ci start"; echo "game ci start" >> /home/job-log.txt; echo "CACHE_KEY=$CACHE_KEY"; echo "$CACHE_KEY"; if [ -n "$LOCKED_WORKSPACE" ]; then echo "Retained Workspace: true"; fi; if [ -n "$LOCKED_WORKSPACE" ] && [ -d "$GITHUB_WORKSPACE/.git" ]; then echo "Retained Workspace Already Exists!"; fi; /entrypoint.sh; } | node ${builderPath} -m remote-cli-log-stream --logFile /home/job-log.txt
     ${BuildAutomationWorkflow.engineCacheCommands()}
-    if [ ! -f "/data/cache/$CACHE_KEY/build/build-$BUILD_GUID.tar" ] && [ ! -f "/data/cache/$CACHE_KEY/build/build-$BUILD_GUID.tar.lz4" ]; then
-      tar -cf "/data/cache/$CACHE_KEY/build/build-$BUILD_GUID.tar" --files-from /dev/null || touch "/data/cache/$CACHE_KEY/build/build-$BUILD_GUID.tar"
-    fi
+    # Ensure cache directories exist for post-build and S3 upload hooks.
+    # Do NOT create empty placeholder tars — they waste S3 storage and on next
+    # build the pull-cache hook downloads them, giving Unity an empty Library
+    # folder (zero caching benefit, full reimport every time).
+    mkdir -p "/data/cache/$CACHE_KEY/build"
     # Run post-build tasks and capture output
     # Note: Post-build may clean up the builder directory, so we write output directly to log file
     # Use set +e to allow the command to fail without exiting the script
@@ -243,17 +245,14 @@ echo "CACHE_KEY=$CACHE_KEY"`;
   }
 
   /**
-   * Generate shell commands to create empty cache tar files for each engine cache folder.
-   * For Unity, this produces the same commands that were previously hardcoded for 'Library'.
+   * Generate shell commands to ensure cache directories exist for each engine cache folder.
+   * Real cache tars are created by remote-cli-post-build, not here.
    */
   private static engineCacheCommands(): string {
     return getEngine().cacheFolders.map(folder => {
       const prefix = folder.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase();
 
-      return `mkdir -p "/data/cache/$CACHE_KEY/${folder}"
-    if [ ! -f "/data/cache/$CACHE_KEY/${folder}/${prefix}-$BUILD_GUID.tar" ] && [ ! -f "/data/cache/$CACHE_KEY/${folder}/${prefix}-$BUILD_GUID.tar.lz4" ]; then
-      tar -cf "/data/cache/$CACHE_KEY/${folder}/${prefix}-$BUILD_GUID.tar" --files-from /dev/null || touch "/data/cache/$CACHE_KEY/${folder}/${prefix}-$BUILD_GUID.tar"
-    fi`;
+      return `mkdir -p "/data/cache/$CACHE_KEY/${folder}"`;
     }).join('\n    ');
   }
 
