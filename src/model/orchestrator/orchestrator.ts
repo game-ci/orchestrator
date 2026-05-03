@@ -119,11 +119,11 @@ class Orchestrator {
       }
     }
 
-    // Detect LocalStack endpoints and handle AWS provider appropriately
+    // Detect local AWS emulator endpoints (e.g. MiniStack) and handle AWS provider appropriately
     // AWS_FORCE_PROVIDER options:
-    //   - 'aws': Force AWS provider (requires LocalStack Pro with ECS support)
+    //   - 'aws': Force AWS provider (requires a local emulator with ECS support)
     //   - 'aws-local': Validate AWS templates/config but execute via local-docker (for CI without ECS)
-    //   - unset/other: Auto-fallback to local-docker when LocalStack detected
+    //   - unset/other: Auto-fallback to local-docker when local emulator detected
     const awsForceProvider = process.env.AWS_FORCE_PROVIDER || '';
     const forceAwsProvider = awsForceProvider === 'aws' || awsForceProvider === 'true';
     const useAwsLocalMode = awsForceProvider === 'aws-local';
@@ -143,25 +143,25 @@ class Orchestrator {
     ]
       .filter((x) => typeof x === 'string')
       .join(' ');
-    const isLocalStack = /localstack|localhost|127\.0\.0\.1/i.test(endpointsToCheck);
+    const isLocalStack = /ministack|localstack|localhost|127\.0\.0\.1/i.test(endpointsToCheck);
     let provider = Orchestrator.buildParameters.providerStrategy;
     let validateAwsTemplates = false;
 
     if (provider === 'aws' && isLocalStack) {
       if (useAwsLocalMode) {
         // aws-local mode: Validate AWS templates but execute via local-docker
-        // This provides confidence in AWS CloudFormation without requiring LocalStack Pro
+        // This provides confidence in AWS CloudFormation without requiring a full AWS emulator
         OrchestratorLogger.log('AWS_FORCE_PROVIDER=aws-local: Validating AWS templates, executing via local-docker');
         validateAwsTemplates = true;
         provider = 'local-docker';
       } else if (forceAwsProvider) {
-        // Force full AWS provider (requires LocalStack Pro with ECS support)
+        // Force full AWS provider (requires a local emulator with ECS support)
         OrchestratorLogger.log(
-          'LocalStack endpoints detected but AWS_FORCE_PROVIDER=aws; using full AWS provider (requires ECS support)',
+          'Local emulator endpoints detected but AWS_FORCE_PROVIDER=aws; using full AWS provider (requires ECS support)',
         );
       } else {
         // Auto-fallback to local-docker
-        OrchestratorLogger.log('LocalStack endpoints detected; routing provider to local-docker for this run');
+        OrchestratorLogger.log('Local emulator endpoints detected; routing provider to local-docker for this run');
         OrchestratorLogger.log(
           'Note: Set AWS_FORCE_PROVIDER=aws-local to validate AWS templates with local-docker execution',
         );
@@ -192,10 +192,10 @@ class Orchestrator {
 
         // Validate that AWS provider is actually being used when expected
         if (isLocalStack && forceAwsProvider) {
-          OrchestratorLogger.log('✓ AWS provider initialized with LocalStack - AWS functionality will be validated');
+          OrchestratorLogger.log('✓ AWS provider initialized with local emulator - AWS functionality will be validated');
         } else if (isLocalStack && !forceAwsProvider) {
           OrchestratorLogger.log(
-            '⚠ WARNING: AWS provider was requested but LocalStack detected without AWS_FORCE_PROVIDER',
+            '⚠ WARNING: AWS provider was requested but local emulator detected without AWS_FORCE_PROVIDER',
           );
           OrchestratorLogger.log('⚠ This may cause AWS functionality tests to fail validation');
         }

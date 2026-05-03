@@ -18,7 +18,7 @@ export class SharedWorkspaceLocking {
   private static _s3: S3;
   private static get s3(): S3 {
     if (!SharedWorkspaceLocking._s3) {
-      // Use factory so LocalStack endpoint/path-style settings are honored
+      // Use factory so local AWS emulator endpoint/path-style settings are honored
       SharedWorkspaceLocking._s3 = AwsClientFactory.getS3();
     }
 

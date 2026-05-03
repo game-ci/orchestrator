@@ -116,7 +116,7 @@ export function configureOrchestratorOptions(yargs: any): void {
   })
 
   yargs.option('awsEndpoint', {
-    description: 'AWS endpoint override (e.g., for LocalStack)',
+    description: 'AWS endpoint override (e.g., for local AWS emulators like MiniStack)',
     type: 'string',
   })
 

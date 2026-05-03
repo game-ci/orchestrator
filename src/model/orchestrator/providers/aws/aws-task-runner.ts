@@ -19,8 +19,8 @@ class AWSTaskRunner {
 
   /**
    * Transform localhost endpoints to host.docker.internal for container environments.
-   * When LocalStack is used, ECS tasks run in Docker containers that need to reach
-   * LocalStack on the host machine via host.docker.internal.
+   * When a local AWS emulator (e.g. MiniStack) is used, ECS tasks run in Docker containers
+   * that need to reach the emulator on the host machine via host.docker.internal.
    */
   private static transformEndpointsForContainer(
     environment: OrchestratorEnvironmentVariable[],

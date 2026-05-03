@@ -86,11 +86,11 @@ commands: echo "test"`;
       expect(afterSteps).toHaveLength(1);
     });
     it('Run build once - check for pre and post custom hooks run contents', async () => {
-      // Skip when running against LocalStack — ECS containers don't actually execute,
+      // Skip when running against a local AWS emulator — ECS containers don't actually execute,
       // so hook command output is never captured in build results.
       const awsEndpoint = process.env.AWS_ENDPOINT || process.env.AWS_ENDPOINT_URL || '';
       if (awsEndpoint.includes('localhost') || awsEndpoint.includes('127.0.0.1')) {
-        console.log('Skipping hooks execution test on LocalStack (ECS containers do not execute)');
+        console.log('Skipping hooks execution test on local AWS emulator (ECS containers do not execute)');
 
         return;
       }

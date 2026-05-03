@@ -14,8 +14,8 @@ export class AwsClientFactory {
   private static s3: S3;
 
   private static getCredentials() {
-    // Explicitly provide credentials from environment variables for LocalStack compatibility
-    // LocalStack accepts any credentials, but the AWS SDK needs them to be explicitly set
+    // Explicitly provide credentials from environment variables for local AWS emulator compatibility (e.g. MiniStack)
+    // Local emulators accept any credentials, but the AWS SDK needs them to be explicitly set
     const accessKeyId = process.env.AWS_ACCESS_KEY_ID;
     const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY;
 

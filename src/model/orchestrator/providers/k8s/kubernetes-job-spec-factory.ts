@@ -35,11 +35,10 @@ class KubernetesJobSpecFactory {
       'INPUT_AWSENDPOINT',
     ]);
 
-    // Determine the LocalStack hostname to use for K8s pods
-    // Priority: K8S_LOCALSTACK_HOST env var > localstack-main (container name on shared network)
-    // Note: Using K8S_LOCALSTACK_HOST instead of LOCALSTACK_HOST to avoid conflict with awslocal CLI
-    const localstackHost = process.env['K8S_LOCALSTACK_HOST'] || 'localstack-main';
-    OrchestratorLogger.log(`K8s pods will use LocalStack host: ${localstackHost}`);
+    // Determine the local AWS emulator hostname to use for K8s pods
+    // Priority: K8S_MINISTACK_HOST env var > K8S_LOCALSTACK_HOST (legacy) > localstack-main (container name on shared network)
+    const localstackHost = process.env['K8S_MINISTACK_HOST'] || process.env['K8S_LOCALSTACK_HOST'] || 'localstack-main';
+    OrchestratorLogger.log(`K8s pods will use local AWS emulator host: ${localstackHost}`);
 
     const adjustedEnvironment = environment.map((x) => {
       let value = x.value;
@@ -48,8 +47,8 @@ class KubernetesJobSpecFactory {
         endpointEnvironmentNames.has(x.name) &&
         (value.startsWith('http://localhost') || value.startsWith('http://127.0.0.1'))
       ) {
-        // Replace localhost with the LocalStack container hostname
-        // When k3d and LocalStack are on the same Docker network, pods can reach LocalStack by container name
+        // Replace localhost with the local AWS emulator container hostname
+        // When k3d and the emulator are on the same Docker network, pods can reach it by container name
         value = value
           .replace('http://localhost', `http://${localstackHost}`)
           .replace('http://127.0.0.1', `http://${localstackHost}`);

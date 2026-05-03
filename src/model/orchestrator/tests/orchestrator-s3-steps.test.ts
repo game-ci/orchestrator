@@ -133,7 +133,7 @@ describe('Orchestrator pre-built S3 steps', () => {
 
         // Only run S3 operations if environment supports it
         if (shouldRunS3) {
-          // Get S3 endpoint for LocalStack compatibility
+          // Get S3 endpoint for local AWS emulator compatibility (e.g. MiniStack)
           // Convert host.docker.internal to localhost for host-side test execution
           let s3Endpoint = OrchestratorOptions.awsS3Endpoint || process.env.AWS_S3_ENDPOINT;
           if (s3Endpoint && s3Endpoint.includes('host.docker.internal')) {
@@ -142,8 +142,8 @@ describe('Orchestrator pre-built S3 steps', () => {
           }
           const endpointArguments = s3Endpoint ? `--endpoint-url ${s3Endpoint}` : '';
 
-          // Configure AWS credentials if available (needed for LocalStack)
-          // LocalStack accepts any credentials, but they must be provided
+          // Configure AWS credentials if available (needed for local AWS emulators)
+          // Local emulators accept any credentials, but they must be provided
           if (process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY) {
             try {
               await OrchestratorSystem.Run(
@@ -161,7 +161,7 @@ describe('Orchestrator pre-built S3 steps', () => {
               OrchestratorLogger.log(`Failed to configure AWS credentials: ${configError}`);
             }
           } else {
-            // For LocalStack, use default test credentials if none provided
+            // For local emulators, use default test credentials if none provided
             const defaultAccessKey = 'test';
             const defaultSecretKey = 'test';
             try {
@@ -172,7 +172,7 @@ describe('Orchestrator pre-built S3 steps', () => {
                 `aws configure set aws_secret_access_key "${defaultSecretKey}" --profile default || true`,
               );
               await OrchestratorSystem.Run(`aws configure set region "us-east-1" --profile default || true`);
-              OrchestratorLogger.log('Using default LocalStack test credentials');
+              OrchestratorLogger.log('Using default test credentials for local AWS emulator');
             } catch (configError) {
               OrchestratorLogger.log(`Failed to configure default AWS credentials: ${configError}`);
             }

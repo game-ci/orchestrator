@@ -92,8 +92,8 @@ class LocalDockerOrchestrator implements ProviderInterface {
       content.push({ name: x.EnvironmentVariable, value: x.ParameterValue });
     }
 
-    // Replace localhost with host.docker.internal for LocalStack endpoints (similar to K8s)
-    // This allows Docker containers to access LocalStack running on the host
+    // Replace localhost with host.docker.internal for local AWS emulator endpoints (similar to K8s)
+    // This allows Docker containers to access the emulator (e.g. MiniStack) running on the host
     const endpointEnvironmentNames = new Set([
       'AWS_S3_ENDPOINT',
       'AWS_ENDPOINT',

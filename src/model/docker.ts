@@ -1,7 +1,7 @@
 /**
  * Docker runner — executes container builds via `docker run`.
  *
- * Used by the local-docker provider (and the LocalStack auto-fallback)
+ * Used by the local-docker provider (and the local AWS emulator auto-fallback)
  * to run builds inside Docker containers.
  */
 

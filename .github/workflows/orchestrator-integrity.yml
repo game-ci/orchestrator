@@ -49,10 +49,10 @@ env:
 #   - Deduplicates cleanup logic via reusable shell functions
 #
 # Job groups:
-#   k8s-tests          - Needs k3d cluster + LocalStack. 5 tests.
-#   aws-provider-tests - Needs LocalStack only (no k3d). 8 tests.
-#   local-docker-tests - Needs Docker only (some tests also need LocalStack). 10 tests.
-#   rclone-tests       - Needs rclone + LocalStack. 1 test.
+#   k8s-tests          - Needs k3d cluster + MiniStack. 5 tests.
+#   aws-provider-tests - Needs MiniStack only (no k3d). 8 tests.
+#   local-docker-tests - Needs Docker only (some tests also need MiniStack). 10 tests.
+#   rclone-tests       - Needs rclone + MiniStack. 1 test.
 # ==============================================================================
 
 jobs:
@@ -66,7 +66,7 @@ jobs:
       K3D_NODE_CONTAINERS: 'k3d-unity-builder-agent-0'
       AWS_FORCE_PROVIDER: aws-local
       RESOURCE_TRACKING: 'true'
-      K8S_LOCALSTACK_HOST: localstack-main
+      K8S_MINISTACK_HOST: localstack-main
     steps:
       # --- Setup ---
       - uses: actions/checkout@v4
@@ -141,11 +141,9 @@ jobs:
           echo "Disk usage after cleanup:"
           df -h
 
-      - name: Start LocalStack
-        env:
-          LOCALSTACK_AUTH_TOKEN: ${{ secrets.LOCALSTACK_AUTH_TOKEN }}
+      - name: Start MiniStack
         run: |
-          echo "Starting LocalStack..."
+          echo "Starting MiniStack..."
           HOST_IP=$(ip route | grep default | awk '{print $3}')
           echo "Host gateway IP: $HOST_IP"
           docker run -d \
@@ -156,34 +154,27 @@ jobs:
             -e SERVICES=s3,cloudformation,ecs,kinesis,cloudwatch,logs,efs,ec2,iam,elasticfilesystem,secretsmanager,lambda,events,sts \
             -e DEBUG=0 \
             -e HOSTNAME_EXTERNAL=localstack-main \
-            -e LOCALSTACK_AUTH_TOKEN \
-            localstack/localstack:latest || true
-          echo "Waiting for LocalStack to be ready..."
+            ministackorg/ministack || true
+          echo "Waiting for MiniStack to be ready..."
           MAX_ATTEMPTS=60
           READY=false
           for i in $(seq 1 $MAX_ATTEMPTS); do
             if ! docker ps | grep -q localstack-main; then
-              echo "LocalStack container not running (attempt $i/$MAX_ATTEMPTS)"
+              echo "MiniStack container not running (attempt $i/$MAX_ATTEMPTS)"
               sleep 2
               continue
             fi
-            HEALTH=$(curl -s http://localhost:4566/_localstack/health 2>/dev/null || echo "")
-            if [ -z "$HEALTH" ] || ! echo "$HEALTH" | grep -q "services"; then
-              echo "LocalStack health endpoint not ready (attempt $i/$MAX_ATTEMPTS)"
-              sleep 2
-              continue
-            fi
-            if echo "$HEALTH" | grep -q '"s3"'; then
-              echo "LocalStack is ready with S3 service (attempt $i/$MAX_ATTEMPTS)"
+            if curl -sf http://localhost:4566 > /dev/null 2>&1; then
+              echo "MiniStack is ready (attempt $i/$MAX_ATTEMPTS)"
               READY=true
               break
             fi
-            echo "Waiting for LocalStack S3 service... ($i/$MAX_ATTEMPTS)"
+            echo "Waiting for MiniStack... ($i/$MAX_ATTEMPTS)"
             sleep 2
           done
           if [ "$READY" != "true" ]; then
-            echo "ERROR: LocalStack did not become ready after $MAX_ATTEMPTS attempts"
-            docker ps -a | grep localstack || echo "No LocalStack container found"
+            echo "ERROR: MiniStack did not become ready after $MAX_ATTEMPTS attempts"
+            docker ps -a | grep localstack || echo "No MiniStack container found"
             docker logs localstack-main --tail 100 || true
             exit 1
           fi
@@ -193,18 +184,17 @@ jobs:
           if ! command -v aws > /dev/null 2>&1; then
             pip install awscli || true
           fi
-          pip install awscli-local || true
           aws --version || echo "AWS CLI not available"
 
       - name: Create S3 bucket for tests
         run: |
-          echo "Verifying LocalStack connectivity..."
+          echo "Verifying MiniStack connectivity..."
           for i in {1..10}; do
-            if curl -s http://localhost:4566/_localstack/health > /dev/null 2>&1; then
-              echo "LocalStack is accessible"
+            if curl -sf http://localhost:4566 > /dev/null 2>&1; then
+              echo "MiniStack is accessible"
               break
             fi
-            echo "Waiting for LocalStack... ($i/10)"
+            echo "Waiting for MiniStack... ($i/10)"
             sleep 1
           done
           MAX_RETRIES=5
@@ -213,15 +203,7 @@ jobs:
           while [ $RETRY_COUNT -lt $MAX_RETRIES ] && [ "$BUCKET_CREATED" != "true" ]; do
             RETRY_COUNT=$((RETRY_COUNT + 1))
             echo "Attempting to create S3 bucket (attempt $RETRY_COUNT/$MAX_RETRIES)..."
-            if command -v awslocal > /dev/null 2>&1; then
-              if awslocal s3 mb s3://$AWS_STACK_NAME 2>&1; then
-                echo "Bucket created successfully with awslocal"
-                BUCKET_CREATED=true
-              else
-                echo "Bucket creation failed, will retry..."
-                sleep 2
-              fi
-            elif command -v aws > /dev/null 2>&1; then
+            if command -v aws > /dev/null 2>&1; then
               if aws --endpoint-url=http://localhost:4566 s3 mb s3://$AWS_STACK_NAME 2>&1; then
                 echo "Bucket created successfully with aws CLI"
                 BUCKET_CREATED=true
@@ -230,7 +212,7 @@ jobs:
                 sleep 2
               fi
             else
-              echo "Neither awslocal nor aws CLI available"
+              echo "aws CLI not available"
               exit 1
             fi
           done
@@ -264,16 +246,16 @@ jobs:
       - name: Create k3s cluster (k3d)
         timeout-minutes: 5
         run: |
-          LOCALSTACK_IP=$(docker inspect -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' localstack-main 2>/dev/null || echo "")
-          echo "LocalStack container IP: $LOCALSTACK_IP"
+          MINISTACK_IP=$(docker inspect -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' localstack-main 2>/dev/null || echo "")
+          echo "MiniStack container IP: $MINISTACK_IP"
           k3d cluster create unity-builder \
             --agents 1 \
             --network orchestrator-net \
             --wait
           kubectl config current-context | cat
-          echo "LOCALSTACK_IP=$LOCALSTACK_IP" >> $GITHUB_ENV
+          echo "MINISTACK_IP=$MINISTACK_IP" >> $GITHUB_ENV
 
-      - name: Verify cluster readiness and LocalStack connectivity
+      - name: Verify cluster readiness and MiniStack connectivity
         timeout-minutes: 2
         run: |
           for i in {1..60}; do
@@ -286,15 +268,15 @@ jobs:
           done
           kubectl get nodes
           kubectl get storageclass
-          LOCALSTACK_IP=$(docker inspect -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' localstack-main 2>/dev/null || echo "")
-          echo "LocalStack container IP: $LOCALSTACK_IP"
-          echo "Testing LocalStack connectivity from k3d cluster..."
-          curl -s --max-time 5 http://localhost:4566/_localstack/health | head -5 || echo "Host connectivity failed"
+          MINISTACK_IP=$(docker inspect -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' localstack-main 2>/dev/null || echo "")
+          echo "MiniStack container IP: $MINISTACK_IP"
+          echo "Testing MiniStack connectivity from k3d cluster..."
+          curl -sf --max-time 5 http://localhost:4566 | head -5 || echo "Host connectivity failed"
           docker run --rm --network orchestrator-net curlimages/curl \
-            curl -s --max-time 5 http://localstack-main:4566/_localstack/health 2>&1 | head -5 || echo "Container network test failed"
-          kubectl run test-localstack --image=curlimages/curl --rm -i --restart=Never --timeout=30s -- \
-            curl -v --max-time 10 http://${LOCALSTACK_IP}:4566/_localstack/health 2>&1 | head -30 || \
-            echo "Cluster connectivity test - if this fails, LocalStack may not be accessible from k3d"
+            curl -sf --max-time 5 http://localstack-main:4566 2>&1 | head -5 || echo "Container network test failed"
+          kubectl run test-ministack --image=curlimages/curl --rm -i --restart=Never --timeout=30s -- \
+            curl -v --max-time 10 http://${MINISTACK_IP}:4566 2>&1 | head -30 || \
+            echo "Cluster connectivity test - if this fails, MiniStack may not be accessible from k3d"
 
       - name: Clean up K8s resources before tests
         run: |
@@ -487,7 +469,7 @@ jobs:
           df -h
 
   # ============================================================================
-  # AWS/LOCALSTACK PROVIDER TESTS
+  # AWS/MINISTACK PROVIDER TESTS
   # ============================================================================
   aws-provider-tests:
     name: AWS Provider Tests
@@ -534,41 +516,33 @@ jobs:
           echo "Disk usage after cleanup:"
           df -h
 
-      - name: Start LocalStack
-        env:
-          LOCALSTACK_AUTH_TOKEN: ${{ secrets.LOCALSTACK_AUTH_TOKEN }}
+      - name: Start MiniStack
         run: |
-          echo "Starting LocalStack..."
+          echo "Starting MiniStack..."
           docker run -d \
             --name localstack-main \
             -p 4566:4566 \
             -e SERVICES=s3,cloudformation,ecs,kinesis,cloudwatch,logs,efs,ec2,iam,elasticfilesystem,secretsmanager,lambda,events,sts \
             -e DEBUG=0 \
-            -e LOCALSTACK_AUTH_TOKEN \
-            localstack/localstack:latest || true
-          echo "Waiting for LocalStack to be ready..."
+            ministackorg/ministack || true
+          echo "Waiting for MiniStack to be ready..."
           MAX_ATTEMPTS=60
           READY=false
           for i in $(seq 1 $MAX_ATTEMPTS); do
             if ! docker ps | grep -q localstack-main; then
-              echo "LocalStack container not running (attempt $i/$MAX_ATTEMPTS)"
+              echo "MiniStack container not running (attempt $i/$MAX_ATTEMPTS)"
               sleep 2
               continue
             fi
-            HEALTH=$(curl -s http://localhost:4566/_localstack/health 2>/dev/null || echo "")
-            if [ -z "$HEALTH" ] || ! echo "$HEALTH" | grep -q "services"; then
-              sleep 2
-              continue
-            fi
-            if echo "$HEALTH" | grep -q '"s3"'; then
-              echo "LocalStack is ready with S3 service (attempt $i/$MAX_ATTEMPTS)"
+            if curl -sf http://localhost:4566 > /dev/null 2>&1; then
+              echo "MiniStack is ready (attempt $i/$MAX_ATTEMPTS)"
               READY=true
               break
             fi
             sleep 2
           done
           if [ "$READY" != "true" ]; then
-            echo "ERROR: LocalStack did not become ready"
+            echo "ERROR: MiniStack did not become ready"
             docker logs localstack-main --tail 100 || true
             exit 1
           fi
@@ -578,12 +552,11 @@ jobs:
           if ! command -v aws > /dev/null 2>&1; then
             pip install awscli || true
           fi
-          pip install awscli-local || true
 
       - name: Create S3 bucket for tests
         run: |
           for i in {1..10}; do
-            if curl -s http://localhost:4566/_localstack/health > /dev/null 2>&1; then break; fi
+            if curl -sf http://localhost:4566 > /dev/null 2>&1; then break; fi
             sleep 1
           done
           MAX_RETRIES=5
@@ -591,12 +564,10 @@ jobs:
           BUCKET_CREATED=false
           while [ $RETRY_COUNT -lt $MAX_RETRIES ] && [ "$BUCKET_CREATED" != "true" ]; do
             RETRY_COUNT=$((RETRY_COUNT + 1))
-            if command -v awslocal > /dev/null 2>&1; then
-              if awslocal s3 mb s3://$AWS_STACK_NAME 2>&1; then BUCKET_CREATED=true; else sleep 2; fi
-            elif command -v aws > /dev/null 2>&1; then
+            if command -v aws > /dev/null 2>&1; then
               if aws --endpoint-url=http://localhost:4566 s3 mb s3://$AWS_STACK_NAME 2>&1; then BUCKET_CREATED=true; else sleep 2; fi
             else
-              echo "Neither awslocal nor aws CLI available"; exit 1
+              echo "aws CLI not available"; exit 1
             fi
           done
           if [ "$BUCKET_CREATED" != "true" ]; then
@@ -866,19 +837,16 @@ jobs:
           echo "Disk usage after cleanup:"
           df -h
 
-      - name: Start LocalStack (for S3-dependent local-docker tests)
-        env:
-          LOCALSTACK_AUTH_TOKEN: ${{ secrets.LOCALSTACK_AUTH_TOKEN }}
+      - name: Start MiniStack (for S3-dependent local-docker tests)
         run: |
-          echo "Starting LocalStack for S3-dependent tests..."
+          echo "Starting MiniStack for S3-dependent tests..."
           docker run -d \
             --name localstack-main \
             -p 4566:4566 \
             -e SERVICES=s3,cloudformation \
             -e DEBUG=0 \
-            -e LOCALSTACK_AUTH_TOKEN \
-            localstack/localstack:latest || true
-          echo "Waiting for LocalStack to be ready..."
+            ministackorg/ministack || true
+          echo "Waiting for MiniStack to be ready..."
           MAX_ATTEMPTS=60
           READY=false
           for i in $(seq 1 $MAX_ATTEMPTS); do
@@ -886,20 +854,15 @@ jobs:
               sleep 2
               continue
             fi
-            HEALTH=$(curl -s http://localhost:4566/_localstack/health 2>/dev/null || echo "")
-            if [ -z "$HEALTH" ] || ! echo "$HEALTH" | grep -q "services"; then
-              sleep 2
-              continue
-            fi
-            if echo "$HEALTH" | grep -q '"s3"'; then
-              echo "LocalStack is ready (attempt $i/$MAX_ATTEMPTS)"
+            if curl -sf http://localhost:4566 > /dev/null 2>&1; then
+              echo "MiniStack is ready (attempt $i/$MAX_ATTEMPTS)"
               READY=true
               break
             fi
             sleep 2
           done
           if [ "$READY" != "true" ]; then
-            echo "ERROR: LocalStack did not become ready"
+            echo "ERROR: MiniStack did not become ready"
             docker logs localstack-main --tail 100 || true
             exit 1
           fi
@@ -907,18 +870,15 @@ jobs:
       - name: Install AWS CLI and create S3 bucket
         run: |
           if ! command -v aws > /dev/null 2>&1; then pip install awscli || true; fi
-          pip install awscli-local || true
           MAX_RETRIES=5
           RETRY_COUNT=0
           BUCKET_CREATED=false
           while [ $RETRY_COUNT -lt $MAX_RETRIES ] && [ "$BUCKET_CREATED" != "true" ]; do
             RETRY_COUNT=$((RETRY_COUNT + 1))
-            if command -v awslocal > /dev/null 2>&1; then
-              if awslocal s3 mb s3://$AWS_STACK_NAME 2>&1; then BUCKET_CREATED=true; else sleep 2; fi
-            elif command -v aws > /dev/null 2>&1; then
+            if command -v aws > /dev/null 2>&1; then
               if aws --endpoint-url=http://localhost:4566 s3 mb s3://$AWS_STACK_NAME 2>&1; then BUCKET_CREATED=true; else sleep 2; fi
             else
-              echo "Neither awslocal nor aws CLI available"; exit 1
+              echo "aws CLI not available"; exit 1
             fi
           done
           if [ "$BUCKET_CREATED" != "true" ]; then
@@ -1175,33 +1135,29 @@ jobs:
           docker system prune -af --volumes || true
           df -h
 
-      - name: Start LocalStack
-        env:
-          LOCALSTACK_AUTH_TOKEN: ${{ secrets.LOCALSTACK_AUTH_TOKEN }}
+      - name: Start MiniStack
         run: |
-          echo "Starting LocalStack for rclone S3 backend..."
+          echo "Starting MiniStack for rclone S3 backend..."
           docker run -d \
             --name localstack-main \
             -p 4566:4566 \
             -e SERVICES=s3 \
             -e DEBUG=0 \
-            -e LOCALSTACK_AUTH_TOKEN \
-            localstack/localstack:latest || true
-          echo "Waiting for LocalStack to be ready..."
+            ministackorg/ministack || true
+          echo "Waiting for MiniStack to be ready..."
           MAX_ATTEMPTS=60
           READY=false
           for i in $(seq 1 $MAX_ATTEMPTS); do
             if ! docker ps | grep -q localstack-main; then sleep 2; continue; fi
-            HEALTH=$(curl -s http://localhost:4566/_localstack/health 2>/dev/null || echo "")
-            if echo "$HEALTH" | grep -q '"s3"'; then
-              echo "LocalStack is ready (attempt $i/$MAX_ATTEMPTS)"
+            if curl -sf http://localhost:4566 > /dev/null 2>&1; then
+              echo "MiniStack is ready (attempt $i/$MAX_ATTEMPTS)"
               READY=true
               break
             fi
             sleep 2
           done
           if [ "$READY" != "true" ]; then
-            echo "ERROR: LocalStack did not become ready"
+            echo "ERROR: MiniStack did not become ready"
             docker logs localstack-main --tail 100 || true
             exit 1
           fi
@@ -1209,34 +1165,31 @@ jobs:
       - name: Install AWS CLI and create S3 bucket
         run: |
           if ! command -v aws > /dev/null 2>&1; then pip install awscli || true; fi
-          pip install awscli-local || true
           MAX_RETRIES=5
           RETRY_COUNT=0
           BUCKET_CREATED=false
           while [ $RETRY_COUNT -lt $MAX_RETRIES ] && [ "$BUCKET_CREATED" != "true" ]; do
             RETRY_COUNT=$((RETRY_COUNT + 1))
-            if command -v awslocal > /dev/null 2>&1; then
-              if awslocal s3 mb s3://$AWS_STACK_NAME 2>&1; then BUCKET_CREATED=true; else sleep 2; fi
-            elif command -v aws > /dev/null 2>&1; then
+            if command -v aws > /dev/null 2>&1; then
               if aws --endpoint-url=http://localhost:4566 s3 mb s3://$AWS_STACK_NAME 2>&1; then BUCKET_CREATED=true; else sleep 2; fi
             else
-              echo "Neither awslocal nor aws CLI available"; exit 1
+              echo "aws CLI not available"; exit 1
             fi
           done
           if [ "$BUCKET_CREATED" != "true" ]; then
             echo "ERROR: Failed to create S3 bucket"; exit 1
           fi
 
-      - name: Install and configure rclone with LocalStack S3
+      - name: Install and configure rclone with MiniStack S3
         run: |
           echo "Installing rclone..."
           curl https://rclone.org/install.sh | sudo bash
           rclone version
 
-          echo "Configuring rclone to use LocalStack S3..."
+          echo "Configuring rclone to use MiniStack S3..."
           mkdir -p ~/.config/rclone
           cat > ~/.config/rclone/rclone.conf << 'EOF'
-          [localstack-s3]
+          [ministack-s3]
           type = s3
           provider = Other
           env_auth = false
@@ -1248,8 +1201,8 @@ jobs:
           EOF
 
           echo "Testing rclone configuration..."
-          rclone lsd localstack-s3: || echo "No buckets yet (expected)"
-          rclone ls localstack-s3:game-ci-team-pipelines || echo "Bucket may be empty"
+          rclone lsd ministack-s3: || echo "No buckets yet (expected)"
+          rclone ls ministack-s3:game-ci-team-pipelines || echo "Bucket may be empty"
           echo "Rclone configured successfully"
 
       - run: yarn install --frozen-lockfile
@@ -1267,8 +1220,8 @@ jobs:
           orchestratorTests: true
           versioning: None
           PROVIDER_STRATEGY: local-docker
-          RCLONE_REMOTE: 'localstack-s3:game-ci-team-pipelines'
-          rcloneRemote: 'localstack-s3:game-ci-team-pipelines'
+          RCLONE_REMOTE: 'ministack-s3:game-ci-team-pipelines'
+          rcloneRemote: 'ministack-s3:game-ci-team-pipelines'
           GIT_PRIVATE_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN }}
 
@@ -1283,7 +1236,7 @@ jobs:
           df -h
 
   # ============================================================================
-  # MOCK AWS TESTS (sibling to LocalStack — no external dependencies)
+  # MOCK AWS TESTS (sibling to MiniStack — no external dependencies)
   # ============================================================================
   mock-aws-tests:
     name: Mock AWS Provider Tests

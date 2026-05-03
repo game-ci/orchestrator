@@ -34,7 +34,7 @@ export class TaskParameterSerializer {
         ...TaskParameterSerializer.serializeOrchestratorOptions(),
         ...CommandHookService.getSecrets(CommandHookService.getHooks(buildParameters.commandHooks)),
 
-        // Include AWS environment variables for LocalStack compatibility
+        // Include AWS environment variables for local AWS emulator compatibility
         ...TaskParameterSerializer.serializeAwsEnvironmentVariables(),
       ]
         .filter(
