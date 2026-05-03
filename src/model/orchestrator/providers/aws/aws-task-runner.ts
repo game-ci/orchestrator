@@ -14,6 +14,17 @@ import OrchestratorOptions from '../../options/orchestrator-options';
 import GitHub from '../../../github';
 import { AwsClientFactory } from './aws-client-factory';
 
+const DEFAULT_TASK_WAIT_TIME_SECONDS = 900;
+
+function getTaskWaitTime(): number {
+  const overrideValue = Number(process.env.ORCHESTRATOR_AWS_TASK_WAIT_TIME ?? '');
+  if (!Number.isNaN(overrideValue) && overrideValue > 0) {
+    return overrideValue;
+  }
+
+  return DEFAULT_TASK_WAIT_TIME_SECONDS;
+}
+
 class AWSTaskRunner {
   private static readonly encodedUnderscore = `$252F`;
 
@@ -177,11 +188,12 @@ class AWSTaskRunner {
   }
 
   private static async waitUntilTaskRunning(taskArn: string, cluster: string) {
+    const taskWaitTime = getTaskWaitTime();
     try {
       await waitUntilTasksRunning(
         {
           client: AwsClientFactory.getECS(),
-          maxWaitTime: 300,
+          maxWaitTime: taskWaitTime,
           minDelay: 5,
           maxDelay: 30,
         },
@@ -191,10 +203,18 @@ class AWSTaskRunner {
       const error = error_ as Error;
       await new Promise((resolve) => setTimeout(resolve, 3000));
       const taskAfterError = await AWSTaskRunner.describeTasks(cluster, taskArn);
-      OrchestratorLogger.log(`Orchestrator job has ended ${taskAfterError?.containers?.[0]?.lastStatus}`);
+      const lastStatus = taskAfterError?.containers?.[0]?.lastStatus;
+      OrchestratorLogger.log(
+        `ECS task waiter timed out after ${taskWaitTime}s — task status: ${lastStatus}. ` +
+          `This often means image pull is slow (large Unity images). Continuing to stream logs...`,
+      );
 
-      core.setFailed(error.message || String(error));
-      core.error(OrchestratorLogger.stringifyError(error));
+      // Don't fail the build here — the task may still be starting or already running.
+      // Log streaming will detect if the task actually fails later.
+      core.warning(
+        `ECS task did not reach RUNNING within ${taskWaitTime}s (status: ${lastStatus}). ` +
+          `Set ORCHESTRATOR_AWS_TASK_WAIT_TIME to increase (current: ${taskWaitTime}s).`,
+      );
     }
   }
 
