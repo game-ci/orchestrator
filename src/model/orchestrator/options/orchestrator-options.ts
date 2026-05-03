@@ -75,7 +75,7 @@ class OrchestratorOptions {
   }
 
   static get orchestratorRepoName(): string {
-    return OrchestratorOptions.getInput('orchestratorRepoName') || 'game-ci/unity-builder';
+    return OrchestratorOptions.getInput('orchestratorRepoName') || 'game-ci/orchestrator';
   }
 
   static get cloneDepth(): string {
