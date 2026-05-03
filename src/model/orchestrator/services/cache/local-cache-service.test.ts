@@ -51,6 +51,42 @@ describe('LocalCacheService', () => {
     });
   });
 
+  describe('generateCacheKeyCandidates', () => {
+    it('orders compatible fallback keys after the exact key', () => {
+      (mockFs.existsSync as jest.Mock).mockReturnValue(true);
+      (mockFs.readdirSync as jest.Mock).mockReturnValue([
+        { name: 'StandaloneWindows64-2022_3_1f1-main', isDirectory: () => true },
+        { name: 'StandaloneWindows64-2022_3_1f1-develop', isDirectory: () => true },
+        { name: 'StandaloneWindows64-2021_3_1f1-main', isDirectory: () => true },
+        { name: 'WebGL-2022_3_1f1-main', isDirectory: () => true },
+      ]);
+
+      const result = LocalCacheService.generateCacheKeyCandidates(
+        '/cache',
+        'StandaloneWindows64',
+        '2022.3.1f1',
+        'main',
+      );
+
+      expect(result).toEqual([
+        'StandaloneWindows64-2022_3_1f1-main',
+        'StandaloneWindows64-2022_3_1f1-develop',
+        'StandaloneWindows64-2021_3_1f1-main',
+        'WebGL-2022_3_1f1-main',
+      ]);
+    });
+  });
+
+  describe('isCacheFolderComplete', () => {
+    it('rejects Unity Library skeleton markers with zero-byte ArtifactDB', () => {
+      (mockFs.existsSync as jest.Mock).mockReturnValue(true);
+      (mockFs.readdirSync as jest.Mock).mockReturnValue(['ArtifactDB']);
+      (mockFs.statSync as jest.Mock).mockReturnValue({ size: 0 });
+
+      expect(LocalCacheService.isCacheFolderComplete('/project/Library', 'Library')).toBe(false);
+    });
+  });
+
   describe('resolveCacheRoot', () => {
     const originalEnv = process.env;
 
@@ -118,6 +154,27 @@ describe('LocalCacheService', () => {
 
       const result = await LocalCacheService.restoreLibraryCache('/project', '/cache', 'key1');
       expect(result).toBe(false);
+    });
+
+    it('should copy fallback directory caches when move-directory is selected', async () => {
+      const exactPath = path.join('/cache', 'exact', 'Library');
+      const fallbackPath = path.join('/cache', 'fallback', 'Library');
+
+      (mockFs.existsSync as jest.Mock).mockImplementation((filePath: string) => filePath !== exactPath);
+      (mockFs.readdirSync as jest.Mock).mockReturnValue(['ArtifactDB']);
+      (mockFs.statSync as jest.Mock).mockReturnValue({ size: 1 });
+      (mockFs.mkdirSync as jest.Mock).mockReturnValue(undefined);
+      (mockFs.cpSync as jest.Mock).mockReturnValue(undefined);
+      (mockFs.rmSync as jest.Mock).mockReturnValue(undefined);
+
+      const result = await LocalCacheService.restoreEngineCache('/project', '/cache', 'exact', {
+        fallbackKeys: ['fallback'],
+        restoreMode: 'move-directory',
+      });
+
+      expect(result).toBe(true);
+      expect(mockFs.cpSync).toHaveBeenCalledWith(fallbackPath, path.join('/project', 'Library'), { recursive: true });
+      expect(mockFs.renameSync).not.toHaveBeenCalled();
     });
   });
 

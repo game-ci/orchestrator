@@ -4,6 +4,18 @@ import { OrchestratorSystem } from '../core/orchestrator-system';
 import OrchestratorLogger from '../core/orchestrator-logger';
 import { getEngine } from '../../../engine';
 
+export interface LocalCacheRestoreOptions {
+  fallbackKeys?: string[];
+  validateRestored?: boolean;
+  restoreMode?: 'tar' | 'move-directory' | 'copy-directory';
+}
+
+export interface LocalCacheSaveOptions {
+  diagnostics?: { crashEvidenceFound?: boolean };
+  skipOnCrashEvidence?: boolean;
+  saveMode?: 'tar' | 'move-directory' | 'copy-directory';
+}
+
 export class LocalCacheService {
   /**
    * Resolve the cache root directory based on build parameters and environment.
@@ -31,15 +43,69 @@ export class LocalCacheService {
     return raw.replace(/[^a-zA-Z0-9-]/g, '_');
   }
 
+  static generateCacheKeyCandidates(
+    cacheRoot: string,
+    targetPlatform: string,
+    unityVersion: string,
+    branch: string,
+    explicitFallbackKeys: string[] = [],
+  ): string[] {
+    const exactKey = LocalCacheService.generateCacheKey(targetPlatform, unityVersion, branch);
+    const candidates = new Set<string>([exactKey]);
+
+    for (const key of explicitFallbackKeys) {
+      if (key) candidates.add(key);
+    }
+
+    if (!fs.existsSync(cacheRoot)) {
+      return Array.from(candidates);
+    }
+
+    try {
+      const platformPrefix = targetPlatform.replace(/[^a-zA-Z0-9-]/g, '_');
+      const versionPart = unityVersion.replace(/[^a-zA-Z0-9-]/g, '_');
+      const entries = fs
+        .readdirSync(cacheRoot, { withFileTypes: true })
+        .filter((entry) => entry.isDirectory())
+        .map((entry) => entry.name)
+        .filter((key) => key !== exactKey);
+
+      const scored = entries
+        .map((key) => {
+          let score = 0;
+          if (key.startsWith(`${platformPrefix}-${versionPart}-`)) score += 30;
+          if (key.startsWith(`${platformPrefix}-`)) score += 20;
+          if (key.includes(`-${versionPart}-`)) score += 10;
+
+          return { key, score };
+        })
+        .filter((candidate) => candidate.score > 0)
+        .sort((a, b) => b.score - a.score || a.key.localeCompare(b.key));
+
+      for (const candidate of scored) {
+        candidates.add(candidate.key);
+      }
+    } catch (error: any) {
+      OrchestratorLogger.logWarning(`[LocalCache] Failed to discover fallback cache keys: ${error.message}`);
+    }
+
+    return Array.from(candidates);
+  }
+
   /**
    * Restore engine-specific cache folders from the local filesystem.
    * Iterates over getEngine().cacheFolders (e.g. ['Library'] for Unity).
    * Returns true if any cache was restored.
    */
-  static async restoreEngineCache(projectPath: string, cacheRoot: string, cacheKey: string): Promise<boolean> {
+  static async restoreEngineCache(
+    projectPath: string,
+    cacheRoot: string,
+    cacheKey: string,
+    options: LocalCacheRestoreOptions = {},
+  ): Promise<boolean> {
     let restored = false;
     for (const folder of getEngine().cacheFolders) {
-      if (await LocalCacheService.restoreCacheFolder(projectPath, cacheRoot, cacheKey, folder)) {
+      if (await LocalCacheService.restoreCacheFolder(projectPath, cacheRoot, cacheKey, folder, options)) {
         restored = true;
       }
     }
@@ -56,9 +122,14 @@ export class LocalCacheService {
    * Save engine-specific cache folders to the local cache.
    * Iterates over getEngine().cacheFolders (e.g. ['Library'] for Unity).
    */
-  static async saveEngineCache(projectPath: string, cacheRoot: string, cacheKey: string): Promise<void> {
+  static async saveEngineCache(
+    projectPath: string,
+    cacheRoot: string,
+    cacheKey: string,
+    options: LocalCacheSaveOptions = {},
+  ): Promise<void> {
     for (const folder of getEngine().cacheFolders) {
-      await LocalCacheService.saveCacheFolder(projectPath, cacheRoot, cacheKey, folder);
+      await LocalCacheService.saveCacheFolder(projectPath, cacheRoot, cacheKey, folder, options);
     }
   }
 
@@ -72,6 +143,37 @@ export class LocalCacheService {
     cacheRoot: string,
     cacheKey: string,
     folder: string,
+    options: LocalCacheRestoreOptions = {},
+  ): Promise<boolean> {
+    const candidates = [cacheKey, ...(options.fallbackKeys || []).filter((key) => key !== cacheKey)];
+
+    for (const candidateKey of candidates) {
+      const isFallback = candidateKey !== cacheKey;
+      const candidateOptions =
+        isFallback && options.restoreMode === 'move-directory'
+          ? { ...options, restoreMode: 'copy-directory' as const }
+          : options;
+
+      if (
+        await LocalCacheService.restoreCacheFolderCandidate(projectPath, cacheRoot, candidateKey, folder, candidateOptions)
+      ) {
+        if (isFallback) {
+          LocalCacheService.clearProfileDependentArtifacts(projectPath, folder);
+        }
+
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  private static async restoreCacheFolderCandidate(
+    projectPath: string,
+    cacheRoot: string,
+    cacheKey: string,
+    folder: string,
+    options: LocalCacheRestoreOptions = {},
   ): Promise<boolean> {
     const cachePath = path.join(cacheRoot, cacheKey, folder);
 
@@ -80,6 +182,10 @@ export class LocalCacheService {
         OrchestratorLogger.log(`[LocalCache] ${folder} cache miss: ${cachePath}`);
 
         return false;
+      }
+
+      if (options.restoreMode && options.restoreMode !== 'tar') {
+        return LocalCacheService.restoreDirectoryCache(projectPath, cachePath, folder, options);
       }
 
       const files = fs.readdirSync(cachePath).filter((f) => f.endsWith('.tar'));
@@ -108,6 +214,14 @@ export class LocalCacheService {
 
       OrchestratorLogger.log(`[LocalCache] ${folder} cache hit: restoring from ${tarPath}`);
       await OrchestratorSystem.Run(`tar -xf "${tarPath}" -C "${projectPath}"`, true);
+
+      if (options.validateRestored !== false && !LocalCacheService.isCacheFolderComplete(dest, folder)) {
+        OrchestratorLogger.logWarning(`[LocalCache] ${folder} restored from ${tarPath} is incomplete; discarding`);
+        fs.rmSync(dest, { recursive: true, force: true });
+
+        return false;
+      }
+
       OrchestratorLogger.log(`[LocalCache] ${folder} cache restored successfully`);
 
       return true;
@@ -123,10 +237,17 @@ export class LocalCacheService {
     cacheRoot: string,
     cacheKey: string,
     folder: string,
+    options: LocalCacheSaveOptions = {},
   ): Promise<void> {
     const folderPath = path.join(projectPath, folder);
 
     try {
+      if (options.skipOnCrashEvidence && options.diagnostics?.crashEvidenceFound) {
+        OrchestratorLogger.logWarning(`[LocalCache] ${folder} save skipped because Unity crash evidence was found`);
+
+        return;
+      }
+
       if (!fs.existsSync(folderPath)) {
         OrchestratorLogger.log(`[LocalCache] ${folder} folder does not exist, skipping save`);
 
@@ -140,8 +261,20 @@ export class LocalCacheService {
         return;
       }
 
+      if (!LocalCacheService.isCacheFolderComplete(folderPath, folder)) {
+        OrchestratorLogger.logWarning(`[LocalCache] ${folder} folder is incomplete, skipping save`);
+
+        return;
+      }
+
       const cachePath = path.join(cacheRoot, cacheKey, folder);
       fs.mkdirSync(cachePath, { recursive: true });
+
+      if (options.saveMode && options.saveMode !== 'tar') {
+        LocalCacheService.saveDirectoryCache(folderPath, cachePath, options.saveMode);
+
+        return;
+      }
 
       const timestamp = Date.now();
       const prefix = folder.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase();
@@ -157,6 +290,77 @@ export class LocalCacheService {
     } catch (error: any) {
       OrchestratorLogger.logWarning(`[LocalCache] ${folder} cache save failed: ${error.message}`);
     }
+  }
+
+  private static restoreDirectoryCache(
+    projectPath: string,
+    cachePath: string,
+    folder: string,
+    options: LocalCacheRestoreOptions,
+  ): boolean {
+    const dest = path.join(projectPath, folder);
+
+    try {
+      if (!LocalCacheService.isCacheFolderComplete(cachePath, folder)) {
+        OrchestratorLogger.log(`[LocalCache] ${folder} directory cache miss or incomplete: ${cachePath}`);
+
+        return false;
+      }
+
+      const entries = fs.readdirSync(cachePath);
+      if (entries.length > 0 && entries.every((entry) => entry.endsWith('.tar'))) {
+        OrchestratorLogger.logWarning(
+          `[LocalCache] ${folder} cache at ${cachePath} contains tar archives; use localCacheMode=tar to restore it`,
+        );
+
+        return false;
+      }
+
+      if (fs.existsSync(dest)) {
+        fs.rmSync(dest, { recursive: true, force: true });
+      }
+
+      fs.mkdirSync(path.dirname(dest), { recursive: true });
+      if (options.restoreMode === 'copy-directory') {
+        fs.cpSync(cachePath, dest, { recursive: true });
+      } else {
+        fs.renameSync(cachePath, dest);
+      }
+
+      if (options.validateRestored !== false && !LocalCacheService.isCacheFolderComplete(dest, folder)) {
+        OrchestratorLogger.logWarning(`[LocalCache] ${folder} directory cache restored incomplete; discarding`);
+        fs.rmSync(dest, { recursive: true, force: true });
+
+        return false;
+      }
+
+      OrchestratorLogger.log(`[LocalCache] ${folder} directory cache restored successfully`);
+
+      return true;
+    } catch (error: any) {
+      OrchestratorLogger.logWarning(`[LocalCache] ${folder} directory cache restore failed: ${error.message}`);
+
+      return false;
+    }
+  }
+
+  private static saveDirectoryCache(
+    folderPath: string,
+    cachePath: string,
+    saveMode: 'move-directory' | 'copy-directory',
+  ): void {
+    if (fs.existsSync(cachePath)) {
+      fs.rmSync(cachePath, { recursive: true, force: true });
+    }
+
+    fs.mkdirSync(path.dirname(cachePath), { recursive: true });
+    if (saveMode === 'copy-directory') {
+      fs.cpSync(folderPath, cachePath, { recursive: true });
+    } else {
+      fs.renameSync(folderPath, cachePath);
+    }
+
+    OrchestratorLogger.log(`[LocalCache] ${path.basename(folderPath)} directory cache saved successfully`);
   }
 
   /**
@@ -309,5 +513,62 @@ export class LocalCacheService {
     } catch (error: any) {
       OrchestratorLogger.logWarning(`[LocalCache] Cleanup of old entries failed: ${error.message}`);
     }
+  }
+
+  static isCacheFolderComplete(folderPath: string, folder: string): boolean {
+    try {
+      if (!fs.existsSync(folderPath)) return false;
+
+      const entries = fs.readdirSync(folderPath);
+      if (entries.length === 0) return false;
+
+      if (folder.replace(/\\/g, '/').split('/').pop() !== 'Library') {
+        return true;
+      }
+
+      const skeletonMarkers = [path.join(folderPath, 'ArtifactDB'), path.join(folderPath, 'assetDatabase.info')];
+      for (const marker of skeletonMarkers) {
+        if (fs.existsSync(marker)) {
+          const stat = fs.statSync(marker);
+          if (stat.size === 0) {
+            return false;
+          }
+        }
+      }
+
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  static clearProfileDependentArtifacts(projectPath: string, folder: string): string[] {
+    const folderName = folder.replace(/\\/g, '/').split('/').pop();
+    if (folderName !== 'Library') {
+      return [];
+    }
+
+    const libraryPath = path.join(projectPath, folder);
+
+    return LocalCacheService.removeCacheSubfolders(libraryPath, ['ScriptAssemblies', 'Bee']);
+  }
+
+  static removeCacheSubfolders(rootPath: string, subfolders: string[]): string[] {
+    const removed: string[] = [];
+
+    for (const subfolder of subfolders) {
+      const target = path.join(rootPath, subfolder);
+      try {
+        if (fs.existsSync(target)) {
+          fs.rmSync(target, { recursive: true, force: true });
+          removed.push(target);
+          OrchestratorLogger.log(`[LocalCache] Cleared profile-dependent cache folder: ${target}`);
+        }
+      } catch (error: any) {
+        OrchestratorLogger.logWarning(`[LocalCache] Failed to clear ${target}: ${error.message}`);
+      }
+    }
+
+    return removed;
   }
 }
