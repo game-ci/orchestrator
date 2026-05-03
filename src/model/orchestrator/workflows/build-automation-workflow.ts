@@ -170,8 +170,7 @@ echo "CACHE_KEY=$CACHE_KEY"`;
     if ! command -v npm > /dev/null 2>&1; then printf '#!/bin/sh\nexit 0\n' > /usr/local/bin/npm && chmod +x /usr/local/bin/npm; fi
     if ! command -v n > /dev/null 2>&1; then printf '#!/bin/sh\nexit 0\n' > /usr/local/bin/n && chmod +x /usr/local/bin/n; fi
     if ! command -v yarn > /dev/null 2>&1; then printf '#!/bin/sh\nexit 0\n' > /usr/local/bin/yarn && chmod +x /usr/local/bin/yarn; fi
-    ${Orchestrator.buildParameters.cacheSaveOnFailure ? CacheCheckpointService.generateFailureTrapScript('/data/cache/$CACHE_KEY') : ''}
-    ${CacheCheckpointService.generateCheckpointScript(Orchestrator.buildParameters.cacheCheckpointInterval, '/data/cache/$CACHE_KEY')}
+    ${Orchestrator.buildParameters.cacheSaveOnFailure ? CacheCheckpointService.generateFailureTrapScript('/data/cache/$CACHE_KEY', Orchestrator.buildParameters.cacheSaveOnFailureFilter) : ''}
     # Pipe entrypoint.sh output through log stream to capture Unity build output (including "Build succeeded")
     { echo "game ci start"; echo "game ci start" >> /home/job-log.txt; echo "CACHE_KEY=$CACHE_KEY"; echo "$CACHE_KEY"; if [ -n "$LOCKED_WORKSPACE" ]; then echo "Retained Workspace: true"; fi; if [ -n "$LOCKED_WORKSPACE" ] && [ -d "$GITHUB_WORKSPACE/.git" ]; then echo "Retained Workspace Already Exists!"; fi; /entrypoint.sh; } | node ${builderPath} -m remote-cli-log-stream --logFile /home/job-log.txt
     ${BuildAutomationWorkflow.engineCacheCommands()}
@@ -180,7 +179,6 @@ echo "CACHE_KEY=$CACHE_KEY"`;
     # build the pull-cache hook downloads them, giving Unity an empty Library
     # folder (zero caching benefit, full reimport every time).
     mkdir -p "/data/cache/$CACHE_KEY/build"
-    ${CacheCheckpointService.generateCheckpointStopScript()}
     # Run post-build tasks and capture output
     # Note: Post-build may clean up the builder directory, so we write output directly to log file
     # Use set +e to allow the command to fail without exiting the script

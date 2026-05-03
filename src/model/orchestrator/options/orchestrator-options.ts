@@ -312,12 +312,12 @@ class OrchestratorOptions {
     return OrchestratorOptions.getInput('cacheKey') || OrchestratorOptions.branch;
   }
 
-  static get cacheCheckpointInterval(): number {
-    return Number(OrchestratorOptions.getInput('cacheCheckpointInterval')) || 0;
-  }
-
   static get cacheSaveOnFailure(): boolean {
     return OrchestratorOptions.getInput('cacheSaveOnFailure') === 'true';
+  }
+
+  static get cacheSaveOnFailureFilter(): string {
+    return OrchestratorOptions.getInput('cacheSaveOnFailureFilter') || 'all';
   }
 
   static get cacheRetentionDays(): number {

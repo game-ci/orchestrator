@@ -3,6 +3,7 @@ import Orchestrator from '../../orchestrator';
 import { CustomWorkflow } from '../../workflows/custom-workflow';
 import { RemoteClientLogger } from '../../remote-client/remote-client-logger';
 import OrchestratorLogger from '../core/orchestrator-logger';
+import { CacheCheckpointService } from '../cache/cache-checkpoint-service';
 import path from 'node:path';
 import fs from 'node:fs';
 import Input from '../../../input';
@@ -168,21 +169,7 @@ export class ContainerHookService {
         Orchestrator.buildParameters.awsStackName
       }/orchestrator-cache/$CACHE_KEY/Library || true
       rm -r /data/cache/$CACHE_KEY/Library || true
-      ${Orchestrator.buildParameters.cacheRetentionDays > 0 ? `
-      # Cache retention: remove entries older than ${Orchestrator.buildParameters.cacheRetentionDays} days
-      CUTOFF_DATE=$(date -d "-${Orchestrator.buildParameters.cacheRetentionDays} days" +%s 2>/dev/null || echo "")
-      if [ -n "$CUTOFF_DATE" ]; then
-        BUCKET_PREFIX="s3://${Orchestrator.buildParameters.awsStackName}/orchestrator-cache/"
-        aws $ENDPOINT_ARGS s3 ls "$BUCKET_PREFIX" --recursive 2>/dev/null | while read -r line; do
-          FILE_DATE_STR=$(echo "$line" | awk '{print $1" "$2}')
-          FILE_KEY=$(echo "$line" | awk '{print $4}')
-          FILE_DATE_EPOCH=$(date -d "$FILE_DATE_STR" +%s 2>/dev/null || echo "0")
-          if [ -n "$FILE_KEY" ] && [ "$FILE_DATE_EPOCH" -lt "$CUTOFF_DATE" ] 2>/dev/null; then
-            aws $ENDPOINT_ARGS s3 rm "s3://${Orchestrator.buildParameters.awsStackName}/$FILE_KEY" 2>/dev/null || true
-          fi
-        done
-        echo "[Cache Retention] Cleaned entries older than ${Orchestrator.buildParameters.cacheRetentionDays} days"
-      fi` : ''}
+      ${CacheCheckpointService.generateRetentionCleanupScript(Orchestrator.buildParameters.cacheRetentionDays, Orchestrator.buildParameters.awsStackName)}
     else
       echo "AWS CLI not available, skipping aws-s3-upload-cache"
     fi

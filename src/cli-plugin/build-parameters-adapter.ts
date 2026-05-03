@@ -56,8 +56,8 @@ export function createBuildParametersFromCliOptions(options: Record<string, any>
   bp.skipLfs = options.skipLfs === true || options.skipLfs === 'true'
   bp.skipCache = options.skipCache === true || options.skipCache === 'true'
   bp.lockedWorkspace = ''
-  bp.cacheCheckpointInterval = Number(options.cacheCheckpointInterval) || 0
   bp.cacheSaveOnFailure = options.cacheSaveOnFailure === true || options.cacheSaveOnFailure === 'true'
+  bp.cacheSaveOnFailureFilter = options.cacheSaveOnFailureFilter || 'all'
   bp.cacheRetentionDays = Number(options.cacheRetentionDays) || 0
 
   // ── docker ────────────────────────────────────────────────────────

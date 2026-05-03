@@ -226,17 +226,17 @@ export function configureOrchestratorOptions(yargs: any): void {
     default: '',
   })
 
-  // --- Cache checkpointing ---
-  yargs.option('cacheCheckpointInterval', {
-    description: 'Save Library cache every N minutes during build (0 = disabled). Survives OOM/timeout.',
-    type: 'number',
-    default: 0,
-  })
-
+  // --- Cache survival ---
   yargs.option('cacheSaveOnFailure', {
-    description: 'Attempt to save partial Library cache when build fails or is killed',
+    description: 'Save partial Library cache when build fails or is killed (OOM, timeout, crash)',
     type: 'boolean',
     default: false,
+  })
+
+  yargs.option('cacheSaveOnFailureFilter', {
+    description: 'Which failures trigger cache save: "all", "oom", "timeout", "exit-code:N" (comma-separated)',
+    type: 'string',
+    default: 'all',
   })
 
   yargs.option('cacheRetentionDays', {
