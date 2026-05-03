@@ -226,6 +226,25 @@ export function configureOrchestratorOptions(yargs: any): void {
     default: '',
   })
 
+  // --- Cache checkpointing ---
+  yargs.option('cacheCheckpointInterval', {
+    description: 'Save Library cache every N minutes during build (0 = disabled). Survives OOM/timeout.',
+    type: 'number',
+    default: 0,
+  })
+
+  yargs.option('cacheSaveOnFailure', {
+    description: 'Attempt to save partial Library cache when build fails or is killed',
+    type: 'boolean',
+    default: false,
+  })
+
+  yargs.option('cacheRetentionDays', {
+    description: 'Auto-delete S3 cache entries older than N days (0 = keep forever)',
+    type: 'number',
+    default: 0,
+  })
+
   // --- Input override ---
   yargs.option('pullInputList', {
     description: 'Comma-separated list of inputs to pull from secret manager',
