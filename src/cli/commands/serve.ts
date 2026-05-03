@@ -207,10 +207,11 @@ async function dispatchCommand(provider: any, request: CliProviderRequest, cliAr
 
     case 'garbage-collect': {
       const previewOnly = params.previewOnly ?? cliArgs.dryRun ?? false;
+      const olderThan = params.olderThan ?? cliArgs.garbageMaxAge ?? 24;
       const output = await provider.garbageCollect(
         params.filter || '',
         previewOnly,
-        params.olderThan ?? 0,
+        olderThan,
         params.fullCache ?? false,
         params.baseDependencies ?? false,
       );

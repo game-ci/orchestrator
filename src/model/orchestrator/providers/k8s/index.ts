@@ -94,19 +94,112 @@ class Kubernetes implements ProviderInterface {
   watchWorkflow(): Promise<string> {
     throw new Error('Method not implemented.');
   }
-  garbageCollect(
-    // eslint-disable-next-line no-unused-vars
+  async garbageCollect(
     filter: string,
-    // eslint-disable-next-line no-unused-vars
     previewOnly: boolean,
-    // eslint-disable-next-line no-unused-vars
     olderThan: Number,
     // eslint-disable-next-line no-unused-vars
     fullCache: boolean,
     // eslint-disable-next-line no-unused-vars
     baseDependencies: boolean,
   ): Promise<string> {
-    return new Promise((result) => result(``));
+    const maxAgeHours = Number(olderThan) || 24;
+    const maxAgeMs = maxAgeHours * 60 * 60 * 1000;
+    const now = Date.now();
+    const output: string[] = [];
+
+    // Clean up completed/failed jobs older than maxAge
+    const jobs = await this.kubeClientBatch.listNamespacedJob(this.namespace);
+    for (const job of jobs.body.items) {
+      const jobName = job.metadata?.name || '';
+      if (filter && !jobName.includes(filter)) continue;
+      if (!jobName.startsWith('unity-builder-job-')) continue;
+
+      const createdAt = job.metadata?.creationTimestamp;
+      if (createdAt && now - new Date(createdAt).getTime() < maxAgeMs) continue;
+
+      const isComplete = job.status?.conditions?.some(
+        (c) => (c.type === 'Complete' || c.type === 'Failed') && c.status === 'True',
+      );
+      if (!isComplete) continue;
+
+      if (previewOnly) {
+        OrchestratorLogger.log(`[dry-run] Would delete job ${jobName}`);
+        output.push(`[dry-run] Would delete job: ${jobName}`);
+      } else {
+        OrchestratorLogger.log(`Deleting job ${jobName}`);
+        await this.kubeClientBatch.deleteNamespacedJob(jobName, this.namespace);
+        output.push(`Deleted job: ${jobName}`);
+      }
+    }
+
+    // Clean up orphaned pods from game-ci jobs
+    const pods = await this.kubeClient.listNamespacedPod(this.namespace);
+    for (const pod of pods.body.items) {
+      const podName = pod.metadata?.name || '';
+      if (filter && !podName.includes(filter)) continue;
+      const jobLabel = pod.metadata?.labels?.['job-name'] || '';
+      if (!jobLabel.startsWith('unity-builder-job-')) continue;
+
+      const createdAt = pod.metadata?.creationTimestamp;
+      if (createdAt && now - new Date(createdAt).getTime() < maxAgeMs) continue;
+
+      const phase = pod.status?.phase;
+      if (phase !== 'Succeeded' && phase !== 'Failed') continue;
+
+      if (previewOnly) {
+        OrchestratorLogger.log(`[dry-run] Would delete pod ${podName}`);
+        output.push(`[dry-run] Would delete pod: ${podName}`);
+      } else {
+        OrchestratorLogger.log(`Deleting pod ${podName}`);
+        await this.kubeClient.deleteNamespacedPod(podName, this.namespace);
+        output.push(`Deleted pod: ${podName}`);
+      }
+    }
+
+    // Clean up orphaned secrets from game-ci builds
+    const secrets = await this.kubeClient.listNamespacedSecret(this.namespace);
+    for (const secret of secrets.body.items) {
+      const secretName = secret.metadata?.name || '';
+      if (!secretName.startsWith('build-credentials-')) continue;
+
+      const createdAt = secret.metadata?.creationTimestamp;
+      if (createdAt && now - new Date(createdAt).getTime() < maxAgeMs) continue;
+
+      if (previewOnly) {
+        OrchestratorLogger.log(`[dry-run] Would delete secret ${secretName}`);
+        output.push(`[dry-run] Would delete secret: ${secretName}`);
+      } else {
+        OrchestratorLogger.log(`Deleting secret ${secretName}`);
+        await this.kubeClient.deleteNamespacedSecret(secretName, this.namespace);
+        output.push(`Deleted secret: ${secretName}`);
+      }
+    }
+
+    // Clean up orphaned service accounts
+    const serviceAccounts = await this.kubeClient.listNamespacedServiceAccount(this.namespace);
+    for (const sa of serviceAccounts.body.items) {
+      const saName = sa.metadata?.name || '';
+      if (!saName.startsWith('service-account-')) continue;
+
+      const createdAt = sa.metadata?.creationTimestamp;
+      if (createdAt && now - new Date(createdAt).getTime() < maxAgeMs) continue;
+
+      if (previewOnly) {
+        OrchestratorLogger.log(`[dry-run] Would delete service account ${saName}`);
+        output.push(`[dry-run] Would delete service account: ${saName}`);
+      } else {
+        OrchestratorLogger.log(`Deleting service account ${saName}`);
+        await this.kubeClient.deleteNamespacedServiceAccount(saName, this.namespace);
+        output.push(`Deleted service account: ${saName}`);
+      }
+    }
+
+    if (output.length === 0) {
+      output.push('No resources matched garbage collection criteria');
+    }
+
+    return output.join('\n');
   }
   public async setupWorkflow(
     buildGuid: string,

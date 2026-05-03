@@ -63,9 +63,7 @@ class AWSBuildEnvironment implements ProviderInterface {
     // eslint-disable-next-line no-unused-vars
     baseDependencies: boolean,
   ): Promise<string> {
-    await GarbageCollectionService.cleanup(!previewOnly, olderThan > 0);
-
-    return ``;
+    return GarbageCollectionService.cleanup(!previewOnly, olderThan);
   }
 
   async cleanupWorkflow(
