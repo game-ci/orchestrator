@@ -26,19 +26,114 @@ class LocalDockerOrchestrator implements ProviderInterface {
   watchWorkflow(): Promise<string> {
     throw new Error('Method not implemented.');
   }
-  garbageCollect(
-    // eslint-disable-next-line no-unused-vars
+  async garbageCollect(
     filter: string,
-    // eslint-disable-next-line no-unused-vars
     previewOnly: boolean,
-    // eslint-disable-next-line no-unused-vars
     olderThan: Number,
-    // eslint-disable-next-line no-unused-vars
     fullCache: boolean,
     // eslint-disable-next-line no-unused-vars
     baseDependencies: boolean,
   ): Promise<string> {
-    return new Promise((result) => result(``));
+    const maxAgeHours = Number(olderThan) || 24;
+    const output: string[] = [];
+
+    // Clean up stopped game-ci containers older than maxAge
+    const containerFilter = filter || 'unity';
+    const listCmd = `docker ps -a --filter "status=exited" --filter "name=${containerFilter}" --format "{{.ID}}\\t{{.Names}}\\t{{.CreatedAt}}"`;
+
+    try {
+      const containerList = await OrchestratorSystem.Run(listCmd, false, true);
+      for (const line of containerList.split('\n')) {
+        if (!line.trim()) continue;
+        const [id, name, ...createdParts] = line.split('\t');
+        if (!id) continue;
+        const createdAt = new Date(createdParts.join('\t'));
+        const ageMs = Date.now() - createdAt.getTime();
+        if (ageMs < maxAgeHours * 60 * 60 * 1000) continue;
+
+        if (previewOnly) {
+          OrchestratorLogger.log(`[dry-run] Would remove container ${name} (${id})`);
+          output.push(`[dry-run] Would remove container: ${name}`);
+        } else {
+          OrchestratorLogger.log(`Removing container ${name} (${id})`);
+          await OrchestratorSystem.Run(`docker rm ${id}`, false, true);
+          output.push(`Removed container: ${name}`);
+        }
+      }
+    } catch (error) {
+      OrchestratorLogger.log(`Failed to list/remove containers: ${error}`);
+    }
+
+    // Clean up dangling images (and optionally all game-ci images if fullCache)
+    try {
+      if (fullCache) {
+        const imageList = await OrchestratorSystem.Run(
+          `docker images --filter "reference=*unity*" --format "{{.ID}}\\t{{.Repository}}:{{.Tag}}\\t{{.CreatedAt}}"`,
+          false,
+          true,
+        );
+        for (const line of imageList.split('\n')) {
+          if (!line.trim()) continue;
+          const [id, repo, ...createdParts] = line.split('\t');
+          if (!id) continue;
+          const createdAt = new Date(createdParts.join('\t'));
+          const ageMs = Date.now() - createdAt.getTime();
+          if (ageMs < maxAgeHours * 60 * 60 * 1000) continue;
+
+          if (previewOnly) {
+            OrchestratorLogger.log(`[dry-run] Would remove image ${repo} (${id})`);
+            output.push(`[dry-run] Would remove image: ${repo}`);
+          } else {
+            OrchestratorLogger.log(`Removing image ${repo} (${id})`);
+            await OrchestratorSystem.Run(`docker rmi ${id}`, false, true);
+            output.push(`Removed image: ${repo}`);
+          }
+        }
+      } else {
+        // Just prune dangling images
+        if (previewOnly) {
+          const pruneOutput = await OrchestratorSystem.Run(`docker image prune --force --filter "until=${maxAgeHours}h" --dry-run 2>/dev/null || docker images -f "dangling=true" -q`, false, true);
+          if (pruneOutput.trim()) {
+            output.push(`[dry-run] Would prune dangling images`);
+          }
+        } else {
+          const pruneOutput = await OrchestratorSystem.Run(`docker image prune --force --filter "until=${maxAgeHours}h"`, false, true);
+          if (pruneOutput.trim()) {
+            output.push(`Pruned dangling images`);
+          }
+        }
+      }
+    } catch (error) {
+      OrchestratorLogger.log(`Failed to clean up images: ${error}`);
+    }
+
+    // Clean up build cache volumes
+    try {
+      const volumeList = await OrchestratorSystem.Run(
+        `docker volume ls --filter "name=orchestrator" --format "{{.Name}}"`,
+        false,
+        true,
+      );
+      for (const volumeName of volumeList.split('\n')) {
+        if (!volumeName.trim()) continue;
+        if (previewOnly) {
+          OrchestratorLogger.log(`[dry-run] Would remove volume ${volumeName}`);
+          output.push(`[dry-run] Would remove volume: ${volumeName}`);
+        } else {
+          OrchestratorLogger.log(`Removing volume ${volumeName}`);
+          await OrchestratorSystem.Run(`docker volume rm ${volumeName}`, false, true);
+          output.push(`Removed volume: ${volumeName}`);
+        }
+      }
+    } catch (error) {
+      OrchestratorLogger.log(`Failed to clean up volumes: ${error}`);
+    }
+
+    if (output.length === 0) {
+      output.push('No resources matched garbage collection criteria');
+    }
+
+    return output.join('\n');
   }
   async cleanupWorkflow(
     buildParameters: BuildParameters,
