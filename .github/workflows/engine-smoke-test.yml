@@ -2,19 +2,19 @@ name: Engine Smoke Tests
 
 on:
   push:
-    branches: [main, 'release/**', 'feat/**']
+    branches: [main, "release/**", "feat/**"]
   pull_request:
-    branches: [main, 'release/**']
+    branches: [main, "release/**"]
   workflow_dispatch:
     inputs:
       godot-version:
-        description: 'Godot version tag for barichello/godot-ci image'
+        description: "Godot version tag for barichello/godot-ci image"
         required: false
-        default: '4.3'
+        default: "4.3"
       unreal-image:
-        description: 'Real UE Docker image for full build test (leave empty to use CI stub)'
+        description: "Real UE Docker image for full build test (leave empty to use CI stub)"
         required: false
-        default: ''
+        default: ""
 
 jobs:
   # ─── Godot — actual project export using third-party image ─────
@@ -65,11 +65,28 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Install package manager (from package.json)
+        run: |
+          corepack enable
+          corepack install
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: "20"
+      - name: Resolve yarn cache folder
+        id: yarn-config
+        run: echo "cacheFolder=$(yarn config get cacheFolder)" >> "$GITHUB_OUTPUT"
+      - name: Restore yarn install cache (node_modules + cacheFolder + install-state)
+        uses: actions/cache@v4
+        with:
+          path: |
+            node_modules
+            ${{ steps.yarn-config.outputs.cacheFolder }}
+            .yarn/install-state.gz
+          key: yarn-${{ runner.os }}-node-'20'-${{ hashFiles('yarn.lock') }}
+          restore-keys: |
+            yarn-${{ runner.os }}-node-'20'-
 
-      - run: yarn install --frozen-lockfile
+      - run: yarn install --immutable
       - run: yarn build
 
       - name: Verify built-in Godot engine plugin
@@ -142,11 +159,28 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Install package manager (from package.json)
+        run: |
+          corepack enable
+          corepack install
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: "20"
+      - name: Resolve yarn cache folder
+        id: yarn-config
+        run: echo "cacheFolder=$(yarn config get cacheFolder)" >> "$GITHUB_OUTPUT"
+      - name: Restore yarn install cache (node_modules + cacheFolder + install-state)
+        uses: actions/cache@v4
+        with:
+          path: |
+            node_modules
+            ${{ steps.yarn-config.outputs.cacheFolder }}
+            .yarn/install-state.gz
+          key: yarn-${{ runner.os }}-node-'20'-${{ hashFiles('yarn.lock') }}
+          restore-keys: |
+            yarn-${{ runner.os }}-node-'20'-
 
-      - run: yarn install --frozen-lockfile
+      - run: yarn install --immutable
       - run: yarn build
 
       - name: Verify built-in Unreal engine plugin
@@ -199,11 +233,28 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Install package manager (from package.json)
+        run: |
+          corepack enable
+          corepack install
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: "20"
+      - name: Resolve yarn cache folder
+        id: yarn-config
+        run: echo "cacheFolder=$(yarn config get cacheFolder)" >> "$GITHUB_OUTPUT"
+      - name: Restore yarn install cache (node_modules + cacheFolder + install-state)
+        uses: actions/cache@v4
+        with:
+          path: |
+            node_modules
+            ${{ steps.yarn-config.outputs.cacheFolder }}
+            .yarn/install-state.gz
+          key: yarn-${{ runner.os }}-node-'20'-${{ hashFiles('yarn.lock') }}
+          restore-keys: |
+            yarn-${{ runner.os }}-node-'20'-
 
-      - run: yarn install --frozen-lockfile
+      - run: yarn install --immutable
       - run: yarn build
 
       - name: Test all serve subcommands
