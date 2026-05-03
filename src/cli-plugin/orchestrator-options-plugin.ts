@@ -35,6 +35,40 @@ export function configureOrchestratorOptions(yargs: any): void {
     default: 'header',
   })
 
+  yargs.option('providerStrategy', {
+    description: 'Provider strategy (aws, k8s, local, docker, gcp-cloud-run, azure-aci, etc.)',
+    type: 'string',
+  })
+
+  yargs.option('customJob', {
+    description: 'Custom job definition',
+    type: 'string',
+    default: '',
+  })
+
+  yargs.option('branch', {
+    description: 'Git branch to build',
+    type: 'string',
+  })
+
+  yargs.option('githubOwner', {
+    description: 'GitHub repository owner',
+    type: 'string',
+    default: '',
+  })
+
+  yargs.option('githubRepoName', {
+    description: 'GitHub repository name',
+    type: 'string',
+    default: '',
+  })
+
+  yargs.option('middlewareFiles', {
+    description: 'Comma-separated middleware file paths',
+    type: 'string',
+    default: '',
+  })
+
   // --- Runner checks ---
   yargs.option('runnerCheckEnabled', {
     description: 'Enable runner availability checks before dispatching',
@@ -299,6 +333,19 @@ export function configureOrchestratorOptions(yargs: any): void {
     description: 'Skip caching',
     type: 'boolean',
     default: false,
+  })
+
+  // --- Shared builder / cleanup ---
+  yargs.option('useSharedBuilder', {
+    description: 'Use shared builder mode',
+    type: 'boolean',
+    default: false,
+  })
+
+  yargs.option('useCleanupCron', {
+    description: 'Enable cleanup cron job',
+    type: 'boolean',
+    default: true,
   })
 
   // --- Advanced ---
