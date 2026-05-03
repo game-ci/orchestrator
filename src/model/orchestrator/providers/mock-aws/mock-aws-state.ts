@@ -3,7 +3,7 @@
  *
  * Simulates CloudFormation stacks, ECS clusters/tasks, S3 buckets,
  * Kinesis streams, and CloudWatch log groups — enough to exercise
- * the full orchestrator AWS pipeline without LocalStack or real AWS.
+ * the full orchestrator AWS pipeline without MiniStack or real AWS.
  *
  * Designed to be corrected as drift from real AWS behavior is reported.
  */

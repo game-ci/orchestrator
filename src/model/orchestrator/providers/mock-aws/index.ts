@@ -1,11 +1,11 @@
 /**
- * Mock AWS Provider — sibling to the real AWS provider and LocalStack.
+ * Mock AWS Provider — sibling to the real AWS provider and MiniStack.
  *
  * Implements the full ProviderInterface using in-memory mock services
  * for CloudFormation, ECS/Fargate, S3, Kinesis, and CloudWatch Logs.
  *
  * Use cases:
- *   - CI testing without LocalStack or real AWS credentials
+ *   - CI testing without MiniStack or real AWS credentials
  *   - Fast unit/integration tests for orchestrator logic
  *   - Validating CloudFormation template parsing and task lifecycle
  *   - Developing against the AWS pipeline offline

@@ -3,6 +3,7 @@ import Orchestrator from '../../orchestrator';
 import { CustomWorkflow } from '../../workflows/custom-workflow';
 import { RemoteClientLogger } from '../../remote-client/remote-client-logger';
 import OrchestratorLogger from '../core/orchestrator-logger';
+import { CacheCheckpointService } from '../cache/cache-checkpoint-service';
 import path from 'node:path';
 import fs from 'node:fs';
 import Input from '../../../input';
@@ -156,6 +157,10 @@ export class ContainerHookService {
       fi
       ENDPOINT_ARGS=""
       if [ -n "$AWS_S3_ENDPOINT" ]; then ENDPOINT_ARGS="--endpoint-url $AWS_S3_ENDPOINT"; fi
+      # Skip uploading empty or near-empty tar files (< 1KB) — these are leftover
+      # stubs with no real cache data and would poison the cache for the next build.
+      find /data/cache/$CACHE_KEY/lfs -name "*.tar*" -size -1k -delete 2>/dev/null || true
+      find /data/cache/$CACHE_KEY/Library -name "*.tar*" -size -1k -delete 2>/dev/null || true
       aws $ENDPOINT_ARGS s3 cp --recursive /data/cache/$CACHE_KEY/lfs s3://${
         Orchestrator.buildParameters.awsStackName
       }/orchestrator-cache/$CACHE_KEY/lfs || true
@@ -164,6 +169,7 @@ export class ContainerHookService {
         Orchestrator.buildParameters.awsStackName
       }/orchestrator-cache/$CACHE_KEY/Library || true
       rm -r /data/cache/$CACHE_KEY/Library || true
+      ${CacheCheckpointService.generateRetentionCleanupScript(Orchestrator.buildParameters.cacheRetentionDays, Orchestrator.buildParameters.awsStackName)}
     else
       echo "AWS CLI not available, skipping aws-s3-upload-cache"
     fi

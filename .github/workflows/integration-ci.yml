@@ -15,15 +15,15 @@ env:
 
 jobs:
   # ============================================================================
-  # AWS + LOCALSTACK SMOKE TEST
+  # AWS + MINISTACK SMOKE TEST
   # ============================================================================
   # Validates:
   #   - CloudFormation template generation (aws-local mode)
-  #   - S3 integration via LocalStack
+  #   - S3 integration via MiniStack
   #   - aws-local fallback (Fargate → local-docker with template validation)
   # ============================================================================
-  aws-localstack-smoke:
-    name: AWS + LocalStack Smoke
+  aws-ministack-smoke:
+    name: AWS + MiniStack Smoke
     runs-on: ubuntu-latest
     env:
       AWS_ACCESS_KEY_ID: test
@@ -40,9 +40,7 @@ jobs:
           node-version: 20
           cache: 'yarn'
 
-      - name: Start LocalStack
-        env:
-          LOCALSTACK_AUTH_TOKEN: ${{ secrets.LOCALSTACK_AUTH_TOKEN }}
+      - name: Start MiniStack
         run: |
           docker run -d \
             --name localstack-main \
@@ -50,17 +48,15 @@ jobs:
             -p 4566:4566 \
             -e SERVICES=s3,cloudformation,ecs,kinesis,cloudwatch,logs,iam,secretsmanager \
             -e DEBUG=0 \
-            -e LOCALSTACK_AUTH_TOKEN \
-            localstack/localstack:4
-          echo "Waiting for LocalStack to be ready..."
+            ministackorg/ministack
+          echo "Waiting for MiniStack to be ready..."
           for i in $(seq 1 60); do
-            HEALTH=$(curl -s http://localhost:4566/_localstack/health 2>/dev/null || echo "")
-            if echo "$HEALTH" | grep -q '"s3"'; then
-              echo "LocalStack is ready (attempt $i/60)"
+            if curl -sf http://localhost:4566 > /dev/null 2>&1; then
+              echo "MiniStack is ready (attempt $i/60)"
               break
             fi
             if [ "$i" -eq 60 ]; then
-              echo "ERROR: LocalStack did not become ready"
+              echo "ERROR: MiniStack did not become ready"
               docker logs localstack-main --tail 100 || true
               exit 1
             fi
@@ -69,9 +65,8 @@ jobs:
 
       - name: Create S3 bucket
         run: |
-          pip install awscli-local
           for i in $(seq 1 5); do
-            if awslocal s3 mb s3://$AWS_STACK_NAME 2>&1; then
+            if aws --endpoint-url=http://localhost:4566 s3 mb s3://$AWS_STACK_NAME 2>&1; then
               echo "Bucket created successfully"
               break
             fi
@@ -100,8 +95,8 @@ jobs:
           rm -rf ./orchestrator-cache/* || true
           docker system prune -f || true
 
-      # Test 2: S3 integration via LocalStack (local-docker provider + S3 hooks)
-      - name: 'Test: orchestrator-s3-steps (local-docker + LocalStack S3)'
+      # Test 2: S3 integration via MiniStack (local-docker provider + S3 hooks)
+      - name: 'Test: orchestrator-s3-steps (local-docker + MiniStack S3)'
         timeout-minutes: 15
         run: yarn run test "orchestrator-s3-steps" --detectOpenHandles --forceExit --runInBand
         env:
@@ -131,7 +126,7 @@ jobs:
   # Validates:
   #   - K8s Job creation and pod scheduling via k3d
   #   - PVC creation and binding
-  #   - LocalStack S3 connectivity from k3d pods
+  #   - MiniStack S3 connectivity from k3d pods
   # ============================================================================
   k8s-smoke:
     name: K8s + k3d Smoke
@@ -140,7 +135,7 @@ jobs:
       AWS_ACCESS_KEY_ID: test
       AWS_SECRET_ACCESS_KEY: test
       AWS_FORCE_PROVIDER: aws-local
-      K8S_LOCALSTACK_HOST: localstack-main
+      K8S_MINISTACK_HOST: localstack-main
       RESOURCE_TRACKING: 'true'
     steps:
       - uses: actions/checkout@v4
@@ -167,9 +162,7 @@ jobs:
           docker network rm orchestrator-net 2>/dev/null || true
           docker network create orchestrator-net
 
-      - name: Start LocalStack
-        env:
-          LOCALSTACK_AUTH_TOKEN: ${{ secrets.LOCALSTACK_AUTH_TOKEN }}
+      - name: Start MiniStack
         run: |
           docker run -d \
             --name localstack-main \
@@ -180,17 +173,15 @@ jobs:
             -e SERVICES=s3,cloudformation,ecs,kinesis,cloudwatch,logs,iam,secretsmanager \
             -e DEBUG=0 \
             -e HOSTNAME_EXTERNAL=localstack-main \
-            -e LOCALSTACK_AUTH_TOKEN \
-            localstack/localstack:4
-          echo "Waiting for LocalStack to be ready..."
+            ministackorg/ministack
+          echo "Waiting for MiniStack to be ready..."
           for i in $(seq 1 60); do
-            HEALTH=$(curl -s http://localhost:4566/_localstack/health 2>/dev/null || echo "")
-            if echo "$HEALTH" | grep -q '"s3"'; then
-              echo "LocalStack is ready (attempt $i/60)"
+            if curl -sf http://localhost:4566 > /dev/null 2>&1; then
+              echo "MiniStack is ready (attempt $i/60)"
               break
             fi
             if [ "$i" -eq 60 ]; then
-              echo "ERROR: LocalStack did not become ready"
+              echo "ERROR: MiniStack did not become ready"
               docker logs localstack-main --tail 100 || true
               exit 1
             fi
@@ -199,9 +190,8 @@ jobs:
 
       - name: Create S3 bucket
         run: |
-          pip install awscli-local
           for i in $(seq 1 5); do
-            if awslocal s3 mb s3://$AWS_STACK_NAME 2>&1; then
+            if aws --endpoint-url=http://localhost:4566 s3 mb s3://$AWS_STACK_NAME 2>&1; then
               echo "Bucket created successfully"
               break
             fi
@@ -218,7 +208,7 @@ jobs:
             --wait
           kubectl config current-context | cat
 
-      - name: Verify cluster and LocalStack connectivity
+      - name: Verify cluster and MiniStack connectivity
         timeout-minutes: 2
         run: |
           for i in $(seq 1 60); do
@@ -231,9 +221,9 @@ jobs:
           done
           kubectl get nodes
           kubectl get storageclass
-          LOCALSTACK_IP=$(docker inspect -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' localstack-main 2>/dev/null || echo "")
-          echo "LocalStack container IP: $LOCALSTACK_IP"
-          echo "LOCALSTACK_IP=$LOCALSTACK_IP" >> $GITHUB_ENV
+          MINISTACK_IP=$(docker inspect -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' localstack-main 2>/dev/null || echo "")
+          echo "MiniStack container IP: $MINISTACK_IP"
+          echo "MINISTACK_IP=$MINISTACK_IP" >> $GITHUB_ENV
 
       - run: yarn install --frozen-lockfile
       - run: yarn build

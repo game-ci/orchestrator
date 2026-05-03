@@ -57,16 +57,13 @@ class AWSBuildEnvironment implements ProviderInterface {
   async garbageCollect(
     filter: string,
     previewOnly: boolean,
-    // eslint-disable-next-line no-unused-vars
     olderThan: Number,
     // eslint-disable-next-line no-unused-vars
     fullCache: boolean,
     // eslint-disable-next-line no-unused-vars
     baseDependencies: boolean,
   ): Promise<string> {
-    await GarbageCollectionService.cleanup(!previewOnly);
-
-    return ``;
+    return GarbageCollectionService.cleanup(!previewOnly, olderThan);
   }
 
   async cleanupWorkflow(
@@ -107,7 +104,8 @@ class AWSBuildEnvironment implements ProviderInterface {
     AwsClientFactory.getECS();
     const CF = AwsClientFactory.getCloudFormation();
     AwsClientFactory.getKinesis();
-    OrchestratorLogger.log(`AWS Region: ${CF.config.region}`);
+    const resolvedRegion = typeof CF.config.region === 'function' ? await CF.config.region() : CF.config.region;
+    OrchestratorLogger.log(`AWS Region: ${resolvedRegion}`);
     const entrypoint = ['/bin/sh'];
     const startTimeMs = Date.now();
     const taskDef = await new AwsJobStack(this.baseStackName).setupCloudFormations(

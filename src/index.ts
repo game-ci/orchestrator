@@ -1,12 +1,19 @@
 /**
  * @game-ci/orchestrator — entry point
  *
- * Exports the Orchestrator.run() function and supporting types so that
- * unity-builder (or any host) can plug it in:
+ * Primary integration point for unity-builder:
+ *   const { createPlugin } = await import('@game-ci/orchestrator');
+ *   const plugin = createPlugin();
+ *   await plugin.initialize(coreParams, workspace);
  *
+ * Legacy / direct usage:
  *   import { Orchestrator } from '@game-ci/orchestrator';
  *   await Orchestrator.run(buildParameters, baseImage);
  */
+
+// Plugin lifecycle — primary integration for unity-builder
+export { createPlugin } from './plugin-lifecycle';
+export type { OrchestratorPlugin } from './plugin-lifecycle';
 
 export type {
   OrchestratorConfig,
@@ -48,6 +55,7 @@ export { IncrementalSyncService } from './model/orchestrator/services/sync';
 // Advanced services (lazy-loaded by unity-builder plugin interface)
 export { ChildWorkspaceService } from './model/orchestrator/services/cache/child-workspace-service';
 export { LocalCacheService } from './model/orchestrator/services/cache/local-cache-service';
+export { CacheCheckpointService } from './model/orchestrator/services/cache/cache-checkpoint-service';
 export { SubmoduleProfileService } from './model/orchestrator/services/submodule/submodule-profile-service';
 export { LfsAgentService } from './model/orchestrator/services/lfs/lfs-agent-service';
 export { GitHooksService } from './model/orchestrator/services/hooks/git-hooks-service';

@@ -35,11 +35,11 @@ describe('Orchestrator Caching', () => {
         orchestratorDebug: true,
       };
 
-      // For AWS LocalStack tests, set provider strategy to 'aws' so the orchestrator's
-      // built-in LocalStack auto-fallback (orchestrator.ts) routes to local-docker for
-      // container execution while S3 cache hooks still use LocalStack.
+      // For local AWS emulator tests, set provider strategy to 'aws' so the orchestrator's
+      // built-in auto-fallback (orchestrator.ts) routes to local-docker for
+      // container execution while S3 cache hooks still use the local emulator.
       const awsEndpoint = process.env.AWS_S3_ENDPOINT || process.env.AWS_ENDPOINT || process.env.AWS_ENDPOINT_URL || '';
-      const isLocalStack = /localhost|127\.0\.0\.1|localstack/i.test(awsEndpoint);
+      const isLocalStack = /localhost|127\.0\.0\.1|ministack|localstack/i.test(awsEndpoint);
       if (isLocalStack && OrchestratorOptions.providerStrategy !== 'k8s') {
         overrides.providerStrategy = 'aws';
         overrides.containerHookFiles += `,aws-s3-pull-cache,aws-s3-upload-cache`;

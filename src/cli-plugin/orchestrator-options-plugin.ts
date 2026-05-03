@@ -35,6 +35,40 @@ export function configureOrchestratorOptions(yargs: any): void {
     default: 'header',
   })
 
+  yargs.option('providerStrategy', {
+    description: 'Provider strategy (aws, k8s, local, docker, gcp-cloud-run, azure-aci, etc.)',
+    type: 'string',
+  })
+
+  yargs.option('customJob', {
+    description: 'Custom job definition',
+    type: 'string',
+    default: '',
+  })
+
+  yargs.option('branch', {
+    description: 'Git branch to build',
+    type: 'string',
+  })
+
+  yargs.option('githubOwner', {
+    description: 'GitHub repository owner',
+    type: 'string',
+    default: '',
+  })
+
+  yargs.option('githubRepoName', {
+    description: 'GitHub repository name',
+    type: 'string',
+    default: '',
+  })
+
+  yargs.option('middlewareFiles', {
+    description: 'Comma-separated middleware file paths',
+    type: 'string',
+    default: '',
+  })
+
   // --- Runner checks ---
   yargs.option('runnerCheckEnabled', {
     description: 'Enable runner availability checks before dispatching',
@@ -116,7 +150,7 @@ export function configureOrchestratorOptions(yargs: any): void {
   })
 
   yargs.option('awsEndpoint', {
-    description: 'AWS endpoint override (e.g., for LocalStack)',
+    description: 'AWS endpoint override (e.g., for local AWS emulators like MiniStack)',
     type: 'string',
   })
 
@@ -226,6 +260,25 @@ export function configureOrchestratorOptions(yargs: any): void {
     default: '',
   })
 
+  // --- Cache survival ---
+  yargs.option('cacheSaveOnFailure', {
+    description: 'Save partial Library cache when build fails or is killed (OOM, timeout, crash)',
+    type: 'boolean',
+    default: false,
+  })
+
+  yargs.option('cacheSaveOnFailureFilter', {
+    description: 'Which failures trigger cache save: "all", "oom", "timeout", "exit-code:N" (comma-separated)',
+    type: 'string',
+    default: 'all',
+  })
+
+  yargs.option('cacheRetentionDays', {
+    description: 'Auto-delete S3 cache entries older than N days (0 = keep forever)',
+    type: 'number',
+    default: 0,
+  })
+
   // --- Input override ---
   yargs.option('pullInputList', {
     description: 'Comma-separated list of inputs to pull from secret manager',
@@ -282,6 +335,19 @@ export function configureOrchestratorOptions(yargs: any): void {
     default: false,
   })
 
+  // --- Shared builder / cleanup ---
+  yargs.option('useSharedBuilder', {
+    description: 'Use shared builder mode',
+    type: 'boolean',
+    default: false,
+  })
+
+  yargs.option('useCleanupCron', {
+    description: 'Enable cleanup cron job',
+    type: 'boolean',
+    default: true,
+  })
+
   // --- Advanced ---
   yargs.option('orchestratorDebug', {
     description: 'Enable orchestrator debug logging',
@@ -323,6 +389,13 @@ export function configureOrchestratorOptions(yargs: any): void {
     description: 'Max age in hours for garbage collection',
     type: 'number',
     default: 24,
+  })
+
+  yargs.option('dryRun', {
+    alias: 'dry-run',
+    description: 'Preview garbage-collect actions without deleting resources (maps to previewOnly)',
+    type: 'boolean',
+    default: false,
   })
 
   // --- GitHub integration ---

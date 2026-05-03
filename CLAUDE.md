@@ -42,13 +42,13 @@ yarn game-ci --help   # Run CLI locally via ts-node
 - Jest with ts-jest, config in `jest.config.js`
 - Test files: `*.test.ts` colocated with source or in `__tests__/` directories
 - Test utilities in `src/test-utils/`
-- Integration tests exercise real AWS/K8s flows (run in CI with LocalStack + k3d)
+- Integration tests exercise real AWS/K8s flows (run in CI with MiniStack + k3d)
 
 ## CI Workflows
 
 - `.github/workflows/test.yml` — unit tests
 - `.github/workflows/ci.yml` — caller workflow for test + integrity
-- `.github/workflows/orchestrator-integrity.yml` — integration tests (AWS via LocalStack, K8s via k3d)
+- `.github/workflows/orchestrator-integrity.yml` — integration tests (AWS via MiniStack, K8s via k3d)
 - `.github/workflows/release-cli.yml` — CLI binary releases (npm publish is not yet active — no `NPM_TOKEN` secret configured)
 
 ## Conventions

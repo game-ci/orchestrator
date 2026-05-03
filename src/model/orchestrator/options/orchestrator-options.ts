@@ -75,7 +75,7 @@ class OrchestratorOptions {
   }
 
   static get orchestratorRepoName(): string {
-    return OrchestratorOptions.getInput('orchestratorRepoName') || 'game-ci/unity-builder';
+    return OrchestratorOptions.getInput('orchestratorRepoName') || 'game-ci/orchestrator';
   }
 
   static get cloneDepth(): string {
@@ -312,6 +312,18 @@ class OrchestratorOptions {
     return OrchestratorOptions.getInput('cacheKey') || OrchestratorOptions.branch;
   }
 
+  static get cacheSaveOnFailure(): boolean {
+    return OrchestratorOptions.getInput('cacheSaveOnFailure') === 'true';
+  }
+
+  static get cacheSaveOnFailureFilter(): string {
+    return OrchestratorOptions.getInput('cacheSaveOnFailureFilter') || 'all';
+  }
+
+  static get cacheRetentionDays(): number {
+    return Number(OrchestratorOptions.getInput('cacheRetentionDays')) || 0;
+  }
+
   // ### ### ###
   // Utility Parameters
   // ### ### ###
@@ -370,6 +382,126 @@ class OrchestratorOptions {
 
   static get garbageMaxAge(): number {
     return Number(OrchestratorOptions.getInput(`garbageMaxAge`)) || 24;
+  }
+
+  static get dryRun(): boolean {
+    return OrchestratorOptions.getInput('dryRun') === 'true';
+  }
+
+  // ### ### ###
+  // Engine
+  // ### ### ###
+
+  static get engine(): string {
+    return OrchestratorOptions.getInput('engine') || 'unity';
+  }
+
+  static get enginePlugin(): string {
+    return OrchestratorOptions.getInput('enginePlugin') || '';
+  }
+
+  // ### ### ###
+  // AWS (additional)
+  // ### ### ###
+
+  static get awsBaseStackName(): string {
+    return OrchestratorOptions.getInput('awsBaseStackName') || '';
+  }
+
+  // ### ### ###
+  // GCP Cloud Run
+  // ### ### ###
+
+  static get gcpCloudRunRegion(): string {
+    return OrchestratorOptions.getInput('gcpCloudRunRegion') || '';
+  }
+
+  static get gcpCloudRunProject(): string {
+    return OrchestratorOptions.getInput('gcpCloudRunProject') || '';
+  }
+
+  // ### ### ###
+  // Azure ACI
+  // ### ### ###
+
+  static get azureResourceGroup(): string {
+    return OrchestratorOptions.getInput('azureResourceGroup') || '';
+  }
+
+  static get azureSubscriptionId(): string {
+    return OrchestratorOptions.getInput('azureSubscriptionId') || '';
+  }
+
+  // ### ### ###
+  // GitHub Actions provider
+  // ### ### ###
+
+  static get githubActionsRepo(): string {
+    return OrchestratorOptions.getInput('githubActionsRepo') || '';
+  }
+
+  static get githubActionsWorkflow(): string {
+    return OrchestratorOptions.getInput('githubActionsWorkflow') || '';
+  }
+
+  static get githubActionsToken(): string {
+    return OrchestratorOptions.getInput('githubActionsToken') || '';
+  }
+
+  // ### ### ###
+  // GitLab CI provider
+  // ### ### ###
+
+  static get gitlabProjectId(): string {
+    return OrchestratorOptions.getInput('gitlabProjectId') || '';
+  }
+
+  static get gitlabTriggerToken(): string {
+    return OrchestratorOptions.getInput('gitlabTriggerToken') || '';
+  }
+
+  static get gitlabApiUrl(): string {
+    return OrchestratorOptions.getInput('gitlabApiUrl') || '';
+  }
+
+  // ### ### ###
+  // Remote PowerShell provider
+  // ### ### ###
+
+  static get remotePowershellHost(): string {
+    return OrchestratorOptions.getInput('remotePowershellHost') || '';
+  }
+
+  // ### ### ###
+  // Ansible provider
+  // ### ### ###
+
+  static get ansibleInventory(): string {
+    return OrchestratorOptions.getInput('ansibleInventory') || '';
+  }
+
+  static get ansiblePlaybook(): string {
+    return OrchestratorOptions.getInput('ansiblePlaybook') || '';
+  }
+
+  // ### ### ###
+  // Hot Runner
+  // ### ### ###
+
+  static get hotRunnerEnabled(): boolean {
+    return OrchestratorOptions.getInput('hotRunnerEnabled') === 'true';
+  }
+
+  static get hotRunnerTransport(): string {
+    return OrchestratorOptions.getInput('hotRunnerTransport') || 'tcp';
+  }
+
+  // ### ### ###
+  // Sync
+  // ### ### ###
+
+  static get syncStrategy(): string {
+    return OrchestratorOptions.getInput('syncStrategy') || 'full';
   }
 }
 

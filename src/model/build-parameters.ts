@@ -56,6 +56,9 @@ class BuildParameters {
   skipLfs!: boolean;
   skipCache!: boolean;
   lockedWorkspace!: string;
+  cacheSaveOnFailure!: boolean;
+  cacheSaveOnFailureFilter!: string;
+  cacheRetentionDays!: number;
 
   // ── docker ──────────────────────────────────────────────────────────
   dockerWorkspacePath!: string;
@@ -213,6 +216,9 @@ class BuildParameters {
     p.skipLfs = false;
     p.skipCache = false;
     p.lockedWorkspace = '';
+    p.cacheSaveOnFailure = false;
+    p.cacheSaveOnFailureFilter = 'all';
+    p.cacheRetentionDays = 0;
     p.awsStackName = Input.getInput('awsStackName') || process.env.AWS_STACK_NAME || 'game-ci';
     p.storageProvider = Input.getInput('storageProvider') || process.env.STORAGE_PROVIDER || 's3';
     p.rcloneRemote = Input.getInput('rcloneRemote') || process.env.RCLONE_REMOTE || '';
