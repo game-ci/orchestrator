@@ -341,6 +341,10 @@ inputs:
   cleanReservedFilenames:
     required: false
     default: 'false'
+  unityProcessCleanup:
+    required: false
+    default: 'false'
+    description: 'On Windows self-hosted runners, clean stale Unity processes scoped to the project path before launch.'
 
   # ─── Build archive ─────────────────────────────────────────────────
   buildArchiveEnabled:
@@ -379,6 +383,18 @@ inputs:
   localCacheLfs:
     required: false
     default: 'false'
+  localCacheFallback:
+    required: false
+    default: 'false'
+    description: 'When the exact local cache key misses, try compatible cache keys from the same platform/version.'
+  localCacheFallbackKeys:
+    required: false
+    default: ''
+    description: 'Comma-separated explicit local cache fallback keys to try after the exact key.'
+  localCacheMode:
+    required: false
+    default: 'tar'
+    description: 'Local Library cache mode: tar, copy-directory, or move-directory. move-directory is intended for same-volume Windows self-hosted runners.'
 
   # ─── Child workspaces ──────────────────────────────────────────────
   childWorkspacesEnabled:
@@ -684,6 +700,7 @@ runs:
         INPUT_GITINTEGRITYCHECK: ${{ inputs.gitIntegrityCheck }}
         INPUT_GITAUTORECOVER: ${{ inputs.gitAutoRecover }}
         INPUT_CLEANRESERVEDFILENAMES: ${{ inputs.cleanReservedFilenames }}
+        INPUT_UNITYPROCESSCLEANUP: ${{ inputs.unityProcessCleanup }}
         INPUT_BUILDARCHIVEENABLED: ${{ inputs.buildArchiveEnabled }}
         INPUT_BUILDARCHIVEPATH: ${{ inputs.buildArchivePath }}
         INPUT_BUILDARCHIVERETENTION: ${{ inputs.buildArchiveRetention }}
@@ -694,6 +711,9 @@ runs:
         INPUT_LOCALCACHEROOT: ${{ inputs.localCacheRoot }}
         INPUT_LOCALCACHELIBRARY: ${{ inputs.localCacheLibrary }}
         INPUT_LOCALCACHELFS: ${{ inputs.localCacheLfs }}
+        INPUT_LOCALCACHEFALLBACK: ${{ inputs.localCacheFallback }}
+        INPUT_LOCALCACHEFALLBACKKEYS: ${{ inputs.localCacheFallbackKeys }}
+        INPUT_LOCALCACHEMODE: ${{ inputs.localCacheMode }}
         INPUT_CHILDWORKSPACESENABLED: ${{ inputs.childWorkspacesEnabled }}
         INPUT_CHILDWORKSPACENAME: ${{ inputs.childWorkspaceName }}
         INPUT_CHILDWORKSPACECACHEROOT: ${{ inputs.childWorkspaceCacheRoot }}

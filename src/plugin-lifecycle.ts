@@ -114,6 +114,9 @@ const config = {
   get cleanReservedFilenames() {
     return getBool('cleanReservedFilenames');
   },
+  get unityProcessCleanup() {
+    return getBool('unityProcessCleanup');
+  },
 
   // Build archive
   get buildArchiveEnabled() {
@@ -177,6 +180,15 @@ const config = {
   },
   get localCacheLfs() {
     return getBool('localCacheLfs');
+  },
+  get localCacheFallback() {
+    return getBool('localCacheFallback');
+  },
+  get localCacheFallbackKeys() {
+    return getInput('localCacheFallbackKeys');
+  },
+  get localCacheMode() {
+    return getInput('localCacheMode') || 'tar';
   },
 
   // Git hooks
@@ -362,6 +374,11 @@ export function createPlugin(): OrchestratorPlugin {
         BuildReliabilityService.cleanReservedFilenames(coreParams.projectPath);
       }
 
+      if (config.unityProcessCleanup) {
+        const { UnityProcessService } = await import('./model/orchestrator/services/reliability');
+        UnityProcessService.cleanupWorkspaceProcesses(path.join(ws, coreParams.projectPath));
+      }
+
       // ── Child workspace restore ────────────────────────────────
       if (config.childWorkspacesEnabled && config.childWorkspaceName) {
         const { ChildWorkspaceService } = await import('./model/orchestrator/services/cache/child-workspace-service');
@@ -434,7 +451,22 @@ export function createPlugin(): OrchestratorPlugin {
         }
         if (config.localCacheLibrary) {
           const projectFullPath = path.join(ws, coreParams.projectPath);
-          await LocalCacheService.restoreLibraryCache(projectFullPath, cacheRoot, cacheKey);
+          const fallbackKeys = config.localCacheFallback
+            ? LocalCacheService.generateCacheKeyCandidates(
+                cacheRoot,
+                coreParams.targetPlatform,
+                coreParams.editorVersion,
+                coreParams.branch || '',
+                config.localCacheFallbackKeys
+                  .split(',')
+                  .map((key) => key.trim())
+                  .filter(Boolean),
+              ).filter((key) => key !== cacheKey)
+            : [];
+          await LocalCacheService.restoreEngineCache(projectFullPath, cacheRoot, cacheKey, {
+            fallbackKeys,
+            restoreMode: config.localCacheMode as any,
+          });
         }
       }
 
@@ -466,7 +498,9 @@ export function createPlugin(): OrchestratorPlugin {
 
         if (config.localCacheLibrary) {
           const projectFullPath = path.join(ws, coreParams.projectPath);
-          await LocalCacheService.saveLibraryCache(projectFullPath, cacheRoot, cacheKey);
+          await LocalCacheService.saveEngineCache(projectFullPath, cacheRoot, cacheKey, {
+            saveMode: config.localCacheMode as any,
+          });
         }
         if (config.localCacheLfs) {
           await LocalCacheService.saveLfsCache(ws, cacheRoot, cacheKey);
