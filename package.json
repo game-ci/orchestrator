@@ -22,8 +22,8 @@
   "license": "MIT",
   "scripts": {
     "build": "tsc",
-    "test": "jest",
-    "test:ci": "jest --runInBand",
+    "test": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js",
+    "test:ci": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js --runInBand",
     "lint": "prettier --check \"src/**/*.{js,ts}\"",
     "format": "prettier --write \"src/**/*.{js,ts}\"",
     "game-ci": "ts-node src/cli.ts"
