@@ -2,28 +2,28 @@ name: Integration Tests
 
 on:
   schedule:
-    - cron: '0 3 * * *' # Nightly at 3 AM UTC
+    - cron: "0 3 * * *" # Nightly at 3 AM UTC
   push:
     branches: [main]
     paths:
-      - 'src/model/orchestrator/providers/**'
-      - 'src/model/orchestrator/orchestrator.ts'
-      - 'src/model/orchestrator/workflows/**'
-      - 'src/model/orchestrator/services/**'
-      - '.github/workflows/orchestrator-integrity.yml'
+      - "src/model/orchestrator/providers/**"
+      - "src/model/orchestrator/orchestrator.ts"
+      - "src/model/orchestrator/workflows/**"
+      - "src/model/orchestrator/services/**"
+      - ".github/workflows/orchestrator-integrity.yml"
   workflow_dispatch:
     inputs:
       runGithubIntegrationTests:
-        description: 'Run GitHub Checks integration tests'
+        description: "Run GitHub Checks integration tests"
         required: false
-        default: 'false'
+        default: "false"
         type: string
   workflow_call:
     inputs:
       runGithubIntegrationTests:
-        description: 'Run GitHub Checks integration tests'
+        description: "Run GitHub Checks integration tests"
         required: false
-        default: 'false'
+        default: "false"
         type: string
 
 permissions:
@@ -63,23 +63,39 @@ jobs:
     name: K8s Provider Tests
     runs-on: ubuntu-latest
     env:
-      K3D_NODE_CONTAINERS: 'k3d-unity-builder-agent-0'
+      K3D_NODE_CONTAINERS: "k3d-unity-builder-agent-0"
       AWS_FORCE_PROVIDER: aws-local
-      RESOURCE_TRACKING: 'true'
+      RESOURCE_TRACKING: "true"
       K8S_MINISTACK_HOST: localstack-main
     steps:
       # --- Setup ---
       - uses: actions/checkout@v4
         with:
           lfs: false
+      - name: Install package manager (from package.json)
+        run: |
+          corepack enable
+          corepack install
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: 'yarn'
+      - name: Resolve yarn cache folder
+        id: yarn-config
+        run: echo "cacheFolder=$(yarn config get cacheFolder)" >> "$GITHUB_OUTPUT"
+      - name: Restore yarn install cache (node_modules + cacheFolder + install-state)
+        uses: actions/cache@v4
+        with:
+          path: |
+            node_modules
+            ${{ steps.yarn-config.outputs.cacheFolder }}
+            .yarn/install-state.gz
+          key: yarn-${{ runner.os }}-node-20-${{ hashFiles('yarn.lock') }}
+          restore-keys: |
+            yarn-${{ runner.os }}-node-20-
       - name: Set up kubectl
         uses: azure/setup-kubectl@v4
         with:
-          version: 'v1.34.1'
+          version: "v1.34.1"
       - name: Install k3d
         run: |
           curl -s https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | bash
@@ -222,7 +238,7 @@ jobs:
             exit 1
           fi
 
-      - run: yarn install --frozen-lockfile
+      - run: yarn install --immutable
       - run: yarn build
       # ==========================================
       # FAST UNIT TESTS (no infra required, fast-fail gate)
@@ -314,8 +330,8 @@ jobs:
           KUBE_STORAGE_CLASS: local-path
           PROVIDER_STRATEGY: k8s
           KUBE_VOLUME_SIZE: 2Gi
-          containerCpu: '512'
-          containerMemory: '512'
+          containerCpu: "512"
+          containerMemory: "512"
           GIT_PRIVATE_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN }}
       - name: Cleanup after orchestrator-image (K8s)
@@ -338,16 +354,16 @@ jobs:
           KUBE_STORAGE_CLASS: local-path
           PROVIDER_STRATEGY: k8s
           KUBE_VOLUME_SIZE: 2Gi
-          containerCpu: '1000'
-          containerMemory: '1024'
+          containerCpu: "1000"
+          containerMemory: "1024"
           AWS_ACCESS_KEY_ID: test
           AWS_SECRET_ACCESS_KEY: test
           AWS_S3_ENDPOINT: http://localhost:4566
           AWS_ENDPOINT: http://localhost:4566
           INPUT_AWSS3ENDPOINT: http://localhost:4566
           INPUT_AWSENDPOINT: http://localhost:4566
-          AWS_S3_FORCE_PATH_STYLE: 'true'
-          AWS_EC2_METADATA_DISABLED: 'true'
+          AWS_S3_FORCE_PATH_STYLE: "true"
+          AWS_EC2_METADATA_DISABLED: "true"
           GIT_PRIVATE_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN }}
       - name: Cleanup after orchestrator-kubernetes
@@ -370,16 +386,16 @@ jobs:
           KUBE_STORAGE_CLASS: local-path
           PROVIDER_STRATEGY: k8s
           KUBE_VOLUME_SIZE: 2Gi
-          containerCpu: '1000'
-          containerMemory: '1024'
+          containerCpu: "1000"
+          containerMemory: "1024"
           AWS_ACCESS_KEY_ID: test
           AWS_SECRET_ACCESS_KEY: test
           AWS_S3_ENDPOINT: http://localhost:4566
           AWS_ENDPOINT: http://localhost:4566
           INPUT_AWSS3ENDPOINT: http://localhost:4566
           INPUT_AWSENDPOINT: http://localhost:4566
-          AWS_S3_FORCE_PATH_STYLE: 'true'
-          AWS_EC2_METADATA_DISABLED: 'true'
+          AWS_S3_FORCE_PATH_STYLE: "true"
+          AWS_EC2_METADATA_DISABLED: "true"
           GIT_PRIVATE_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN }}
       - name: Cleanup after orchestrator-s3-steps (K8s)
@@ -402,16 +418,16 @@ jobs:
           KUBE_STORAGE_CLASS: local-path
           PROVIDER_STRATEGY: k8s
           KUBE_VOLUME_SIZE: 2Gi
-          containerCpu: '1000'
-          containerMemory: '1024'
+          containerCpu: "1000"
+          containerMemory: "1024"
           AWS_ACCESS_KEY_ID: test
           AWS_SECRET_ACCESS_KEY: test
           AWS_S3_ENDPOINT: http://localhost:4566
           AWS_ENDPOINT: http://localhost:4566
           INPUT_AWSS3ENDPOINT: http://localhost:4566
           INPUT_AWSENDPOINT: http://localhost:4566
-          AWS_S3_FORCE_PATH_STYLE: 'true'
-          AWS_EC2_METADATA_DISABLED: 'true'
+          AWS_S3_FORCE_PATH_STYLE: "true"
+          AWS_EC2_METADATA_DISABLED: "true"
           GIT_PRIVATE_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN }}
       - name: Cleanup after orchestrator-end2end-caching (K8s)
@@ -443,16 +459,16 @@ jobs:
           KUBE_STORAGE_CLASS: local-path
           PROVIDER_STRATEGY: k8s
           KUBE_VOLUME_SIZE: 2Gi
-          containerCpu: '512'
-          containerMemory: '512'
+          containerCpu: "512"
+          containerMemory: "512"
           AWS_ACCESS_KEY_ID: test
           AWS_SECRET_ACCESS_KEY: test
           AWS_S3_ENDPOINT: http://localhost:4566
           AWS_ENDPOINT: http://localhost:4566
           INPUT_AWSS3ENDPOINT: http://localhost:4566
           INPUT_AWSENDPOINT: http://localhost:4566
-          AWS_S3_FORCE_PATH_STYLE: 'true'
-          AWS_EC2_METADATA_DISABLED: 'true'
+          AWS_S3_FORCE_PATH_STYLE: "true"
+          AWS_EC2_METADATA_DISABLED: "true"
           GIT_PRIVATE_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN }}
 
@@ -484,10 +500,26 @@ jobs:
       - uses: actions/checkout@v4
         with:
           lfs: false
+      - name: Install package manager (from package.json)
+        run: |
+          corepack enable
+          corepack install
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: 'yarn'
+      - name: Resolve yarn cache folder
+        id: yarn-config
+        run: echo "cacheFolder=$(yarn config get cacheFolder)" >> "$GITHUB_OUTPUT"
+      - name: Restore yarn install cache (node_modules + cacheFolder + install-state)
+        uses: actions/cache@v4
+        with:
+          path: |
+            node_modules
+            ${{ steps.yarn-config.outputs.cacheFolder }}
+            .yarn/install-state.gz
+          key: yarn-${{ runner.os }}-node-20-${{ hashFiles('yarn.lock') }}
+          restore-keys: |
+            yarn-${{ runner.os }}-node-20-
 
       - name: Define cleanup functions
         run: |
@@ -576,7 +608,7 @@ jobs:
             exit 1
           fi
 
-      - run: yarn install --frozen-lockfile
+      - run: yarn install --immutable
       - run: yarn build
 
       # --- AWS Test 1: orchestrator-image ---
@@ -805,10 +837,26 @@ jobs:
       - uses: actions/checkout@v4
         with:
           lfs: false
+      - name: Install package manager (from package.json)
+        run: |
+          corepack enable
+          corepack install
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: 'yarn'
+      - name: Resolve yarn cache folder
+        id: yarn-config
+        run: echo "cacheFolder=$(yarn config get cacheFolder)" >> "$GITHUB_OUTPUT"
+      - name: Restore yarn install cache (node_modules + cacheFolder + install-state)
+        uses: actions/cache@v4
+        with:
+          path: |
+            node_modules
+            ${{ steps.yarn-config.outputs.cacheFolder }}
+            .yarn/install-state.gz
+          key: yarn-${{ runner.os }}-node-20-${{ hashFiles('yarn.lock') }}
+          restore-keys: |
+            yarn-${{ runner.os }}-node-20-
 
       - name: Define cleanup functions
         run: |
@@ -885,7 +933,7 @@ jobs:
             echo "ERROR: Failed to create S3 bucket"; exit 1
           fi
 
-      - run: yarn install --frozen-lockfile
+      - run: yarn install --immutable
       - run: yarn build
 
       # --- Docker Test 1: orchestrator-image ---
@@ -968,8 +1016,8 @@ jobs:
           AWS_S3_ENDPOINT: http://localhost:4566
           INPUT_AWSS3ENDPOINT: http://localhost:4566
           INPUT_AWSENDPOINT: http://localhost:4566
-          AWS_S3_FORCE_PATH_STYLE: 'true'
-          AWS_EC2_METADATA_DISABLED: 'true'
+          AWS_S3_FORCE_PATH_STYLE: "true"
+          AWS_EC2_METADATA_DISABLED: "true"
           GIT_PRIVATE_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN }}
       - name: Cleanup after orchestrator-locking-core (local-docker)
@@ -998,8 +1046,8 @@ jobs:
           AWS_S3_ENDPOINT: http://localhost:4566
           INPUT_AWSS3ENDPOINT: http://localhost:4566
           INPUT_AWSENDPOINT: http://localhost:4566
-          AWS_S3_FORCE_PATH_STYLE: 'true'
-          AWS_EC2_METADATA_DISABLED: 'true'
+          AWS_S3_FORCE_PATH_STYLE: "true"
+          AWS_EC2_METADATA_DISABLED: "true"
           GIT_PRIVATE_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN }}
       - name: Cleanup after orchestrator-locking-get-locked (local-docker)
@@ -1068,8 +1116,8 @@ jobs:
           AWS_S3_ENDPOINT: http://localhost:4566
           INPUT_AWSS3ENDPOINT: http://localhost:4566
           INPUT_AWSENDPOINT: http://localhost:4566
-          AWS_S3_FORCE_PATH_STYLE: 'true'
-          AWS_EC2_METADATA_DISABLED: 'true'
+          AWS_S3_FORCE_PATH_STYLE: "true"
+          AWS_EC2_METADATA_DISABLED: "true"
           GIT_PRIVATE_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN }}
       - name: Cleanup after orchestrator-s3-steps (local-docker)
@@ -1098,8 +1146,8 @@ jobs:
           AWS_S3_ENDPOINT: http://localhost:4566
           INPUT_AWSS3ENDPOINT: http://localhost:4566
           INPUT_AWSENDPOINT: http://localhost:4566
-          AWS_S3_FORCE_PATH_STYLE: 'true'
-          AWS_EC2_METADATA_DISABLED: 'true'
+          AWS_S3_FORCE_PATH_STYLE: "true"
+          AWS_EC2_METADATA_DISABLED: "true"
           GIT_PRIVATE_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN }}
 
@@ -1124,10 +1172,26 @@ jobs:
       - uses: actions/checkout@v4
         with:
           lfs: false
+      - name: Install package manager (from package.json)
+        run: |
+          corepack enable
+          corepack install
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: 'yarn'
+      - name: Resolve yarn cache folder
+        id: yarn-config
+        run: echo "cacheFolder=$(yarn config get cacheFolder)" >> "$GITHUB_OUTPUT"
+      - name: Restore yarn install cache (node_modules + cacheFolder + install-state)
+        uses: actions/cache@v4
+        with:
+          path: |
+            node_modules
+            ${{ steps.yarn-config.outputs.cacheFolder }}
+            .yarn/install-state.gz
+          key: yarn-${{ runner.os }}-node-20-${{ hashFiles('yarn.lock') }}
+          restore-keys: |
+            yarn-${{ runner.os }}-node-20-
 
       - name: Initial disk space cleanup
         run: |
@@ -1205,7 +1269,7 @@ jobs:
           rclone ls ministack-s3:game-ci-team-pipelines || echo "Bucket may be empty"
           echo "Rclone configured successfully"
 
-      - run: yarn install --frozen-lockfile
+      - run: yarn install --immutable
       - run: yarn build
 
       # --- Rclone Test 1: orchestrator-rclone-steps ---
@@ -1220,8 +1284,8 @@ jobs:
           orchestratorTests: true
           versioning: None
           PROVIDER_STRATEGY: local-docker
-          RCLONE_REMOTE: 'ministack-s3:game-ci-team-pipelines'
-          rcloneRemote: 'ministack-s3:game-ci-team-pipelines'
+          RCLONE_REMOTE: "ministack-s3:game-ci-team-pipelines"
+          rcloneRemote: "ministack-s3:game-ci-team-pipelines"
           GIT_PRIVATE_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN }}
           GITHUB_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN }}
 
@@ -1247,13 +1311,36 @@ jobs:
       - uses: actions/checkout@v4
         with:
           lfs: false
+      - name: Read Node version from mise.toml
+        id: node
+        run: echo "version=$(grep -E '^node\\s*=' mise.toml | sed -E 's/.*"([^"]+)".*/\\1/')" >> "$GITHUB_OUTPUT"
+      - name: Install package manager (from package.json)
+        run: |
+          corepack enable
+          corepack install
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
-          cache: 'yarn'
-      - run: yarn install --frozen-lockfile
+          node-version: ${{ steps.node.outputs.version }}
+      - name: Resolve yarn cache folder
+        id: yarn-config
+        run: echo "cacheFolder=$(yarn config get cacheFolder)" >> "$GITHUB_OUTPUT"
+      - name: Restore yarn install cache (node_modules + cacheFolder + install-state)
+        uses: actions/cache@v4
+        with:
+          path: |
+            node_modules
+            ${{ steps.yarn-config.outputs.cacheFolder }}
+            .yarn/install-state.gz
+          key: yarn-${{ runner.os }}-node${{ steps.node.outputs.version }}-${{ hashFiles('yarn.lock') }}
+          restore-keys: |
+            yarn-${{ runner.os }}-node${{ steps.node.outputs.version }}-
+      - name: Install deps
+        env:
+          YARN_ENABLE_HARDENED_MODE: "false"
+        run: |
+          case "$(yarn --version)" in 1.*) echo 'expected up-to-date yarn version'; exit 1 ;; esac
+          yarn install --immutable
       - run: yarn build
-
       # --- Mock AWS unit tests (CloudFormation, ECS, S3, Kinesis, CloudWatch) ---
       - name: Run mock AWS service tests
         run: npx jest src/model/orchestrator/providers/mock-aws/mock-aws.test.ts --no-coverage --forceExit
