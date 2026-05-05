@@ -7,7 +7,11 @@ import OrchestratorSecret from '../../options/orchestrator-secret';
 import { ProviderResource } from '../provider-resource';
 import { ProviderWorkflow } from '../provider-workflow';
 import OrchestratorLogger from '../../services/core/orchestrator-logger';
-import { CliProviderRequest, CliProviderResponse, CliProviderSubcommand } from './cli-provider-protocol';
+import {
+  CliProviderRequest,
+  CliProviderResponse,
+  CliProviderSubcommand,
+} from './cli-provider-protocol';
 
 const DEFAULT_TIMEOUT_MS = 300_000; // 300 seconds
 const RUN_TASK_TIMEOUT_MS = 7_200_000; // 2 hours
@@ -50,7 +54,11 @@ class CliProvider implements ProviderInterface {
     buildGuid: string,
     buildParameters: BuildParameters,
     branchName: string,
-    defaultSecretsArray: { ParameterKey: string; EnvironmentVariable: string; ParameterValue: string }[],
+    defaultSecretsArray: {
+      ParameterKey: string;
+      EnvironmentVariable: string;
+      ParameterValue: string;
+    }[],
   ): Promise<any> {
     const response = await this.execute('setup-workflow', {
       buildGuid,
@@ -65,7 +73,11 @@ class CliProvider implements ProviderInterface {
   async cleanupWorkflow(
     buildParameters: BuildParameters,
     branchName: string,
-    defaultSecretsArray: { ParameterKey: string; EnvironmentVariable: string; ParameterValue: string }[],
+    defaultSecretsArray: {
+      ParameterKey: string;
+      EnvironmentVariable: string;
+      ParameterValue: string;
+    }[],
   ): Promise<any> {
     const response = await this.execute('cleanup-workflow', {
       buildParameters,
@@ -162,7 +174,11 @@ class CliProvider implements ProviderInterface {
       child.on('error', (error: Error) => {
         clearTimeout(timer);
         if (!timedOut) {
-          reject(new Error(`CliProvider: failed to spawn executable '${this.executablePath}': ${error.message}`));
+          reject(
+            new Error(
+              `CliProvider: failed to spawn executable '${this.executablePath}': ${error.message}`,
+            ),
+          );
         }
       });
 
@@ -175,14 +191,18 @@ class CliProvider implements ProviderInterface {
             resolve(lastJsonResponse.output || outputLines.join('\n'));
           } else {
             reject(
-              new Error(`CliProvider run-task failed: ${lastJsonResponse.error || 'Unknown error from CLI provider'}`),
+              new Error(
+                `CliProvider run-task failed: ${lastJsonResponse.error || 'Unknown error from CLI provider'}`,
+              ),
             );
           }
         } else if (code === 0) {
           resolve(outputLines.join('\n'));
         } else {
           reject(
-            new Error(`CliProvider run-task exited with code ${code}${stderrOutput ? ': ' + stderrOutput.trim() : ''}`),
+            new Error(
+              `CliProvider run-task exited with code ${code}${stderrOutput ? ': ' + stderrOutput.trim() : ''}`,
+            ),
           );
         }
       });
@@ -192,7 +212,7 @@ class CliProvider implements ProviderInterface {
   async garbageCollect(
     filter: string,
     previewOnly: boolean,
-    olderThan: Number,
+    olderThan: number,
     fullCache: boolean,
     baseDependencies: boolean,
   ): Promise<string> {
@@ -283,7 +303,11 @@ class CliProvider implements ProviderInterface {
       child.on('error', (error: Error) => {
         clearTimeout(timer);
         if (!timedOut) {
-          reject(new Error(`CliProvider: failed to spawn executable '${this.executablePath}': ${error.message}`));
+          reject(
+            new Error(
+              `CliProvider: failed to spawn executable '${this.executablePath}': ${error.message}`,
+            ),
+          );
         }
       });
 
@@ -295,7 +319,11 @@ class CliProvider implements ProviderInterface {
           if (lastJsonResponse.success) {
             resolve(lastJsonResponse.output || outputLines.join('\n'));
           } else {
-            reject(new Error(`CliProvider watch-workflow failed: ${lastJsonResponse.error || 'Unknown error'}`));
+            reject(
+              new Error(
+                `CliProvider watch-workflow failed: ${lastJsonResponse.error || 'Unknown error'}`,
+              ),
+            );
           }
         } else if (code === 0) {
           resolve(outputLines.join('\n'));
@@ -356,7 +384,11 @@ class CliProvider implements ProviderInterface {
       child.on('error', (error: Error) => {
         clearTimeout(timer);
         if (!timedOut) {
-          reject(new Error(`CliProvider: failed to spawn executable '${this.executablePath}': ${error.message}`));
+          reject(
+            new Error(
+              `CliProvider: failed to spawn executable '${this.executablePath}': ${error.message}`,
+            ),
+          );
         }
       });
 
@@ -384,7 +416,11 @@ class CliProvider implements ProviderInterface {
           if (response.success) {
             resolve(response);
           } else {
-            reject(new Error(`CliProvider ${command} failed: ${response.error || 'Unknown error from CLI provider'}`));
+            reject(
+              new Error(
+                `CliProvider ${command} failed: ${response.error || 'Unknown error from CLI provider'}`,
+              ),
+            );
           }
         } else if (code === 0) {
           // No JSON response but exit code 0 — treat as success with raw output

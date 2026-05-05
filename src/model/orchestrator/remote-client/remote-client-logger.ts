@@ -1,17 +1,31 @@
 import OrchestratorLogger from '../services/core/orchestrator-logger';
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import Orchestrator from '../orchestrator';
 import OrchestratorOptions from '../options/orchestrator-options';
 
 export class RemoteClientLogger {
   private static get LogFilePath() {
-    // Use a cross-platform temporary directory for local development
+    // In production the orchestrator runs inside a container where `/home`
+    // is a writable mount; outside that container (CI runners, dev boxes,
+    // unit tests) `/home` is a system directory and not writable. Honour
+    // ORCHESTRATOR_LOG_FILE for explicit overrides, then fall back to
+    // /home/job-log.txt when it's writable, then `os.tmpdir()` for
+    // everything else.
+    if (process.env.ORCHESTRATOR_LOG_FILE) {
+      return process.env.ORCHESTRATOR_LOG_FILE;
+    }
     if (process.platform === 'win32') {
       return path.join(process.cwd(), 'temp', 'job-log.txt');
     }
-
-    return path.join(`/home`, `job-log.txt`);
+    const containerLogPath = path.join('/home', 'job-log.txt');
+    try {
+      fs.accessSync('/home', fs.constants.W_OK);
+      return containerLogPath;
+    } catch {
+      return path.join(os.tmpdir(), 'orchestrator-job-log.txt');
+    }
   }
 
   public static log(message: string) {

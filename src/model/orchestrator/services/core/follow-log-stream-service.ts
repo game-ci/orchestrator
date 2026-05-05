@@ -10,12 +10,19 @@ export class FollowLogStreamService {
   }
   static errors = ``;
   public static DidReceiveEndOfTransmission = false;
-  public static handleIteration(message: string, shouldReadLogs: boolean, shouldCleanup: boolean, output: string) {
+  public static handleIteration(
+    message: string,
+    shouldReadLogs: boolean,
+    shouldCleanup: boolean,
+    output: string,
+  ) {
     if (message.includes(`---${Orchestrator.buildParameters.logId}`)) {
       OrchestratorLogger.log('End of log transmission received');
       FollowLogStreamService.DidReceiveEndOfTransmission = true;
       shouldReadLogs = false;
-    } else if (message.includes('Rebuilding Library because the asset database could not be found!')) {
+    } else if (
+      message.includes('Rebuilding Library because the asset database could not be found!')
+    ) {
       GitHub.updateGitHubCheck(`Library was not found, importing new Library`, ``);
       core.warning('LIBRARY NOT FOUND!');
       core.setOutput('library-found', 'false');

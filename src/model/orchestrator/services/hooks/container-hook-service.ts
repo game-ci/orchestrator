@@ -8,7 +8,7 @@ import path from 'node:path';
 import fs from 'node:fs';
 import Input from '../../../input';
 import OrchestratorOptions from '../../options/orchestrator-options';
-import { ContainerHook as ContainerHook } from './container-hook';
+import { ContainerHook } from './container-hook';
 import { OrchestratorStepParameters } from '../../options/orchestrator-step-parameters';
 
 export class ContainerHookService {
@@ -29,7 +29,9 @@ export class ContainerHookService {
         }
       }
     } catch (error) {
-      RemoteClientLogger.log(`Failed Getting: ${hookLifecycle} \n ${OrchestratorLogger.stringifyError(error)}`);
+      RemoteClientLogger.log(
+        `Failed Getting: ${hookLifecycle} \n ${OrchestratorLogger.stringifyError(error)}`,
+      );
     }
 
     // RemoteClientLogger.log(`Active Steps From Files: \n ${JSON.stringify(results, undefined, 4)}`);
@@ -315,7 +317,9 @@ export class ContainerHookService {
     value: ${process.env.AWS_REGION || ``}
   - name: AWS_S3_ENDPOINT
     value: ${OrchestratorOptions.awsS3Endpoint || process.env.AWS_S3_ENDPOINT || ``}`,
-    ).filter((x) => OrchestratorOptions.containerHookFiles.includes(x.name) && x.hook === hookLifecycle);
+    ).filter(
+      (x) => OrchestratorOptions.containerHookFiles.includes(x.name) && x.hook === hookLifecycle,
+    );
 
     // In local provider mode (non-container) or when AWS credentials are not present, skip AWS S3 hooks
     const provider = Orchestrator.buildParameters?.providerStrategy;
@@ -327,7 +331,9 @@ export class ContainerHookService {
     // Always include AWS hooks on the AWS provider (task role provides creds),
     // otherwise require explicit creds for other containerized providers.
     const shouldIncludeAwsHooks =
-      isContainerized && !Orchestrator.buildParameters?.skipCache && (provider === 'aws' || Boolean(hasAwsCreds));
+      isContainerized &&
+      !Orchestrator.buildParameters?.skipCache &&
+      (provider === 'aws' || Boolean(hasAwsCreds));
     const filteredBuiltIns = shouldIncludeAwsHooks
       ? builtInContainerHooks
       : builtInContainerHooks.filter((x) => x.image !== 'amazon/aws-cli');
@@ -366,7 +372,10 @@ export class ContainerHookService {
         step.secrets = [];
       } else {
         for (const secret of step.secrets) {
-          if (secret.ParameterValue === undefined && process.env[secret.EnvironmentVariable] !== undefined) {
+          if (
+            secret.ParameterValue === undefined &&
+            process.env[secret.EnvironmentVariable] !== undefined
+          ) {
             if (Orchestrator.buildParameters?.orchestratorDebug) {
               // OrchestratorLogger.log(`Injecting custom step ${step.name} from env var ${secret.ParameterKey}`);
             }
@@ -393,7 +402,9 @@ export class ContainerHookService {
   static async RunPostBuildSteps(orchestratorStepState: OrchestratorStepParameters) {
     let output = ``;
     const steps: ContainerHook[] = [
-      ...ContainerHookService.ParseContainerHooks(Orchestrator.buildParameters.postBuildContainerHooks),
+      ...ContainerHookService.ParseContainerHooks(
+        Orchestrator.buildParameters.postBuildContainerHooks,
+      ),
       ...ContainerHookService.GetContainerHooksFromFiles(`after`),
     ];
 
@@ -410,7 +421,9 @@ export class ContainerHookService {
   static async RunPreBuildSteps(orchestratorStepState: OrchestratorStepParameters) {
     let output = ``;
     const steps: ContainerHook[] = [
-      ...ContainerHookService.ParseContainerHooks(Orchestrator.buildParameters.preBuildContainerHooks),
+      ...ContainerHookService.ParseContainerHooks(
+        Orchestrator.buildParameters.preBuildContainerHooks,
+      ),
       ...ContainerHookService.GetContainerHooksFromFiles(`before`),
     ];
 

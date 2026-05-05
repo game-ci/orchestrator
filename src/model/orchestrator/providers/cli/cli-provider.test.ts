@@ -1,55 +1,70 @@
+import {
+  describe,
+  it,
+  expect,
+  beforeEach,
+  afterEach,
+  beforeAll,
+  afterAll,
+  vi,
+  type MockedFunction,
+} from 'vitest';
 import { EventEmitter } from 'events';
 import { ProviderLoader } from '../provider-loader';
 
 // Mock child_process
-jest.mock('child_process', () => ({
-  spawn: jest.fn(),
-  exec: jest.fn(),
+vi.mock('child_process', () => ({
+  spawn: vi.fn(),
+  exec: vi.fn(),
 }));
 
 // Mock @actions/core to prevent GitHub Actions API calls
-jest.mock('@actions/core', () => ({
-  info: jest.fn(),
-  warning: jest.fn(),
-  error: jest.fn(),
-  setOutput: jest.fn(),
-  getInput: jest.fn(() => ''),
+vi.mock('@actions/core', () => ({
+  info: vi.fn(),
+  warning: vi.fn(),
+  error: vi.fn(),
+  setOutput: vi.fn(),
+  getInput: vi.fn(() => ''),
 }));
 
 // Mock provider-git-manager (required by provider-loader)
-jest.mock('../provider-git-manager');
+vi.mock('../provider-git-manager');
 
 import { spawn } from 'child_process';
 import * as core from '@actions/core';
 import CliProvider from './cli-provider';
 
-const mockSpawn = spawn as jest.MockedFunction<typeof spawn>;
+const mockSpawn = spawn as MockedFunction<typeof spawn>;
 
 /**
  * Creates a mock child process with stdin, stdout, stderr as EventEmitters.
  */
 function createMockChildProcess() {
   const child = new EventEmitter() as any;
-  child.stdin = { write: jest.fn(), end: jest.fn() };
+  child.stdin = { write: vi.fn(), end: vi.fn() };
   child.stdout = new EventEmitter();
   child.stderr = new EventEmitter();
-  child.kill = jest.fn();
+  child.kill = vi.fn();
 
   return child;
 }
 
 describe('CliProvider', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe('constructor', () => {
     it('validates that executable path is non-empty', () => {
-      expect(() => new CliProvider('', {} as any)).toThrow('executablePath must be a non-empty string');
+      expect(() => new CliProvider('', {} as any)).toThrow(
+        'executablePath must be a non-empty string',
+      );
     });
 
     it('validates that executable path is not just whitespace', () => {
-      expect(() => new CliProvider('   ', {} as any)).toThrow('executablePath must be a non-empty string');
+      expect(() => new CliProvider('   ', {} as any)).toThrow(
+        'executablePath must be a non-empty string',
+      );
     });
 
     it('accepts a valid executable path', () => {
@@ -85,7 +100,12 @@ describe('CliProvider', () => {
       mockSpawn.mockReturnValue(child);
 
       const provider = new CliProvider('/path/to/exe', {} as any);
-      const promise = provider.setupWorkflow('guid-123', { editorVersion: '2022.3' } as any, 'main', []);
+      const promise = provider.setupWorkflow(
+        'guid-123',
+        { editorVersion: '2022.3' } as any,
+        'main',
+        [],
+      );
 
       child.stdout.emit('data', Buffer.from(JSON.stringify({ success: true, result: {} }) + '\n'));
       child.emit('close', 0);
@@ -109,7 +129,10 @@ describe('CliProvider', () => {
       const promise = provider.listResources();
 
       const resources = [{ Name: 'resource-1' }, { Name: 'resource-2' }];
-      child.stdout.emit('data', Buffer.from(JSON.stringify({ success: true, result: resources }) + '\n'));
+      child.stdout.emit(
+        'data',
+        Buffer.from(JSON.stringify({ success: true, result: resources }) + '\n'),
+      );
       child.emit('close', 0);
 
       const result = await promise;
@@ -123,7 +146,10 @@ describe('CliProvider', () => {
       const provider = new CliProvider('/path/to/exe', {} as any);
       const promise = provider.garbageCollect('', false, 30, false, false);
 
-      child.stdout.emit('data', Buffer.from(JSON.stringify({ success: false, error: 'something went wrong' }) + '\n'));
+      child.stdout.emit(
+        'data',
+        Buffer.from(JSON.stringify({ success: false, error: 'something went wrong' }) + '\n'),
+      );
       child.emit('close', 1);
 
       await expect(promise).rejects.toThrow('something went wrong');
@@ -180,7 +206,10 @@ describe('CliProvider', () => {
 
       // Simulate build output followed by JSON response
       child.stdout.emit('data', Buffer.from('Building project...\nCompiling scripts...\n'));
-      child.stdout.emit('data', Buffer.from(JSON.stringify({ success: true, output: 'Build succeeded' }) + '\n'));
+      child.stdout.emit(
+        'data',
+        Buffer.from(JSON.stringify({ success: true, output: 'Build succeeded' }) + '\n'),
+      );
       child.emit('close', 0);
 
       const result = await promise;
@@ -196,7 +225,9 @@ describe('CliProvider', () => {
 
       child.stdout.emit(
         'data',
-        Buffer.from(JSON.stringify({ success: false, error: 'Build failed: compilation errors' }) + '\n'),
+        Buffer.from(
+          JSON.stringify({ success: false, error: 'Build failed: compilation errors' }) + '\n',
+        ),
       );
       child.emit('close', 1);
 
@@ -238,7 +269,10 @@ describe('CliProvider', () => {
       const provider = new CliProvider('/path/to/exe', {} as any);
       const promise = provider.cleanupWorkflow({ editorVersion: '2022.3' } as any, 'main', []);
 
-      child.stdout.emit('data', Buffer.from(JSON.stringify({ success: true, result: 'cleaned' }) + '\n'));
+      child.stdout.emit(
+        'data',
+        Buffer.from(JSON.stringify({ success: true, result: 'cleaned' }) + '\n'),
+      );
       child.emit('close', 0);
 
       const result = await promise;
@@ -258,7 +292,10 @@ describe('CliProvider', () => {
       const provider = new CliProvider('/path/to/exe', {} as any);
       const promise = provider.garbageCollect('filter*', true, 30, false, true);
 
-      child.stdout.emit('data', Buffer.from(JSON.stringify({ success: true, output: '3 items removed' }) + '\n'));
+      child.stdout.emit(
+        'data',
+        Buffer.from(JSON.stringify({ success: true, output: '3 items removed' }) + '\n'),
+      );
       child.emit('close', 0);
 
       const result = await promise;
@@ -296,7 +333,10 @@ describe('CliProvider', () => {
       const promise = provider.listWorkflow();
 
       const workflows = [{ Name: 'wf-1' }];
-      child.stdout.emit('data', Buffer.from(JSON.stringify({ success: true, result: workflows }) + '\n'));
+      child.stdout.emit(
+        'data',
+        Buffer.from(JSON.stringify({ success: true, result: workflows }) + '\n'),
+      );
       child.emit('close', 0);
 
       const result = await promise;
@@ -327,7 +367,10 @@ describe('CliProvider', () => {
       const promise = provider.watchWorkflow();
 
       child.stdout.emit('data', Buffer.from('watching...\nstatus: running\n'));
-      child.stdout.emit('data', Buffer.from(JSON.stringify({ success: true, output: 'completed' }) + '\n'));
+      child.stdout.emit(
+        'data',
+        Buffer.from(JSON.stringify({ success: true, output: 'completed' }) + '\n'),
+      );
       child.emit('close', 0);
 
       const result = await promise;
@@ -344,7 +387,10 @@ describe('CliProvider', () => {
       const provider = new CliProvider('/path/to/exe', {} as any);
       const promise = provider.watchWorkflow();
 
-      child.stdout.emit('data', Buffer.from(JSON.stringify({ success: false, error: 'lost connection' }) + '\n'));
+      child.stdout.emit(
+        'data',
+        Buffer.from(JSON.stringify({ success: false, error: 'lost connection' }) + '\n'),
+      );
       child.emit('close', 1);
 
       await expect(promise).rejects.toThrow('lost connection');
@@ -410,11 +456,11 @@ describe('CliProvider', () => {
 
   describe('timeout handling', () => {
     beforeEach(() => {
-      jest.useFakeTimers();
+      vi.useFakeTimers();
     });
 
     afterEach(() => {
-      jest.useRealTimers();
+      vi.useRealTimers();
     });
 
     it('rejects and kills process when execute command times out', async () => {
@@ -425,7 +471,7 @@ describe('CliProvider', () => {
       const promise = provider.listResources();
 
       // Advance past the 300s default timeout
-      jest.advanceTimersByTime(301_000);
+      vi.advanceTimersByTime(301_000);
 
       await expect(promise).rejects.toThrow('timed out');
       expect(child.kill).toHaveBeenCalledWith('SIGTERM');
@@ -439,11 +485,13 @@ describe('CliProvider', () => {
       const promise = provider.runTaskInWorkflow('guid', 'image', 'cmd', '/mnt', '/work', [], []);
 
       // Advance past the 2-hour timeout (7_200_000ms)
-      jest.advanceTimersByTime(7_200_001);
+      vi.advanceTimersByTime(7_200_001);
 
       await expect(promise).rejects.toThrow('run-task timed out');
       expect(child.kill).toHaveBeenCalledWith('SIGTERM');
-      expect(core.error).toHaveBeenCalledWith(expect.stringContaining('CLI provider timed out after 120 minutes'));
+      expect(core.error).toHaveBeenCalledWith(
+        expect.stringContaining('CLI provider timed out after 120 minutes'),
+      );
     });
 
     it('rejects and kills process when watchWorkflow times out', async () => {
@@ -454,11 +502,13 @@ describe('CliProvider', () => {
       const promise = provider.watchWorkflow();
 
       // Advance past the 1-hour timeout (3_600_000ms)
-      jest.advanceTimersByTime(3_600_001);
+      vi.advanceTimersByTime(3_600_001);
 
       await expect(promise).rejects.toThrow('watch-workflow timed out');
       expect(child.kill).toHaveBeenCalledWith('SIGTERM');
-      expect(core.error).toHaveBeenCalledWith(expect.stringContaining('CLI provider timed out after 60 minutes'));
+      expect(core.error).toHaveBeenCalledWith(
+        expect.stringContaining('CLI provider timed out after 60 minutes'),
+      );
     });
 
     it('escalates to SIGKILL after grace period on runTaskInWorkflow timeout', async () => {
@@ -469,7 +519,7 @@ describe('CliProvider', () => {
       const promise = provider.runTaskInWorkflow('guid', 'image', 'cmd', '/mnt', '/work', [], []);
 
       // Trigger the timeout
-      jest.advanceTimersByTime(7_200_001);
+      vi.advanceTimersByTime(7_200_001);
 
       await expect(promise).rejects.toThrow('timed out');
 
@@ -477,7 +527,7 @@ describe('CliProvider', () => {
       expect(child.kill).toHaveBeenCalledWith('SIGTERM');
 
       // Advance past the 10s grace period — SIGKILL should fire
-      jest.advanceTimersByTime(10_001);
+      vi.advanceTimersByTime(10_001);
       expect(child.kill).toHaveBeenCalledWith('SIGKILL');
     });
 
@@ -489,7 +539,7 @@ describe('CliProvider', () => {
       const promise = provider.runTaskInWorkflow('guid', 'image', 'cmd', '/mnt', '/work', [], []);
 
       // Trigger the timeout
-      jest.advanceTimersByTime(7_200_001);
+      vi.advanceTimersByTime(7_200_001);
 
       await expect(promise).rejects.toThrow('timed out');
 
@@ -497,7 +547,7 @@ describe('CliProvider', () => {
       child.emit('close', 143);
 
       // Advance past the grace period — SIGKILL should NOT fire because process already exited
-      jest.advanceTimersByTime(10_001);
+      vi.advanceTimersByTime(10_001);
       expect(child.kill).toHaveBeenCalledWith('SIGTERM');
       // SIGKILL should not have been called because the close event cleared the timer
       expect(child.kill).not.toHaveBeenCalledWith('SIGKILL');
@@ -511,14 +561,17 @@ describe('CliProvider', () => {
       const promise = provider.runTaskInWorkflow('guid', 'image', 'cmd', '/mnt', '/work', [], []);
 
       // Process completes before timeout
-      child.stdout.emit('data', Buffer.from(JSON.stringify({ success: true, output: 'done' }) + '\n'));
+      child.stdout.emit(
+        'data',
+        Buffer.from(JSON.stringify({ success: true, output: 'done' }) + '\n'),
+      );
       child.emit('close', 0);
 
       const result = await promise;
       expect(result).toBe('done');
 
       // Advance far past timeout — should NOT reject
-      jest.advanceTimersByTime(8_000_000);
+      vi.advanceTimersByTime(8_000_000);
       expect(child.kill).not.toHaveBeenCalled();
     });
   });

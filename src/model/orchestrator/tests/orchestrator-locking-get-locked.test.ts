@@ -23,7 +23,10 @@ describe('Orchestrator Locking Get Locked Workspace', () => {
       const overrides: any = {
         versioning: 'None',
         projectPath: 'test-project',
-        unityVersion: UnityVersioning.determineUnityVersion('test-project', UnityVersioning.read('test-project')),
+        unityVersion: UnityVersioning.determineUnityVersion(
+          'test-project',
+          UnityVersioning.read('test-project'),
+        ),
         targetPlatform: 'StandaloneLinux64',
         cacheKey: `test-case-${uuidv4()}`,
         maxRetainedWorkspaces: 3,
@@ -33,13 +36,18 @@ describe('Orchestrator Locking Get Locked Workspace', () => {
       const newWorkspaceName = `test-workspace-${uuidv4()}`;
       const runId = uuidv4();
       Orchestrator.buildParameters = buildParameters;
-      expect(await SharedWorkspaceLocking.GetLockedWorkspace(newWorkspaceName, runId, buildParameters)).toBeTruthy();
+      expect(
+        await SharedWorkspaceLocking.GetLockedWorkspace(newWorkspaceName, runId, buildParameters),
+      ).toBeTruthy();
     }, 150000);
     it(`Get locked workspace from unlocked`, async () => {
       const overrides: any = {
         versioning: 'None',
         projectPath: 'test-project',
-        unityVersion: UnityVersioning.determineUnityVersion('test-project', UnityVersioning.read('test-project')),
+        unityVersion: UnityVersioning.determineUnityVersion(
+          'test-project',
+          UnityVersioning.read('test-project'),
+        ),
         targetPlatform: 'StandaloneLinux64',
         cacheKey: `test-case-${uuidv4()}`,
         maxRetainedWorkspaces: 3,
@@ -49,15 +57,22 @@ describe('Orchestrator Locking Get Locked Workspace', () => {
       const newWorkspaceName = `test-workspace-${uuidv4()}`;
       const runId = uuidv4();
       Orchestrator.buildParameters = buildParameters;
-      expect(await SharedWorkspaceLocking.CreateWorkspace(newWorkspaceName, buildParameters)).toBeTruthy();
-      expect(await SharedWorkspaceLocking.GetLockedWorkspace(newWorkspaceName, runId, buildParameters)).toBeTruthy();
+      expect(
+        await SharedWorkspaceLocking.CreateWorkspace(newWorkspaceName, buildParameters),
+      ).toBeTruthy();
+      expect(
+        await SharedWorkspaceLocking.GetLockedWorkspace(newWorkspaceName, runId, buildParameters),
+      ).toBeTruthy();
       expect(Orchestrator.lockedWorkspace).toMatch(newWorkspaceName);
     }, 300000);
     it(`Get locked workspace from locked`, async () => {
       const overrides: any = {
         versioning: 'None',
         projectPath: 'test-project',
-        unityVersion: UnityVersioning.determineUnityVersion('test-project', UnityVersioning.read('test-project')),
+        unityVersion: UnityVersioning.determineUnityVersion(
+          'test-project',
+          UnityVersioning.read('test-project'),
+        ),
         targetPlatform: 'StandaloneLinux64',
         cacheKey: `test-case-${uuidv4()}`,
         maxRetainedWorkspaces: 3,
@@ -68,20 +83,37 @@ describe('Orchestrator Locking Get Locked Workspace', () => {
       const runId = uuidv4();
       const runId2 = uuidv4();
       Orchestrator.buildParameters = buildParameters;
-      expect(await SharedWorkspaceLocking.CreateWorkspace(newWorkspaceName, buildParameters)).toBeTruthy();
-      expect(await SharedWorkspaceLocking.LockWorkspace(newWorkspaceName, runId, buildParameters)).toBeTruthy();
-      expect(await SharedWorkspaceLocking.HasWorkspaceLock(newWorkspaceName, runId, buildParameters)).toBeTruthy();
-      expect(await SharedWorkspaceLocking.IsWorkspaceLocked(newWorkspaceName, buildParameters)).toBeTruthy();
-      expect(await SharedWorkspaceLocking.IsWorkspaceBelowMax(newWorkspaceName, buildParameters)).toBeTruthy();
-      expect(await SharedWorkspaceLocking.DoesWorkspaceExist(newWorkspaceName, buildParameters)).toBeTruthy();
-      expect(await SharedWorkspaceLocking.GetLockedWorkspace(newWorkspaceName, runId2, buildParameters)).toBeTruthy();
+      expect(
+        await SharedWorkspaceLocking.CreateWorkspace(newWorkspaceName, buildParameters),
+      ).toBeTruthy();
+      expect(
+        await SharedWorkspaceLocking.LockWorkspace(newWorkspaceName, runId, buildParameters),
+      ).toBeTruthy();
+      expect(
+        await SharedWorkspaceLocking.HasWorkspaceLock(newWorkspaceName, runId, buildParameters),
+      ).toBeTruthy();
+      expect(
+        await SharedWorkspaceLocking.IsWorkspaceLocked(newWorkspaceName, buildParameters),
+      ).toBeTruthy();
+      expect(
+        await SharedWorkspaceLocking.IsWorkspaceBelowMax(newWorkspaceName, buildParameters),
+      ).toBeTruthy();
+      expect(
+        await SharedWorkspaceLocking.DoesWorkspaceExist(newWorkspaceName, buildParameters),
+      ).toBeTruthy();
+      expect(
+        await SharedWorkspaceLocking.GetLockedWorkspace(newWorkspaceName, runId2, buildParameters),
+      ).toBeTruthy();
       expect(Orchestrator.lockedWorkspace).not.toMatch(newWorkspaceName);
     }, 300000);
     it(`Get locked workspace after double lock and one unlock`, async () => {
       const overrides: any = {
         versioning: 'None',
         projectPath: 'test-project',
-        unityVersion: UnityVersioning.determineUnityVersion('test-project', UnityVersioning.read('test-project')),
+        unityVersion: UnityVersioning.determineUnityVersion(
+          'test-project',
+          UnityVersioning.read('test-project'),
+        ),
         targetPlatform: 'StandaloneLinux64',
         cacheKey: `test-case-${uuidv4()}`,
         maxRetainedWorkspaces: 3,
@@ -92,23 +124,46 @@ describe('Orchestrator Locking Get Locked Workspace', () => {
       const runId = uuidv4();
       const runId2 = uuidv4();
       Orchestrator.buildParameters = buildParameters;
-      expect(await SharedWorkspaceLocking.CreateWorkspace(newWorkspaceName, buildParameters)).toBeTruthy();
-      expect(await SharedWorkspaceLocking.LockWorkspace(newWorkspaceName, runId, buildParameters)).toBeTruthy();
-      expect(await SharedWorkspaceLocking.IsWorkspaceLocked(newWorkspaceName, buildParameters)).toBeTruthy();
-      expect(await SharedWorkspaceLocking.ReleaseWorkspace(newWorkspaceName, runId, buildParameters)).toBeTruthy();
-      expect(await SharedWorkspaceLocking.IsWorkspaceLocked(newWorkspaceName, buildParameters)).toBeFalsy();
-      expect(await SharedWorkspaceLocking.LockWorkspace(newWorkspaceName, runId, buildParameters)).toBeTruthy();
-      expect(await SharedWorkspaceLocking.HasWorkspaceLock(newWorkspaceName, runId, buildParameters)).toBeTruthy();
-      expect(await SharedWorkspaceLocking.IsWorkspaceLocked(newWorkspaceName, buildParameters)).toBeTruthy();
-      expect(await SharedWorkspaceLocking.DoesWorkspaceExist(newWorkspaceName, buildParameters)).toBeTruthy();
-      expect(await SharedWorkspaceLocking.GetLockedWorkspace(newWorkspaceName, runId2, buildParameters)).toBeTruthy();
+      expect(
+        await SharedWorkspaceLocking.CreateWorkspace(newWorkspaceName, buildParameters),
+      ).toBeTruthy();
+      expect(
+        await SharedWorkspaceLocking.LockWorkspace(newWorkspaceName, runId, buildParameters),
+      ).toBeTruthy();
+      expect(
+        await SharedWorkspaceLocking.IsWorkspaceLocked(newWorkspaceName, buildParameters),
+      ).toBeTruthy();
+      expect(
+        await SharedWorkspaceLocking.ReleaseWorkspace(newWorkspaceName, runId, buildParameters),
+      ).toBeTruthy();
+      expect(
+        await SharedWorkspaceLocking.IsWorkspaceLocked(newWorkspaceName, buildParameters),
+      ).toBeFalsy();
+      expect(
+        await SharedWorkspaceLocking.LockWorkspace(newWorkspaceName, runId, buildParameters),
+      ).toBeTruthy();
+      expect(
+        await SharedWorkspaceLocking.HasWorkspaceLock(newWorkspaceName, runId, buildParameters),
+      ).toBeTruthy();
+      expect(
+        await SharedWorkspaceLocking.IsWorkspaceLocked(newWorkspaceName, buildParameters),
+      ).toBeTruthy();
+      expect(
+        await SharedWorkspaceLocking.DoesWorkspaceExist(newWorkspaceName, buildParameters),
+      ).toBeTruthy();
+      expect(
+        await SharedWorkspaceLocking.GetLockedWorkspace(newWorkspaceName, runId2, buildParameters),
+      ).toBeTruthy();
       expect(Orchestrator.lockedWorkspace).not.toContain(newWorkspaceName);
     }, 300000);
     it(`Get locked workspace after double lock and unlock`, async () => {
       const overrides: any = {
         versioning: 'None',
         projectPath: 'test-project',
-        unityVersion: UnityVersioning.determineUnityVersion('test-project', UnityVersioning.read('test-project')),
+        unityVersion: UnityVersioning.determineUnityVersion(
+          'test-project',
+          UnityVersioning.read('test-project'),
+        ),
         targetPlatform: 'StandaloneLinux64',
         cacheKey: `test-case-${uuidv4()}`,
         maxRetainedWorkspaces: 3,
@@ -119,24 +174,49 @@ describe('Orchestrator Locking Get Locked Workspace', () => {
       const runId = uuidv4();
       const runId2 = uuidv4();
       Orchestrator.buildParameters = buildParameters;
-      expect(await SharedWorkspaceLocking.CreateWorkspace(newWorkspaceName, buildParameters)).toBeTruthy();
-      expect(await SharedWorkspaceLocking.LockWorkspace(newWorkspaceName, runId, buildParameters)).toBeTruthy();
-      expect(await SharedWorkspaceLocking.IsWorkspaceLocked(newWorkspaceName, buildParameters)).toBeTruthy();
-      expect(await SharedWorkspaceLocking.ReleaseWorkspace(newWorkspaceName, runId, buildParameters)).toBeTruthy();
-      expect(await SharedWorkspaceLocking.IsWorkspaceLocked(newWorkspaceName, buildParameters)).toBeFalsy();
-      expect(await SharedWorkspaceLocking.LockWorkspace(newWorkspaceName, runId, buildParameters)).toBeTruthy();
-      expect(await SharedWorkspaceLocking.HasWorkspaceLock(newWorkspaceName, runId, buildParameters)).toBeTruthy();
-      expect(await SharedWorkspaceLocking.ReleaseWorkspace(newWorkspaceName, runId, buildParameters)).toBeTruthy();
-      expect(await SharedWorkspaceLocking.IsWorkspaceLocked(newWorkspaceName, buildParameters)).toBeFalsy();
-      expect(await SharedWorkspaceLocking.DoesWorkspaceExist(newWorkspaceName, buildParameters)).toBeTruthy();
-      expect(await SharedWorkspaceLocking.GetLockedWorkspace(newWorkspaceName, runId2, buildParameters)).toBeTruthy();
+      expect(
+        await SharedWorkspaceLocking.CreateWorkspace(newWorkspaceName, buildParameters),
+      ).toBeTruthy();
+      expect(
+        await SharedWorkspaceLocking.LockWorkspace(newWorkspaceName, runId, buildParameters),
+      ).toBeTruthy();
+      expect(
+        await SharedWorkspaceLocking.IsWorkspaceLocked(newWorkspaceName, buildParameters),
+      ).toBeTruthy();
+      expect(
+        await SharedWorkspaceLocking.ReleaseWorkspace(newWorkspaceName, runId, buildParameters),
+      ).toBeTruthy();
+      expect(
+        await SharedWorkspaceLocking.IsWorkspaceLocked(newWorkspaceName, buildParameters),
+      ).toBeFalsy();
+      expect(
+        await SharedWorkspaceLocking.LockWorkspace(newWorkspaceName, runId, buildParameters),
+      ).toBeTruthy();
+      expect(
+        await SharedWorkspaceLocking.HasWorkspaceLock(newWorkspaceName, runId, buildParameters),
+      ).toBeTruthy();
+      expect(
+        await SharedWorkspaceLocking.ReleaseWorkspace(newWorkspaceName, runId, buildParameters),
+      ).toBeTruthy();
+      expect(
+        await SharedWorkspaceLocking.IsWorkspaceLocked(newWorkspaceName, buildParameters),
+      ).toBeFalsy();
+      expect(
+        await SharedWorkspaceLocking.DoesWorkspaceExist(newWorkspaceName, buildParameters),
+      ).toBeTruthy();
+      expect(
+        await SharedWorkspaceLocking.GetLockedWorkspace(newWorkspaceName, runId2, buildParameters),
+      ).toBeTruthy();
       expect(Orchestrator.lockedWorkspace).toContain(newWorkspaceName);
     }, 300000);
     it(`Get locked workspace from unlocked was locked`, async () => {
       const overrides: any = {
         versioning: 'None',
         projectPath: 'test-project',
-        unityVersion: UnityVersioning.determineUnityVersion('test-project', UnityVersioning.read('test-project')),
+        unityVersion: UnityVersioning.determineUnityVersion(
+          'test-project',
+          UnityVersioning.read('test-project'),
+        ),
         targetPlatform: 'StandaloneLinux64',
         cacheKey: `test-case-${uuidv4()}`,
         maxRetainedWorkspaces: 3,
@@ -146,10 +226,18 @@ describe('Orchestrator Locking Get Locked Workspace', () => {
       const newWorkspaceName = `test-workspace-${uuidv4()}`;
       const runId = uuidv4();
       Orchestrator.buildParameters = buildParameters;
-      expect(await SharedWorkspaceLocking.CreateWorkspace(newWorkspaceName, buildParameters)).toBeTruthy();
-      expect(await SharedWorkspaceLocking.LockWorkspace(newWorkspaceName, runId, buildParameters)).toBeTruthy();
-      expect(await SharedWorkspaceLocking.ReleaseWorkspace(newWorkspaceName, runId, buildParameters)).toBeTruthy();
-      expect(await SharedWorkspaceLocking.GetLockedWorkspace(newWorkspaceName, runId, buildParameters)).toBeTruthy();
+      expect(
+        await SharedWorkspaceLocking.CreateWorkspace(newWorkspaceName, buildParameters),
+      ).toBeTruthy();
+      expect(
+        await SharedWorkspaceLocking.LockWorkspace(newWorkspaceName, runId, buildParameters),
+      ).toBeTruthy();
+      expect(
+        await SharedWorkspaceLocking.ReleaseWorkspace(newWorkspaceName, runId, buildParameters),
+      ).toBeTruthy();
+      expect(
+        await SharedWorkspaceLocking.GetLockedWorkspace(newWorkspaceName, runId, buildParameters),
+      ).toBeTruthy();
       expect(Orchestrator.lockedWorkspace).toMatch(newWorkspaceName);
     }, 300000);
   }

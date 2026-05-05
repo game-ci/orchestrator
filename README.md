@@ -50,10 +50,10 @@ irm https://raw.githubusercontent.com/game-ci/orchestrator/main/install.ps1 | ie
 
 ### Options
 
-| Variable | Description |
-| --- | --- |
+| Variable          | Description                                                 |
+| ----------------- | ----------------------------------------------------------- |
 | `GAME_CI_VERSION` | Pin a specific release (e.g. `v2.0.0`). Defaults to latest. |
-| `GAME_CI_INSTALL` | Override install directory. Defaults to `~/.game-ci/bin`. |
+| `GAME_CI_INSTALL` | Override install directory. Defaults to `~/.game-ci/bin`.   |
 
 Pre-built binaries are also available on the [Releases](https://github.com/game-ci/orchestrator/releases) page.
 
@@ -64,7 +64,7 @@ Pre-built binaries are also available on the [Releases](https://github.com/game-
 ```yaml
 - uses: game-ci/unity-builder@v4
   with:
-    providerStrategy: aws          # or k8s, local-docker, etc.
+    providerStrategy: aws # or k8s, local-docker, etc.
     targetPlatform: StandaloneLinux64
     gitPrivateToken: ${{ secrets.GITHUB_TOKEN }}
 ```
@@ -116,9 +116,9 @@ game-ci orchestrate \
 
 UE Docker images are large (35–120 GB). Choose an image source based on your access:
 
-| Image | Size | Access |
-| --- | --- | --- |
-| `ghcr.io/epicgames/unreal-engine:dev-slim-5.4` | ~35 GB | Requires [Epic Games GitHub org](https://github.com/EpicGames) membership |
+| Image                                                                      | Size   | Access                                                                                               |
+| -------------------------------------------------------------------------- | ------ | ---------------------------------------------------------------------------------------------------- |
+| `ghcr.io/epicgames/unreal-engine:dev-slim-5.4`                             | ~35 GB | Requires [Epic Games GitHub org](https://github.com/EpicGames) membership                            |
 | [Community UE5 images](https://unrealcontainers.com/docs/obtaining-images) | ~40 GB | Self-built from your UE license via [ue5-docker](https://github.com/evoverses/ue5-docker) or similar |
 
 ```bash
@@ -167,7 +167,7 @@ No game engine logic is hardcoded into the core. Engine-specific behavior is pro
 
 ```typescript
 interface EnginePlugin {
-  name: string;           // 'unity', 'godot', 'unreal', etc.
+  name: string; // 'unity', 'godot', 'unreal', etc.
   cacheFolders: string[]; // folders to cache between builds
   preStopCommand?: string; // container shutdown command (e.g. license cleanup)
 }
@@ -187,18 +187,18 @@ Plugins can be loaded from NPM packages, CLI executables (any language), or Dock
 
 ## Providers
 
-| Provider | Strategy flag | Description |
-| --- | --- | --- |
-| AWS ECS Fargate | `aws` | Serverless containers on AWS. Auto-provisions CloudFormation, S3, Kinesis. |
-| Kubernetes | `k8s` | Builds as K8s Jobs with persistent volumes. Works with any cluster. |
-| GCP Cloud Run | `gcp-cloud-run` | Serverless containers on Google Cloud. |
-| Azure ACI | `azure-aci` | Azure Container Instances. |
-| Local Docker | `local-docker` | Docker on the current machine. No cloud account needed. |
-| Local System | `local-system` | Run directly on the host. No Docker or cloud needed. |
-| GitHub Actions | `github-actions` | Dispatch builds to GitHub Actions workflows. |
-| GitLab CI | `gitlab-ci` | Trigger builds on GitLab CI pipelines. |
-| Ansible | `ansible` | Orchestrate builds via Ansible playbooks. |
-| Remote PowerShell | `remote-powershell` | Run builds on remote Windows machines. |
+| Provider          | Strategy flag       | Description                                                                |
+| ----------------- | ------------------- | -------------------------------------------------------------------------- |
+| AWS ECS Fargate   | `aws`               | Serverless containers on AWS. Auto-provisions CloudFormation, S3, Kinesis. |
+| Kubernetes        | `k8s`               | Builds as K8s Jobs with persistent volumes. Works with any cluster.        |
+| GCP Cloud Run     | `gcp-cloud-run`     | Serverless containers on Google Cloud.                                     |
+| Azure ACI         | `azure-aci`         | Azure Container Instances.                                                 |
+| Local Docker      | `local-docker`      | Docker on the current machine. No cloud account needed.                    |
+| Local System      | `local-system`      | Run directly on the host. No Docker or cloud needed.                       |
+| GitHub Actions    | `github-actions`    | Dispatch builds to GitHub Actions workflows.                               |
+| GitLab CI         | `gitlab-ci`         | Trigger builds on GitLab CI pipelines.                                     |
+| Ansible           | `ansible`           | Orchestrate builds via Ansible playbooks.                                  |
+| Remote PowerShell | `remote-powershell` | Run builds on remote Windows machines.                                     |
 
 All providers implement the same `ProviderInterface`, so every provider gets caching, hooks, middleware, and artifact management automatically.
 

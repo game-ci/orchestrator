@@ -2,8 +2,12 @@ import OrchestratorLogger from '../../services/core/orchestrator-logger';
 import { CoreV1Api } from '@kubernetes/client-node';
 class KubernetesPods {
   public static async IsPodRunning(podName: string, namespace: string, kubeClient: CoreV1Api) {
-    const pods = (await kubeClient.listNamespacedPod(namespace)).body.items.filter((x) => podName === x.metadata?.name);
-    const running = pods.length > 0 && (pods[0].status?.phase === `Running` || pods[0].status?.phase === `Pending`);
+    const pods = (await kubeClient.listNamespacedPod(namespace)).body.items.filter(
+      (x) => podName === x.metadata?.name,
+    );
+    const running =
+      pods.length > 0 &&
+      (pods[0].status?.phase === `Running` || pods[0].status?.phase === `Pending`);
     const phase = pods[0]?.status?.phase || 'undefined status';
     OrchestratorLogger.log(`Getting pod status: ${phase}`);
     if (phase === `Failed`) {
@@ -24,7 +28,12 @@ class KubernetesPods {
       if (conditions.length > 0) {
         errorDetails.push(
           `Conditions: ${JSON.stringify(
-            conditions.map((c) => ({ type: c.type, status: c.status, reason: c.reason, message: c.message })),
+            conditions.map((c) => ({
+              type: c.type,
+              status: c.status,
+              reason: c.reason,
+              message: c.message,
+            })),
             undefined,
             2,
           )}`,
@@ -86,7 +95,11 @@ class KubernetesPods {
 
       // If pod was killed and we have PreStopHook failure, wait for container status
       // The container might have succeeded but status hasn't been updated yet
-      if (wasKilled && hasPreStopHookFailure && (containerExitCode === undefined || !containerSucceeded)) {
+      if (
+        wasKilled &&
+        hasPreStopHookFailure &&
+        (containerExitCode === undefined || !containerSucceeded)
+      ) {
         OrchestratorLogger.log(
           `Pod ${podName} was killed with PreStopHook failure. Waiting for container status to determine if container succeeded...`,
         );
@@ -98,7 +111,10 @@ class KubernetesPods {
             const updatedPod = (await kubeClient.listNamespacedPod(namespace)).body.items.find(
               (x) => podName === x.metadata?.name,
             );
-            if (updatedPod?.status?.containerStatuses && updatedPod.status.containerStatuses.length > 0) {
+            if (
+              updatedPod?.status?.containerStatuses &&
+              updatedPod.status.containerStatuses.length > 0
+            ) {
               const updatedContainerStatus = updatedPod.status.containerStatuses[0];
               if (updatedContainerStatus.state?.terminated) {
                 const updatedExitCode = updatedContainerStatus.state.terminated.exitCode;
@@ -112,7 +128,9 @@ class KubernetesPods {
                   OrchestratorLogger.log(
                     `Pod ${podName} container failed with exit code ${updatedExitCode} after waiting.`,
                   );
-                  errorDetails.push(`Container terminated after wait: exit code ${updatedExitCode}`);
+                  errorDetails.push(
+                    `Container terminated after wait: exit code ${updatedExitCode}`,
+                  );
                   containerExitCode = updatedExitCode;
                   containerSucceeded = false;
                   break;
@@ -149,7 +167,8 @@ class KubernetesPods {
 
       // Check if pod was evicted due to disk pressure - this is an infrastructure issue
       const wasEvicted = errorDetails.some(
-        (detail) => detail.toLowerCase().includes('evicted') || detail.toLowerCase().includes('diskpressure'),
+        (detail) =>
+          detail.toLowerCase().includes('evicted') || detail.toLowerCase().includes('diskpressure'),
       );
       if (wasEvicted) {
         const evictionMessage = `Pod ${podName} was evicted due to disk pressure. This is a test infrastructure issue - the cluster doesn't have enough disk space.`;
@@ -184,7 +203,9 @@ class KubernetesPods {
     return running;
   }
   public static async GetPodStatus(podName: string, namespace: string, kubeClient: CoreV1Api) {
-    const pods = (await kubeClient.listNamespacedPod(namespace)).body.items.find((x) => podName === x.metadata?.name);
+    const pods = (await kubeClient.listNamespacedPod(namespace)).body.items.find(
+      (x) => podName === x.metadata?.name,
+    );
     const phase = pods?.status?.phase || 'undefined status';
 
     return phase;

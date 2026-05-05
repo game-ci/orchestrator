@@ -1,3 +1,14 @@
+import {
+  describe,
+  it,
+  expect,
+  beforeEach,
+  afterEach,
+  beforeAll,
+  afterAll,
+  vi,
+  type Mocked,
+} from 'vitest';
 import fs from 'node:fs';
 import { TestSuiteParser } from './test-suite-parser';
 import { TaxonomyFilterService } from './taxonomy-filter-service';
@@ -5,13 +16,13 @@ import { TestResultReporter } from './test-result-reporter';
 import { TestWorkflowService } from './test-workflow-service';
 import { TestSuiteDefinition, TestResult, TestRunDefinition } from './test-workflow-types';
 
-jest.mock('node:fs');
-jest.mock('@actions/core');
+vi.mock('node:fs');
+vi.mock('@actions/core');
 
-const mockFs = fs as jest.Mocked<typeof fs>;
+const mockFs = fs as Mocked<typeof fs>;
 
 afterEach(() => {
-  jest.clearAllMocks();
+  vi.clearAllMocks();
 });
 
 // ============================================================================
@@ -92,7 +103,9 @@ runs:
       mockFs.existsSync.mockReturnValue(true);
       mockFs.readFileSync.mockReturnValue(yaml);
 
-      expect(() => TestSuiteParser.parseSuiteFile('/bad-deps.yml')).toThrow("unknown run 'nonexistent'");
+      expect(() => TestSuiteParser.parseSuiteFile('/bad-deps.yml')).toThrow(
+        "unknown run 'nonexistent'",
+      );
     });
   });
 
@@ -311,17 +324,26 @@ extensible_groups:
 
   describe('matchesFilter', () => {
     it('should match exact value', () => {
-      const match = TaxonomyFilterService.matchesFilter({ Scope: 'Unit', Maturity: 'Trusted' }, { Scope: 'Unit' });
+      const match = TaxonomyFilterService.matchesFilter(
+        { Scope: 'Unit', Maturity: 'Trusted' },
+        { Scope: 'Unit' },
+      );
       expect(match).toBe(true);
     });
 
     it('should match comma-separated values', () => {
-      const match = TaxonomyFilterService.matchesFilter({ Scope: 'Integration' }, { Scope: 'Unit,Integration' });
+      const match = TaxonomyFilterService.matchesFilter(
+        { Scope: 'Integration' },
+        { Scope: 'Unit,Integration' },
+      );
       expect(match).toBe(true);
     });
 
     it('should not match when value is not in list', () => {
-      const match = TaxonomyFilterService.matchesFilter({ Scope: 'End To End' }, { Scope: 'Unit,Integration' });
+      const match = TaxonomyFilterService.matchesFilter(
+        { Scope: 'End To End' },
+        { Scope: 'Unit,Integration' },
+      );
       expect(match).toBe(false);
     });
 
@@ -334,7 +356,10 @@ extensible_groups:
     });
 
     it('should match regex patterns', () => {
-      const match = TaxonomyFilterService.matchesFilter({ Maturity: 'Trusted' }, { Maturity: '/Trusted|Adolescent/' });
+      const match = TaxonomyFilterService.matchesFilter(
+        { Maturity: 'Trusted' },
+        { Maturity: '/Trusted|Adolescent/' },
+      );
       expect(match).toBe(true);
     });
 
@@ -352,7 +377,10 @@ extensible_groups:
     });
 
     it('should handle hierarchical dot-notation matching', () => {
-      const match = TaxonomyFilterService.matchesFilter({ Domain: 'Combat.Melee.Sword' }, { Domain: 'Combat.Melee' });
+      const match = TaxonomyFilterService.matchesFilter(
+        { Domain: 'Combat.Melee.Sword' },
+        { Domain: 'Combat.Melee' },
+      );
       expect(match).toBe(true);
     });
   });
@@ -408,7 +436,9 @@ describe('TestResultReporter', () => {
         failed: 2,
         skipped: 3,
         duration: 12.5,
-        testResults: [{ name: 'FailingTest', className: 'MyClass', result: 'Failed', message: 'Assert failed' }],
+        testResults: [
+          { name: 'FailingTest', className: 'MyClass', result: 'Failed', message: 'Assert failed' },
+        ],
       };
 
       const result = TestResultReporter.parseJsonData(data);

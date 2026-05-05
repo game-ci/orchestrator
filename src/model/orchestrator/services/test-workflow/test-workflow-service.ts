@@ -22,7 +22,10 @@ export class TestWorkflowService {
    * group sequentially (runs within a group execute concurrently), and
    * collects all results.
    */
-  static async executeTestSuite(suitePath: string, parameters: BuildParameters): Promise<TestResult[]> {
+  static async executeTestSuite(
+    suitePath: string,
+    parameters: BuildParameters,
+  ): Promise<TestResult[]> {
     core.info(`[TestWorkflow] Loading test suite from: ${suitePath}`);
 
     const suite = TestSuiteParser.parseSuiteFile(suitePath);
@@ -44,7 +47,9 @@ export class TestWorkflowService {
       core.info(`[TestWorkflow] Executing group ${groupIndex}/${groups.length}: [${runNames}]`);
 
       // Execute runs within a group concurrently
-      const groupResults = await Promise.all(group.map((run) => TestWorkflowService.executeTestRun(run, parameters)));
+      const groupResults = await Promise.all(
+        group.map((run) => TestWorkflowService.executeTestRun(run, parameters)),
+      );
 
       allResults.push(...groupResults);
 
@@ -65,7 +70,11 @@ export class TestWorkflowService {
     const resultPath = parameters.testResultPath;
     const resultFormat = parameters.testResultFormat;
     if (resultPath) {
-      TestResultReporter.writeResults(allResults, resultPath, resultFormat as 'junit' | 'json' | 'both');
+      TestResultReporter.writeResults(
+        allResults,
+        resultPath,
+        resultFormat as 'junit' | 'json' | 'both',
+      );
       core.info(`[TestWorkflow] Results written to: ${resultPath}`);
     }
 
@@ -82,7 +91,10 @@ export class TestWorkflowService {
    * actually run multiple test groups in parallel without blocking the
    * Node.js event loop.
    */
-  static async executeTestRun(run: TestRunDefinition, parameters: BuildParameters): Promise<TestResult> {
+  static async executeTestRun(
+    run: TestRunDefinition,
+    parameters: BuildParameters,
+  ): Promise<TestResult> {
     core.info(`[TestWorkflow] Starting run: '${run.name}'`);
 
     const unityArguments = TestWorkflowService.buildUnityArgs(run, parameters);
@@ -119,7 +131,9 @@ export class TestWorkflowService {
         return result;
       } catch {
         // Result file may not exist if Unity exited early
-        core.warning(`[TestWorkflow] Could not parse results for run '${run.name}' -- result file may be missing`);
+        core.warning(
+          `[TestWorkflow] Could not parse results for run '${run.name}' -- result file may be missing`,
+        );
 
         return {
           runName: run.name,
@@ -166,7 +180,7 @@ export class TestWorkflowService {
               className: run.name,
               message: isTimeout
                 ? `Test run timed out after ${run.timeout ?? 600}s`
-                : error.message ?? 'Unknown execution error',
+                : (error.message ?? 'Unknown execution error'),
               stackTrace: error.stderr ?? undefined,
             },
           ],

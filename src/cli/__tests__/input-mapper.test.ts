@@ -1,9 +1,10 @@
+import { describe, it, expect, beforeEach, afterEach, beforeAll, afterAll, vi } from 'vitest';
 import { mapCliArgumentsToInput, CliArguments } from '../input-mapper';
 import { Cli } from '../../model/cli/cli';
 import GitHub from '../../model/github';
 
 afterEach(() => {
-  jest.restoreAllMocks();
+  vi.restoreAllMocks();
   Cli.options = undefined;
 });
 

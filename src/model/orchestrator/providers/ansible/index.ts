@@ -38,7 +38,11 @@ class AnsibleProvider implements ProviderInterface {
     // eslint-disable-next-line no-unused-vars
     branchName: string,
     // eslint-disable-next-line no-unused-vars
-    defaultSecretsArray: { ParameterKey: string; EnvironmentVariable: string; ParameterValue: string }[],
+    defaultSecretsArray: {
+      ParameterKey: string;
+      EnvironmentVariable: string;
+      ParameterValue: string;
+    }[],
   ): Promise<void> {
     OrchestratorLogger.log(`[Ansible] Setting up playbook execution`);
 
@@ -51,16 +55,20 @@ class AnsibleProvider implements ProviderInterface {
       const version = await OrchestratorSystem.Run('ansible --version | head -1');
       OrchestratorLogger.log(`[Ansible] ${version.trim()}`);
     } catch (error: any) {
-      throw new Error(`Ansible not found on PATH: ${error.message || error}`);
+      throw new Error(`Ansible not found on PATH: ${error.message || error}`, { cause: error });
     }
 
     // Verify ansible-playbook binary exists (may be separate from ansible)
     try {
-      await OrchestratorSystem.Run('command -v ansible-playbook || which ansible-playbook || where ansible-playbook');
+      await OrchestratorSystem.Run(
+        'command -v ansible-playbook || which ansible-playbook || where ansible-playbook',
+      );
       OrchestratorLogger.log(`[Ansible] ansible-playbook binary verified`);
     } catch (error: any) {
       core.error('ansible-playbook not found. Install Ansible or ensure it is in PATH.');
-      throw new Error(`ansible-playbook not found on PATH: ${error.message || error}`);
+      throw new Error(`ansible-playbook not found on PATH: ${error.message || error}`, {
+        cause: error,
+      });
     }
 
     // Verify inventory exists
@@ -114,7 +122,9 @@ class AnsibleProvider implements ProviderInterface {
         const userVariables = JSON.parse(this.extraVariables);
         Object.assign(playbookVariables, userVariables);
       } catch {
-        OrchestratorLogger.logWarning(`[Ansible] Failed to parse ansibleExtraVars as JSON, using as-is`);
+        OrchestratorLogger.logWarning(
+          `[Ansible] Failed to parse ansibleExtraVars as JSON, using as-is`,
+        );
       }
     }
 
@@ -138,7 +148,9 @@ class AnsibleProvider implements ProviderInterface {
       .map((secret) => `${secret.EnvironmentVariable}='${secret.ParameterValue}'`)
       .join(' ');
 
-    const fullCommand = environmentPrefix ? `${environmentPrefix} ${commandParts.join(' ')}` : commandParts.join(' ');
+    const fullCommand = environmentPrefix
+      ? `${environmentPrefix} ${commandParts.join(' ')}`
+      : commandParts.join(' ');
 
     try {
       const output = await OrchestratorSystem.Run(fullCommand);
@@ -157,7 +169,11 @@ class AnsibleProvider implements ProviderInterface {
     // eslint-disable-next-line no-unused-vars
     branchName: string,
     // eslint-disable-next-line no-unused-vars
-    defaultSecretsArray: { ParameterKey: string; EnvironmentVariable: string; ParameterValue: string }[],
+    defaultSecretsArray: {
+      ParameterKey: string;
+      EnvironmentVariable: string;
+      ParameterValue: string;
+    }[],
   ): Promise<void> {
     OrchestratorLogger.log(`[Ansible] Cleanup complete`);
   }
@@ -168,7 +184,7 @@ class AnsibleProvider implements ProviderInterface {
     // eslint-disable-next-line no-unused-vars
     previewOnly: boolean,
     // eslint-disable-next-line no-unused-vars
-    olderThan: Number,
+    olderThan: number,
     // eslint-disable-next-line no-unused-vars
     fullCache: boolean,
     // eslint-disable-next-line no-unused-vars

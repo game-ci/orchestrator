@@ -1,3 +1,4 @@
+import { describe, it, expect, beforeEach, afterEach, beforeAll, afterAll, vi } from 'vitest';
 import Orchestrator from '../orchestrator';
 import UnityVersioning from '../../unity-versioning';
 import setups from './orchestrator-suite.test';
@@ -9,20 +10,20 @@ describe('Orchestrator Github Checks', () => {
 
   beforeEach(() => {
     // Mock GitHub API requests to avoid real network calls
-    jest.spyOn(GitHub as any, 'createGitHubCheckRequest').mockResolvedValue({
+    vi.spyOn(GitHub as any, 'createGitHubCheckRequest').mockResolvedValue({
       status: 201,
       data: { id: '1' },
     });
-    jest.spyOn(GitHub as any, 'updateGitHubCheckRequest').mockResolvedValue({
+    vi.spyOn(GitHub as any, 'updateGitHubCheckRequest').mockResolvedValue({
       status: 200,
       data: {},
     });
     // eslint-disable-next-line unicorn/no-useless-undefined
-    jest.spyOn(GitHub as any, 'runUpdateAsyncChecksWorkflow').mockResolvedValue(undefined);
+    vi.spyOn(GitHub as any, 'runUpdateAsyncChecksWorkflow').mockResolvedValue(undefined);
   });
 
   afterEach(() => {
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
   });
 
   it(
@@ -39,7 +40,12 @@ describe('Orchestrator Github Checks', () => {
       await Orchestrator.setup(buildParameter);
       Orchestrator.buildParameters.githubCheckId = await GitHub.createGitHubCheck(`direct create`);
       await GitHub.updateGitHubCheck(`1 ${new Date().toISOString()}`, `direct`);
-      await GitHub.updateGitHubCheck(`2 ${new Date().toISOString()}`, `direct`, `success`, `completed`);
+      await GitHub.updateGitHubCheck(
+        `2 ${new Date().toISOString()}`,
+        `direct`,
+        `success`,
+        `completed`,
+      );
     },
     TIMEOUT_INFINITE,
   );
@@ -58,7 +64,12 @@ describe('Orchestrator Github Checks', () => {
       await Orchestrator.setup(buildParameter);
       Orchestrator.buildParameters.githubCheckId = await GitHub.createGitHubCheck(`async create`);
       await GitHub.updateGitHubCheck(`1 ${new Date().toISOString()}`, `async`);
-      await GitHub.updateGitHubCheck(`2 ${new Date().toISOString()}`, `async`, `success`, `completed`);
+      await GitHub.updateGitHubCheck(
+        `2 ${new Date().toISOString()}`,
+        `async`,
+        `success`,
+        `completed`,
+      );
       GitHub.forceAsyncTest = false;
     },
     TIMEOUT_INFINITE,

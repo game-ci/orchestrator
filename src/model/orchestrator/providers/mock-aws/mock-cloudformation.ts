@@ -24,8 +24,8 @@ export class MockCloudFormation {
     }
 
     // Parse template to determine stack type
-    const isBaseStack = params.TemplateBody?.includes('ECSCluster') ||
-      params.TemplateBody?.includes('base stack');
+    const isBaseStack =
+      params.TemplateBody?.includes('ECSCluster') || params.TemplateBody?.includes('base stack');
 
     const resources = isBaseStack
       ? MockCloudFormation.generateBaseStackResources(stackName)
@@ -43,13 +43,16 @@ export class MockCloudFormation {
 
     // Side effects: create associated resources
     if (isBaseStack) {
-      const clusterArn = resources.find(r => r.LogicalResourceId === 'ECSCluster')?.PhysicalResourceId || '';
+      const clusterArn =
+        resources.find((r) => r.LogicalResourceId === 'ECSCluster')?.PhysicalResourceId || '';
       MockAwsState.ecsClusters.set(clusterArn, []);
       MockAwsState.s3Buckets.set(`${stackName}-bucket`, []);
     } else {
       // Job stack creates a Kinesis stream and log group
-      const streamName = resources.find(r => r.LogicalResourceId === 'KinesisStream')?.PhysicalResourceId || '';
-      const logGroupName = resources.find(r => r.LogicalResourceId === 'LogGroup')?.PhysicalResourceId || '';
+      const streamName =
+        resources.find((r) => r.LogicalResourceId === 'KinesisStream')?.PhysicalResourceId || '';
+      const logGroupName =
+        resources.find((r) => r.LogicalResourceId === 'LogGroup')?.PhysicalResourceId || '';
 
       MockAwsState.kinesisStreams.set(streamName, {
         StreamName: streamName,
@@ -108,13 +111,15 @@ export class MockCloudFormation {
   }
 
   /** List stack summaries. */
-  static listStacks(): { StackSummaries: Array<{
-    StackName: string;
-    StackStatus: string;
-    TemplateDescription?: string;
-    CreationTime: Date;
-  }> } {
-    const summaries = [...MockAwsState.stacks.values()].map(s => ({
+  static listStacks(): {
+    StackSummaries: Array<{
+      StackName: string;
+      StackStatus: string;
+      TemplateDescription?: string;
+      CreationTime: Date;
+    }>;
+  } {
+    const summaries = [...MockAwsState.stacks.values()].map((s) => ({
       StackName: s.StackName,
       StackStatus: s.StackStatus,
       TemplateDescription: s.TemplateDescription,
@@ -124,7 +129,9 @@ export class MockCloudFormation {
   }
 
   /** Describe stack resources. */
-  static describeStackResources(params: { StackName: string }): { StackResources: MockStackResource[] } {
+  static describeStackResources(params: { StackName: string }): {
+    StackResources: MockStackResource[];
+  } {
     const stack = MockAwsState.stacks.get(params.StackName);
     if (!stack) throw new Error(`Stack [${params.StackName}] does not exist`);
     return { StackResources: stack.Resources };

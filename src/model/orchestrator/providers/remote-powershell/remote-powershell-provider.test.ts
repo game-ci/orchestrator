@@ -1,14 +1,27 @@
+import {
+  describe,
+  it,
+  expect,
+  beforeEach,
+  afterEach,
+  beforeAll,
+  afterAll,
+  vi,
+  type MockedFunction,
+} from 'vitest';
 import RemotePowershellProvider from '.';
 import BuildParameters from '../../../build-parameters';
 import { OrchestratorSystem } from '../../services/core/orchestrator-system';
 import OrchestratorLogger from '../../services/core/orchestrator-logger';
 
-jest.mock('../../services/core/orchestrator-system');
-jest.mock('../../services/core/orchestrator-logger');
+vi.mock('../../services/core/orchestrator-system');
+vi.mock('../../services/core/orchestrator-logger');
 
-const mockRun = OrchestratorSystem.Run as jest.MockedFunction<typeof OrchestratorSystem.Run>;
-const mockLog = OrchestratorLogger.log as jest.MockedFunction<typeof OrchestratorLogger.log>;
-const mockLogWarning = OrchestratorLogger.logWarning as jest.MockedFunction<typeof OrchestratorLogger.logWarning>;
+const mockRun = OrchestratorSystem.Run as MockedFunction<typeof OrchestratorSystem.Run>;
+const mockLog = OrchestratorLogger.log as MockedFunction<typeof OrchestratorLogger.log>;
+const mockLogWarning = OrchestratorLogger.logWarning as MockedFunction<
+  typeof OrchestratorLogger.logWarning
+>;
 
 function createBuildParameters(overrides: Partial<BuildParameters> = {}): BuildParameters {
   return {
@@ -23,7 +36,7 @@ describe('RemotePowershellProvider', () => {
   let provider: RemotePowershellProvider;
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     provider = new RemotePowershellProvider(createBuildParameters());
   });
 
@@ -76,9 +89,9 @@ describe('RemotePowershellProvider', () => {
     it('throws descriptive error when connectivity test fails', async () => {
       mockRun.mockRejectedValueOnce(new Error('WinRM service not running'));
 
-      await expect(provider.setupWorkflow('guid-123', createBuildParameters(), 'main', [])).rejects.toThrow(
-        'Failed to connect to remote host build-server-01.internal',
-      );
+      await expect(
+        provider.setupWorkflow('guid-123', createBuildParameters(), 'main', []),
+      ).rejects.toThrow('Failed to connect to remote host build-server-01.internal');
     });
   });
 
@@ -112,7 +125,15 @@ describe('RemotePowershellProvider', () => {
       provider = new RemotePowershellProvider(params);
       mockRun.mockResolvedValueOnce('SSH build output');
 
-      const result = await provider.runTaskInWorkflow('guid-ssh', 'img', 'build', '/m', '/w', [], []);
+      const result = await provider.runTaskInWorkflow(
+        'guid-ssh',
+        'img',
+        'build',
+        '/m',
+        '/w',
+        [],
+        [],
+      );
 
       expect(result).toBe('SSH build output');
 
@@ -140,9 +161,23 @@ describe('RemotePowershellProvider', () => {
     it('includes secrets in the remote script block', async () => {
       mockRun.mockResolvedValueOnce('output');
 
-      const secrets = [{ ParameterKey: 'key1', EnvironmentVariable: 'SECRET_KEY', ParameterValue: 'secret-val-123' }];
+      const secrets = [
+        {
+          ParameterKey: 'key1',
+          EnvironmentVariable: 'SECRET_KEY',
+          ParameterValue: 'secret-val-123',
+        },
+      ];
 
-      await provider.runTaskInWorkflow('guid-sec', 'img', 'build-cmd', '/m', '/w', [], secrets as any);
+      await provider.runTaskInWorkflow(
+        'guid-sec',
+        'img',
+        'build-cmd',
+        '/m',
+        '/w',
+        [],
+        secrets as any,
+      );
 
       const command = mockRun.mock.calls[0][0];
       expect(command).toContain('$env:SECRET_KEY');
@@ -176,9 +211,9 @@ describe('RemotePowershellProvider', () => {
       const execError = new Error('Remote execution failed: access denied');
       mockRun.mockRejectedValueOnce(execError);
 
-      await expect(provider.runTaskInWorkflow('guid-fail', 'img', 'cmd', '/m', '/w', [], [])).rejects.toThrow(
-        'Remote execution failed',
-      );
+      await expect(
+        provider.runTaskInWorkflow('guid-fail', 'img', 'cmd', '/m', '/w', [], []),
+      ).rejects.toThrow('Remote execution failed');
 
       expect(mockLogWarning).toHaveBeenCalledWith(expect.stringContaining('Task failed'));
     });
@@ -203,15 +238,23 @@ describe('RemotePowershellProvider', () => {
       });
       provider = new RemotePowershellProvider(params);
 
-      await expect(provider.runTaskInWorkflow('guid-badcred', 'img', 'cmd', '/m', '/w', [], [])).rejects.toThrow(
-        'username:password',
-      );
+      await expect(
+        provider.runTaskInWorkflow('guid-badcred', 'img', 'cmd', '/m', '/w', [], []),
+      ).rejects.toThrow('username:password');
     });
 
     it('sets working directory in the remote script', async () => {
       mockRun.mockResolvedValueOnce('output');
 
-      await provider.runTaskInWorkflow('guid-wd', 'img', 'cmd', '/m', 'D:\\Builds\\Project', [], []);
+      await provider.runTaskInWorkflow(
+        'guid-wd',
+        'img',
+        'cmd',
+        '/m',
+        'D:\\Builds\\Project',
+        [],
+        [],
+      );
 
       const command = mockRun.mock.calls[0][0];
       expect(command).toContain('Set-Location');

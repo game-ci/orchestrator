@@ -7,6 +7,7 @@ import { v4 as uuidv4 } from 'uuid';
 import setups from './orchestrator-suite.test';
 import { OrchestratorSystem } from '../services/core/orchestrator-system';
 import { OptionValues } from 'commander';
+import { execSync } from 'child_process';
 
 async function CreateParameters(overrides: OptionValues | undefined) {
   if (overrides) {
@@ -31,7 +32,6 @@ describe('Orchestrator pre-built rclone steps', () => {
     let bashAvailable = !isWindows; // assume available on non-Windows
     if (!isCI) {
       try {
-        const { execSync } = require('child_process');
         execSync('rclone version', { stdio: 'ignore' });
         rcloneAvailable = true;
       } catch {
@@ -39,7 +39,6 @@ describe('Orchestrator pre-built rclone steps', () => {
       }
       if (isWindows) {
         try {
-          const { execSync } = require('child_process');
           execSync('bash --version', { stdio: 'ignore' });
           bashAvailable = true;
         } catch {
@@ -49,15 +48,20 @@ describe('Orchestrator pre-built rclone steps', () => {
     }
 
     const hasRcloneRemote = Boolean(process.env.RCLONE_REMOTE || process.env.rcloneRemote);
-    const shouldRunRclone = (isCI && hasRcloneRemote) || (rcloneAvailable && (!isWindows || bashAvailable));
+    const shouldRunRclone =
+      (isCI && hasRcloneRemote) || (rcloneAvailable && (!isWindows || bashAvailable));
 
     if (shouldRunRclone) {
       it('Run build and prebuilt rclone cache pull, cache push and upload build', async () => {
-        const remote = process.env.RCLONE_REMOTE || process.env.rcloneRemote || 'local:./temp/rclone-remote';
+        const remote =
+          process.env.RCLONE_REMOTE || process.env.rcloneRemote || 'local:./temp/rclone-remote';
         const overrides = {
           versioning: 'None',
           projectPath: 'test-project',
-          unityVersion: UnityVersioning.determineUnityVersion('test-project', UnityVersioning.read('test-project')),
+          unityVersion: UnityVersioning.determineUnityVersion(
+            'test-project',
+            UnityVersioning.read('test-project'),
+          ),
           targetPlatform: 'StandaloneLinux64',
           cacheKey: `test-case-${uuidv4()}`,
           containerHookFiles: `rclone-pull-cache,rclone-upload-cache,rclone-upload-build`,

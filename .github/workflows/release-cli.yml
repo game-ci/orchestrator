@@ -6,11 +6,11 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "Release tag to build (e.g., v1.0.0). Uses latest release if empty."
+        description: 'Release tag to build (e.g., v1.0.0). Uses latest release if empty.'
         required: false
         type: string
       publish-npm:
-        description: "Publish to npm"
+        description: 'Publish to npm'
         required: false
         default: false
         type: boolean
@@ -58,7 +58,7 @@ jobs:
           corepack install
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: '20'
       - name: Resolve yarn cache folder
         id: yarn-config
         run: echo "cacheFolder=$(yarn config get cacheFolder)" >> "$GITHUB_OUTPUT"
@@ -168,7 +168,8 @@ jobs:
           corepack install
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
       - name: Resolve yarn cache folder
         id: yarn-config
         run: echo "cacheFolder=$(yarn config get cacheFolder)" >> "$GITHUB_OUTPUT"
@@ -182,7 +183,6 @@ jobs:
           key: yarn-${{ runner.os }}-node-'20'-${{ hashFiles('yarn.lock') }}
           restore-keys: |
             yarn-${{ runner.os }}-node-'20'-
-          registry-url: "https://registry.npmjs.org"
 
       - name: Install dependencies
         run: yarn install --immutable

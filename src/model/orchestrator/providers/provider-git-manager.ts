@@ -138,7 +138,8 @@ export class ProviderGitManager {
       });
 
       const hasUpdates =
-        statusOutput.includes('Your branch is behind') || statusOutput.includes('can be fast-forwarded');
+        statusOutput.includes('Your branch is behind') ||
+        statusOutput.includes('can be fast-forwarded');
 
       if (hasUpdates) {
         OrchestratorLogger.log(`Updates available, pulling latest changes...`);

@@ -1,22 +1,35 @@
+import {
+  describe,
+  it,
+  expect,
+  beforeEach,
+  afterEach,
+  beforeAll,
+  afterAll,
+  vi,
+  type MockedFunction,
+} from 'vitest';
 import GitLabCIProvider from '.';
 import BuildParameters from '../../../build-parameters';
 import { OrchestratorSystem } from '../../services/core/orchestrator-system';
 import OrchestratorLogger from '../../services/core/orchestrator-logger';
 import * as core from '@actions/core';
 
-jest.mock('../../services/core/orchestrator-system');
-jest.mock('../../services/core/orchestrator-logger');
-jest.mock('@actions/core', () => ({
-  info: jest.fn(),
-  warning: jest.fn(),
-  error: jest.fn(),
-  setOutput: jest.fn(),
-  getInput: jest.fn(() => ''),
+vi.mock('../../services/core/orchestrator-system');
+vi.mock('../../services/core/orchestrator-logger');
+vi.mock('@actions/core', () => ({
+  info: vi.fn(),
+  warning: vi.fn(),
+  error: vi.fn(),
+  setOutput: vi.fn(),
+  getInput: vi.fn(() => ''),
 }));
 
-const mockRun = OrchestratorSystem.Run as jest.MockedFunction<typeof OrchestratorSystem.Run>;
-const mockLog = OrchestratorLogger.log as jest.MockedFunction<typeof OrchestratorLogger.log>;
-const mockLogWarning = OrchestratorLogger.logWarning as jest.MockedFunction<typeof OrchestratorLogger.logWarning>;
+const mockRun = OrchestratorSystem.Run as MockedFunction<typeof OrchestratorSystem.Run>;
+const mockLog = OrchestratorLogger.log as MockedFunction<typeof OrchestratorLogger.log>;
+const mockLogWarning = OrchestratorLogger.logWarning as MockedFunction<
+  typeof OrchestratorLogger.logWarning
+>;
 
 function createBuildParameters(overrides: Partial<BuildParameters> = {}): BuildParameters {
   return {
@@ -43,7 +56,7 @@ describe('GitLabCIProvider', () => {
   let provider: GitLabCIProvider;
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     provider = new GitLabCIProvider(createBuildParameters());
   });
 
@@ -103,9 +116,9 @@ describe('GitLabCIProvider', () => {
     it('throws descriptive error when project access check fails', async () => {
       mockRun.mockRejectedValueOnce(new Error('401 Unauthorized'));
 
-      await expect(provider.setupWorkflow('guid-123', createBuildParameters(), 'main', [])).rejects.toThrow(
-        'Failed to access GitLab project my-group/my-project',
-      );
+      await expect(
+        provider.setupWorkflow('guid-123', createBuildParameters(), 'main', []),
+      ).rejects.toThrow('Failed to access GitLab project my-group/my-project');
     });
   });
 
@@ -176,37 +189,47 @@ describe('GitLabCIProvider', () => {
     it('throws when pipeline trigger fails', async () => {
       mockRun.mockRejectedValueOnce(new Error('404 Not Found'));
 
-      await expect(provider.runTaskInWorkflow('guid-err', 'img', 'cmd', '/m', '/w', [], [])).rejects.toThrow(
-        'Failed to trigger pipeline',
-      );
+      await expect(
+        provider.runTaskInWorkflow('guid-err', 'img', 'cmd', '/m', '/w', [], []),
+      ).rejects.toThrow('Failed to trigger pipeline');
     });
 
     it('throws when pipeline finishes with failure status', async () => {
       mockRun.mockResolvedValueOnce(JSON.stringify({ id: 5003, status: 'pending' }));
       mockRun.mockResolvedValueOnce(JSON.stringify({ status: 'failed' }));
 
-      await expect(provider.runTaskInWorkflow('guid-fail', 'img', 'cmd', '/m', '/w', [], [])).rejects.toThrow(
-        'Pipeline 5003 finished with status: failed',
-      );
+      await expect(
+        provider.runTaskInWorkflow('guid-fail', 'img', 'cmd', '/m', '/w', [], []),
+      ).rejects.toThrow('Pipeline 5003 finished with status: failed');
     });
 
     it('throws when pipeline is canceled', async () => {
       mockRun.mockResolvedValueOnce(JSON.stringify({ id: 5004, status: 'pending' }));
       mockRun.mockResolvedValueOnce(JSON.stringify({ status: 'canceled' }));
 
-      await expect(provider.runTaskInWorkflow('guid-cancel', 'img', 'cmd', '/m', '/w', [], [])).rejects.toThrow(
-        'Pipeline 5004 finished with status: canceled',
-      );
+      await expect(
+        provider.runTaskInWorkflow('guid-cancel', 'img', 'cmd', '/m', '/w', [], []),
+      ).rejects.toThrow('Pipeline 5004 finished with status: canceled');
     });
 
     it('handles job log fetch failures gracefully', async () => {
       mockRun.mockResolvedValueOnce(JSON.stringify({ id: 5005, status: 'success' }));
       mockRun.mockResolvedValueOnce(JSON.stringify({ status: 'success' }));
-      mockRun.mockResolvedValueOnce(JSON.stringify([{ id: 20001, name: 'build', status: 'success' }]));
+      mockRun.mockResolvedValueOnce(
+        JSON.stringify([{ id: 20001, name: 'build', status: 'success' }]),
+      );
       // Job trace fetch fails
       mockRun.mockRejectedValueOnce(new Error('trace unavailable'));
 
-      const result = await provider.runTaskInWorkflow('guid-nologs', 'img', 'cmd', '/m', '/w', [], []);
+      const result = await provider.runTaskInWorkflow(
+        'guid-nologs',
+        'img',
+        'cmd',
+        '/m',
+        '/w',
+        [],
+        [],
+      );
 
       expect(result).toContain('build');
       expect(result).toContain('logs unavailable');
@@ -218,7 +241,15 @@ describe('GitLabCIProvider', () => {
       // Jobs list fails
       mockRun.mockRejectedValueOnce(new Error('API error'));
 
-      const result = await provider.runTaskInWorkflow('guid-noapi', 'img', 'cmd', '/m', '/w', [], []);
+      const result = await provider.runTaskInWorkflow(
+        'guid-noapi',
+        'img',
+        'cmd',
+        '/m',
+        '/w',
+        [],
+        [],
+      );
 
       expect(result).toContain('Pipeline 5006 completed successfully');
       expect(result).toContain('logs unavailable');
@@ -255,11 +286,13 @@ describe('GitLabCIProvider', () => {
       };
 
       try {
-        await expect(provider.runTaskInWorkflow('guid-poll-timeout', 'img', 'cmd', '/m', '/w', [], [])).rejects.toThrow(
-          'did not complete within 4 hours',
-        );
+        await expect(
+          provider.runTaskInWorkflow('guid-poll-timeout', 'img', 'cmd', '/m', '/w', [], []),
+        ).rejects.toThrow('did not complete within 4 hours');
 
-        expect(core.error).toHaveBeenCalledWith(expect.stringContaining('did not complete within 4 hours'));
+        expect(core.error).toHaveBeenCalledWith(
+          expect.stringContaining('did not complete within 4 hours'),
+        );
       } finally {
         Date.now = realDateNow;
       }

@@ -1,7 +1,8 @@
+import { describe, it, expect, beforeEach, afterEach, beforeAll, afterAll, vi } from 'vitest';
 import { OrchestratorFolders } from './orchestrator-folders';
 
 // Mock Orchestrator
-jest.mock('../orchestrator', () => ({
+vi.mock('../orchestrator', () => ({
   __esModule: true,
   default: {
     buildParameters: {
@@ -19,14 +20,14 @@ jest.mock('../orchestrator', () => ({
   },
 }));
 
-jest.mock('../../build-parameters', () => ({
+vi.mock('../../build-parameters', () => ({
   __esModule: true,
   default: {
-    shouldUseRetainedWorkspaceMode: jest.fn().mockReturnValue(false),
+    shouldUseRetainedWorkspaceMode: vi.fn().mockReturnValue(false),
   },
 }));
 
-jest.mock('./orchestrator-options', () => ({
+vi.mock('./orchestrator-options', () => ({
   __esModule: true,
   default: {
     useSharedBuilder: false,
@@ -53,7 +54,9 @@ describe('OrchestratorFolders', () => {
 
   describe('ToLinuxFolder', () => {
     it('converts backslashes to forward slashes', () => {
-      expect(OrchestratorFolders.ToLinuxFolder('C:\\Users\\test\\project')).toBe('C:/Users/test/project');
+      expect(OrchestratorFolders.ToLinuxFolder('C:\\Users\\test\\project')).toBe(
+        'C:/Users/test/project',
+      );
     });
 
     it('preserves forward slashes', () => {
@@ -61,7 +64,9 @@ describe('OrchestratorFolders', () => {
     });
 
     it('handles mixed slashes', () => {
-      expect(OrchestratorFolders.ToLinuxFolder('some/path\\mixed/slashes\\here')).toBe('some/path/mixed/slashes/here');
+      expect(OrchestratorFolders.ToLinuxFolder('some/path\\mixed/slashes\\here')).toBe(
+        'some/path/mixed/slashes/here',
+      );
     });
 
     it('handles empty string', () => {

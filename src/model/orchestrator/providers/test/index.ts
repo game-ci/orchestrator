@@ -30,7 +30,11 @@ class TestOrchestrator implements ProviderInterface {
     // eslint-disable-next-line no-unused-vars
     branchName: string,
     // eslint-disable-next-line no-unused-vars
-    defaultSecretsArray: { ParameterKey: string; EnvironmentVariable: string; ParameterValue: string }[],
+    defaultSecretsArray: {
+      ParameterKey: string;
+      EnvironmentVariable: string;
+      ParameterValue: string;
+    }[],
   ) {}
   setupWorkflow(
     // eslint-disable-next-line no-unused-vars
@@ -40,7 +44,11 @@ class TestOrchestrator implements ProviderInterface {
     // eslint-disable-next-line no-unused-vars
     branchName: string,
     // eslint-disable-next-line no-unused-vars
-    defaultSecretsArray: { ParameterKey: string; EnvironmentVariable: string; ParameterValue: string }[],
+    defaultSecretsArray: {
+      ParameterKey: string;
+      EnvironmentVariable: string;
+      ParameterValue: string;
+    }[],
   ) {}
   public async runTaskInWorkflow(
     commands: string,

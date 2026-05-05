@@ -33,7 +33,9 @@ describe('Orchestrator Sync Environments', () => {
       // so the customJob printenv output is never captured in build results.
       const awsEndpoint = process.env.AWS_ENDPOINT || process.env.AWS_ENDPOINT_URL || '';
       if (awsEndpoint.includes('localhost') || awsEndpoint.includes('127.0.0.1')) {
-        console.log('Skipping environment test on local AWS emulator (ECS containers do not execute)');
+        console.log(
+          'Skipping environment test on local AWS emulator (ECS containers do not execute)',
+        );
 
         return;
       }
@@ -65,7 +67,8 @@ describe('Orchestrator Sync Environments', () => {
       // Assert results
       // expect(file).toContain(JSON.stringify(buildParameter));
       expect(file).toContain(`${Input.ToEnvVarFormat(testSecretName)}=${testSecretValue}`);
-      const environmentVariables = TaskParameterSerializer.createOrchestratorEnvironmentVariables(buildParameter);
+      const environmentVariables =
+        TaskParameterSerializer.createOrchestratorEnvironmentVariables(buildParameter);
       const secrets = TaskParameterSerializer.readDefaultSecrets().map((x) => {
         return {
           name: x.EnvironmentVariable,
@@ -86,7 +89,12 @@ describe('Orchestrator Sync Environments', () => {
         'INPUT_AWSENDPOINT',
       ]);
       const combined = [...environmentVariables, ...secrets]
-        .filter((element) => element.value !== undefined && element.value !== '' && typeof element.value !== 'function')
+        .filter(
+          (element) =>
+            element.value !== undefined &&
+            element.value !== '' &&
+            typeof element.value !== 'function',
+        )
         .map((x) => {
           if (typeof x.value === `string`) {
             x.value = x.value.replace(/\s+/g, '');
@@ -108,7 +116,9 @@ describe('Orchestrator Sync Environments', () => {
           return x;
         })
         .filter((element) => {
-          return !['UNITY_LICENSE', 'UNITY_LICENSE', 'CUSTOM_JOB', 'CUSTOM_JOB'].includes(element.name);
+          return !['UNITY_LICENSE', 'UNITY_LICENSE', 'CUSTOM_JOB', 'CUSTOM_JOB'].includes(
+            element.name,
+          );
         });
       const newLinePurgedFile = file
         .replace(/\s+/g, '')

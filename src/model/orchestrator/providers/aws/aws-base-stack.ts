@@ -47,7 +47,9 @@ export class AWSBaseStack {
     const describeStackInput: DescribeStacksCommandInput = {
       StackName: baseStackName,
     };
-    const parametersWithoutHash: Parameter[] = [{ ParameterKey: 'EnvironmentName', ParameterValue: baseStackName }];
+    const parametersWithoutHash: Parameter[] = [
+      { ParameterKey: 'EnvironmentName', ParameterValue: baseStackName },
+    ];
     const parametersHash = crypto
       .createHash('md5')
       .update(baseStack + JSON.stringify(parametersWithoutHash))
@@ -87,7 +89,9 @@ export class AWSBaseStack {
     };
     try {
       if (!stackExists) {
-        OrchestratorLogger.log(`${baseStackName} stack does not exist (${JSON.stringify(stackNames)})`);
+        OrchestratorLogger.log(
+          `${baseStackName} stack does not exist (${JSON.stringify(stackNames)})`,
+        );
         let created = false;
         try {
           await CF.send(new CreateStackCommand(createStackInput));
@@ -107,9 +111,13 @@ export class AWSBaseStack {
       const CFState = await describeStack();
       let stack = CFState.Stacks?.[0];
       if (!stack) {
-        throw new Error(`Base stack doesn't exist, even after creation, stackExists check: ${stackExists}`);
+        throw new Error(
+          `Base stack doesn't exist, even after creation, stackExists check: ${stackExists}`,
+        );
       }
-      const stackVersion = stack.Parameters?.find((x) => x.ParameterKey === 'Version')?.ParameterValue;
+      const stackVersion = stack.Parameters?.find(
+        (x) => x.ParameterKey === 'Version',
+      )?.ParameterValue;
 
       if (stack.StackStatus === 'CREATE_IN_PROGRESS') {
         OrchestratorLogger.log(
@@ -125,7 +133,9 @@ export class AWSBaseStack {
       }
 
       if (stackExists) {
-        OrchestratorLogger.log(`Base stack exists (version: ${stackVersion}, local version: ${parametersHash})`);
+        OrchestratorLogger.log(
+          `Base stack exists (version: ${stackVersion}, local version: ${parametersHash})`,
+        );
         if (parametersHash !== stackVersion) {
           OrchestratorLogger.log(`Attempting update of base stack`);
           try {

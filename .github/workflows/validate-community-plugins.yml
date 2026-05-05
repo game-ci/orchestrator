@@ -3,13 +3,13 @@ name: Validate Community Plugins
 on:
   schedule:
     # Run weekly on Sunday at 02:00 UTC
-    - cron: "0 2 * * 0"
+    - cron: '0 2 * * 0'
   workflow_dispatch:
     inputs:
       plugin_filter:
-        description: "Filter plugins by name (regex pattern, empty = all)"
+        description: 'Filter plugins by name (regex pattern, empty = all)'
         required: false
-        default: ""
+        default: ''
 
 permissions:
   contents: read
@@ -59,7 +59,7 @@ jobs:
             console.log(`Found ${matrix.length} community provider plugins to validate`);
 
   validate:
-    name: "${{ matrix.name }}"
+    name: '${{ matrix.name }}'
     needs: load-plugins
     if: needs.load-plugins.outputs.plugin_count > 0
     runs-on: ubuntu-latest
@@ -93,7 +93,7 @@ jobs:
 
       - name: Install dependencies
         env:
-          YARN_ENABLE_HARDENED_MODE: "false"
+          YARN_ENABLE_HARDENED_MODE: 'false'
         run: |
           case "$(yarn --version)" in 1.*) echo 'expected up-to-date yarn version'; exit 1 ;; esac
           yarn install --immutable
@@ -161,16 +161,18 @@ jobs:
         if: always()
         run: |
           STATUS="${{ steps.validate.outcome }}"
-          echo "## ${{ matrix.name }}" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          if [ "$STATUS" = "success" ]; then
-            echo "✅ **PASSED** — Provider implements ProviderInterface correctly" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "❌ **FAILED** — Provider validation failed" >> $GITHUB_STEP_SUMMARY
-          fi
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "- Source: \`${{ matrix.source }}\`" >> $GITHUB_STEP_SUMMARY
-          echo "- Type: ${{ matrix.type }}" >> $GITHUB_STEP_SUMMARY
+          {
+            echo "## ${{ matrix.name }}"
+            echo ""
+            if [ "$STATUS" = "success" ]; then
+              echo "✅ **PASSED** — Provider implements ProviderInterface correctly"
+            else
+              echo "❌ **FAILED** — Provider validation failed"
+            fi
+            echo ""
+            echo "- Source: \`${{ matrix.source }}\`"
+            echo "- Type: ${{ matrix.type }}"
+          } >> "$GITHUB_STEP_SUMMARY"
 
   report:
     name: Validation Report

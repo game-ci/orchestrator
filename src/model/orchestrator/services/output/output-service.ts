@@ -69,7 +69,9 @@ export class OutputService {
           entry.size = stat.size;
         }
       } catch {
-        OrchestratorLogger.logWarning(`[Output] Failed to stat output '${typeDef.name}' at ${outputPath}`);
+        OrchestratorLogger.logWarning(
+          `[Output] Failed to stat output '${typeDef.name}' at ${outputPath}`,
+        );
       }
 
       manifest.outputs.push(entry);

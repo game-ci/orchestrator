@@ -41,12 +41,18 @@ class GitLabCIProvider implements ProviderInterface {
     // eslint-disable-next-line no-unused-vars
     branchName: string,
     // eslint-disable-next-line no-unused-vars
-    defaultSecretsArray: { ParameterKey: string; EnvironmentVariable: string; ParameterValue: string }[],
+    defaultSecretsArray: {
+      ParameterKey: string;
+      EnvironmentVariable: string;
+      ParameterValue: string;
+    }[],
   ): Promise<void> {
     OrchestratorLogger.log(`[GitLabCI] Setting up pipeline trigger for project ${this.projectId}`);
 
     if (!this.projectId || !this.triggerToken) {
-      throw new Error('gitlabProjectId and gitlabTriggerToken are required for the gitlab-ci provider');
+      throw new Error(
+        'gitlabProjectId and gitlabTriggerToken are required for the gitlab-ci provider',
+      );
     }
 
     // Verify project access
@@ -57,7 +63,10 @@ class GitLabCIProvider implements ProviderInterface {
       );
       OrchestratorLogger.log(`[GitLabCI] Project access verified`);
     } catch (error: any) {
-      throw new Error(`Failed to access GitLab project ${this.projectId}: ${error.message || error}`);
+      throw new Error(
+        `Failed to access GitLab project ${this.projectId}: ${error.message || error}`,
+        { cause: error },
+      );
     }
   }
 
@@ -71,7 +80,9 @@ class GitLabCIProvider implements ProviderInterface {
     // eslint-disable-next-line no-unused-vars
     secrets: OrchestratorSecret[],
   ): Promise<string> {
-    OrchestratorLogger.log(`[GitLabCI] Triggering pipeline on project ${this.projectId}@${this.ref}`);
+    OrchestratorLogger.log(
+      `[GitLabCI] Triggering pipeline on project ${this.projectId}@${this.ref}`,
+    );
 
     const encodedProject = encodeURIComponent(this.projectId);
 
@@ -98,9 +109,11 @@ class GitLabCIProvider implements ProviderInterface {
 
       const pipeline = JSON.parse(response);
       this.pipelineId = pipeline.id;
-      OrchestratorLogger.log(`[GitLabCI] Pipeline triggered: ${this.pipelineId} (status: ${pipeline.status})`);
+      OrchestratorLogger.log(
+        `[GitLabCI] Pipeline triggered: ${this.pipelineId} (status: ${pipeline.status})`,
+      );
     } catch (error: any) {
-      throw new Error(`Failed to trigger pipeline: ${error.message || error}`);
+      throw new Error(`Failed to trigger pipeline: ${error.message || error}`, { cause: error });
     }
 
     // Poll until completion (with maximum duration guard)
@@ -172,7 +185,11 @@ class GitLabCIProvider implements ProviderInterface {
     // eslint-disable-next-line no-unused-vars
     branchName: string,
     // eslint-disable-next-line no-unused-vars
-    defaultSecretsArray: { ParameterKey: string; EnvironmentVariable: string; ParameterValue: string }[],
+    defaultSecretsArray: {
+      ParameterKey: string;
+      EnvironmentVariable: string;
+      ParameterValue: string;
+    }[],
   ): Promise<void> {
     OrchestratorLogger.log(`[GitLabCI] Cleanup complete`);
   }
@@ -183,7 +200,7 @@ class GitLabCIProvider implements ProviderInterface {
     // eslint-disable-next-line no-unused-vars
     previewOnly: boolean,
     // eslint-disable-next-line no-unused-vars
-    olderThan: Number,
+    olderThan: number,
     // eslint-disable-next-line no-unused-vars
     fullCache: boolean,
     // eslint-disable-next-line no-unused-vars

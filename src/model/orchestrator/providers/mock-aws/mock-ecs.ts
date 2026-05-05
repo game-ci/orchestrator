@@ -66,10 +66,7 @@ export class MockEcs {
   }
 
   /** Describe tasks by ARN. */
-  static describeTasks(params: {
-    cluster: string;
-    tasks: string[];
-  }): { tasks: MockEcsTask[] } {
+  static describeTasks(params: { cluster: string; tasks: string[] }): { tasks: MockEcsTask[] } {
     const tasks: MockEcsTask[] = [];
     for (const arn of params.tasks) {
       const task = MockAwsState.ecsTasks.get(arn);
@@ -110,20 +107,17 @@ export class MockEcs {
   }
 
   /** Wait until task reaches RUNNING state. */
-  static async waitUntilTasksRunning(params: {
-    tasks: string[];
-    cluster: string;
-  }): Promise<void> {
+  static async waitUntilTasksRunning(params: { tasks: string[]; cluster: string }): Promise<void> {
     // In mock, tasks transition quickly — just wait for the state change
     const maxWaitMs = 5000;
     const startTime = Date.now();
     while (Date.now() - startTime < maxWaitMs) {
-      const allRunning = params.tasks.every(arn => {
+      const allRunning = params.tasks.every((arn) => {
         const task = MockAwsState.ecsTasks.get(arn);
         return task && (task.lastStatus === 'RUNNING' || task.lastStatus === 'STOPPED');
       });
       if (allRunning) return;
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 100));
     }
   }
 

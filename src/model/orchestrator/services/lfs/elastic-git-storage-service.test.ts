@@ -1,34 +1,47 @@
+import {
+  describe,
+  it,
+  expect,
+  beforeEach,
+  afterEach,
+  beforeAll,
+  afterAll,
+  vi,
+  type Mocked,
+} from 'vitest';
 import fs from 'node:fs';
 import os from 'node:os';
 import { ElasticGitStorageService } from './elastic-git-storage-service';
+import { OrchestratorSystem } from '../core/orchestrator-system';
+import { LfsAgentService } from './lfs-agent-service';
 
-jest.mock('node:fs');
-jest.mock('node:os');
-jest.mock('../core/orchestrator-system', () => ({
+vi.mock('node:fs');
+vi.mock('node:os');
+vi.mock('../core/orchestrator-system', () => ({
   OrchestratorSystem: {
-    Run: jest.fn().mockResolvedValue(''),
+    Run: vi.fn().mockResolvedValue(''),
   },
 }));
-jest.mock('../core/orchestrator-logger', () => ({
+vi.mock('../core/orchestrator-logger', () => ({
   __esModule: true,
   default: {
-    log: jest.fn(),
-    logWarning: jest.fn(),
-    error: jest.fn(),
+    log: vi.fn(),
+    logWarning: vi.fn(),
+    error: vi.fn(),
   },
 }));
-jest.mock('./lfs-agent-service', () => ({
+vi.mock('./lfs-agent-service', () => ({
   LfsAgentService: {
-    configure: jest.fn().mockResolvedValue(undefined),
+    configure: vi.fn().mockResolvedValue(undefined),
   },
 }));
 
-const mockFs = fs as jest.Mocked<typeof fs>;
-const mockOs = os as jest.Mocked<typeof os>;
+const mockFs = fs as Mocked<typeof fs>;
+const mockOs = os as Mocked<typeof os>;
 
 describe('ElasticGitStorageService', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe('parseAgentValue', () => {
@@ -81,15 +94,21 @@ describe('ElasticGitStorageService', () => {
     });
 
     it('should match forward-slash path', () => {
-      expect(ElasticGitStorageService.isElasticGitStorage('/usr/local/bin/elastic-git-storage')).toBe(true);
+      expect(
+        ElasticGitStorageService.isElasticGitStorage('/usr/local/bin/elastic-git-storage'),
+      ).toBe(true);
     });
 
     it('should match backslash path', () => {
-      expect(ElasticGitStorageService.isElasticGitStorage('C:\\tools\\elastic-git-storage')).toBe(true);
+      expect(ElasticGitStorageService.isElasticGitStorage('C:\\tools\\elastic-git-storage')).toBe(
+        true,
+      );
     });
 
     it('should match path with .exe', () => {
-      expect(ElasticGitStorageService.isElasticGitStorage('C:\\tools\\elastic-git-storage.exe')).toBe(true);
+      expect(
+        ElasticGitStorageService.isElasticGitStorage('C:\\tools\\elastic-git-storage.exe'),
+      ).toBe(true);
     });
 
     it('should be case-insensitive', () => {
@@ -115,32 +134,33 @@ describe('ElasticGitStorageService', () => {
 
   describe('findInstalled', () => {
     it('should find on PATH via which/where', async () => {
-      const { OrchestratorSystem } = require('../core/orchestrator-system');
       mockOs.platform.mockReturnValue('linux');
       OrchestratorSystem.Run.mockResolvedValue('/usr/local/bin/elastic-git-storage\n');
-      (mockFs.existsSync as jest.Mock).mockReturnValue(true);
+      (mockFs.existsSync as vi.Mock).mockReturnValue(true);
 
       const result = await ElasticGitStorageService.findInstalled();
       expect(result).toBe('/usr/local/bin/elastic-git-storage');
     });
 
     it('should use where on windows', async () => {
-      const { OrchestratorSystem } = require('../core/orchestrator-system');
       mockOs.platform.mockReturnValue('win32');
       OrchestratorSystem.Run.mockResolvedValue('C:\\tools\\elastic-git-storage.exe\n');
-      (mockFs.existsSync as jest.Mock).mockReturnValue(true);
+      (mockFs.existsSync as vi.Mock).mockReturnValue(true);
 
       const result = await ElasticGitStorageService.findInstalled();
       expect(result).toBe('C:\\tools\\elastic-git-storage.exe');
-      expect(OrchestratorSystem.Run).toHaveBeenCalledWith(expect.stringContaining('where'), false, true);
+      expect(OrchestratorSystem.Run).toHaveBeenCalledWith(
+        expect.stringContaining('where'),
+        false,
+        true,
+      );
     });
 
     it('should check common install locations when not on PATH', async () => {
-      const { OrchestratorSystem } = require('../core/orchestrator-system');
       mockOs.platform.mockReturnValue('linux');
       mockOs.homedir.mockReturnValue('/home/runner');
       OrchestratorSystem.Run.mockRejectedValue(new Error('not found'));
-      (mockFs.existsSync as jest.Mock)
+      (mockFs.existsSync as vi.Mock)
         .mockReturnValueOnce(false) // RUNNER_TOOL_CACHE
         .mockReturnValueOnce(true); // /usr/local/bin
 
@@ -149,18 +169,16 @@ describe('ElasticGitStorageService', () => {
     });
 
     it('should return empty string when not found anywhere', async () => {
-      const { OrchestratorSystem } = require('../core/orchestrator-system');
       mockOs.platform.mockReturnValue('linux');
       mockOs.homedir.mockReturnValue('/home/runner');
       OrchestratorSystem.Run.mockRejectedValue(new Error('not found'));
-      (mockFs.existsSync as jest.Mock).mockReturnValue(false);
+      (mockFs.existsSync as vi.Mock).mockReturnValue(false);
 
       const result = await ElasticGitStorageService.findInstalled();
       expect(result).toBe('');
     });
 
     it('should check windows-specific locations on win32', async () => {
-      const { OrchestratorSystem } = require('../core/orchestrator-system');
       mockOs.platform.mockReturnValue('win32');
       mockOs.homedir.mockReturnValue('C:\\Users\\runner');
       OrchestratorSystem.Run.mockRejectedValue(new Error('not found'));
@@ -169,7 +187,7 @@ describe('ElasticGitStorageService', () => {
       process.env.LOCALAPPDATA = 'C:\\Users\\runner\\AppData\\Local';
       process.env.RUNNER_TOOL_CACHE = '';
 
-      (mockFs.existsSync as jest.Mock).mockImplementation((p: string) => {
+      (mockFs.existsSync as vi.Mock).mockImplementation((p: string) => {
         return p.includes('AppData');
       });
 
@@ -182,39 +200,40 @@ describe('ElasticGitStorageService', () => {
 
   describe('install', () => {
     it('should download correct binary for linux amd64', async () => {
-      const { OrchestratorSystem } = require('../core/orchestrator-system');
       mockOs.platform.mockReturnValue('linux');
       mockOs.arch.mockReturnValue('x64');
       mockOs.tmpdir.mockReturnValue('/tmp');
       OrchestratorSystem.Run.mockResolvedValue('');
-      (mockFs.existsSync as jest.Mock).mockReturnValue(true);
+      (mockFs.existsSync as vi.Mock).mockReturnValue(true);
 
       const result = await ElasticGitStorageService.install('latest');
 
-      expect(OrchestratorSystem.Run).toHaveBeenCalledWith(expect.stringContaining('elastic-git-storage_linux_amd64'));
+      expect(OrchestratorSystem.Run).toHaveBeenCalledWith(
+        expect.stringContaining('elastic-git-storage_linux_amd64'),
+      );
       expect(OrchestratorSystem.Run).toHaveBeenCalledWith(expect.stringContaining('chmod +x'));
       expect(result).toContain('elastic-git-storage');
     });
 
     it('should download correct binary for darwin arm64', async () => {
-      const { OrchestratorSystem } = require('../core/orchestrator-system');
       mockOs.platform.mockReturnValue('darwin');
       mockOs.arch.mockReturnValue('arm64');
       mockOs.tmpdir.mockReturnValue('/tmp');
-      (mockFs.existsSync as jest.Mock).mockReturnValue(true);
+      (mockFs.existsSync as vi.Mock).mockReturnValue(true);
 
       await ElasticGitStorageService.install('v1.2.0');
 
-      expect(OrchestratorSystem.Run).toHaveBeenCalledWith(expect.stringContaining('elastic-git-storage_darwin_arm64'));
+      expect(OrchestratorSystem.Run).toHaveBeenCalledWith(
+        expect.stringContaining('elastic-git-storage_darwin_arm64'),
+      );
       expect(OrchestratorSystem.Run).toHaveBeenCalledWith(expect.stringContaining('v1.2.0'));
     });
 
     it('should download .exe for windows', async () => {
-      const { OrchestratorSystem } = require('../core/orchestrator-system');
       mockOs.platform.mockReturnValue('win32');
       mockOs.arch.mockReturnValue('x64');
       mockOs.tmpdir.mockReturnValue('C:\\temp');
-      (mockFs.existsSync as jest.Mock).mockReturnValue(true);
+      (mockFs.existsSync as vi.Mock).mockReturnValue(true);
 
       await ElasticGitStorageService.install('latest');
 
@@ -226,7 +245,6 @@ describe('ElasticGitStorageService', () => {
     });
 
     it('should use RUNNER_TOOL_CACHE for install dir when available', async () => {
-      const { OrchestratorSystem } = require('../core/orchestrator-system');
       mockOs.platform.mockReturnValue('linux');
       mockOs.arch.mockReturnValue('x64');
       OrchestratorSystem.Run.mockResolvedValue('');
@@ -234,7 +252,7 @@ describe('ElasticGitStorageService', () => {
       const originalCache = process.env.RUNNER_TOOL_CACHE;
       process.env.RUNNER_TOOL_CACHE = '/opt/hostedtoolcache';
 
-      (mockFs.existsSync as jest.Mock).mockReturnValue(true);
+      (mockFs.existsSync as vi.Mock).mockReturnValue(true);
 
       const result = await ElasticGitStorageService.install('latest');
       expect(result).toContain('hostedtoolcache');
@@ -247,31 +265,32 @@ describe('ElasticGitStorageService', () => {
     });
 
     it('should use latest release URL when version is latest', async () => {
-      const { OrchestratorSystem } = require('../core/orchestrator-system');
       mockOs.platform.mockReturnValue('linux');
       mockOs.arch.mockReturnValue('x64');
       mockOs.tmpdir.mockReturnValue('/tmp');
-      (mockFs.existsSync as jest.Mock).mockReturnValue(true);
+      (mockFs.existsSync as vi.Mock).mockReturnValue(true);
 
       await ElasticGitStorageService.install('latest');
 
-      expect(OrchestratorSystem.Run).toHaveBeenCalledWith(expect.stringContaining('/releases/latest/download/'));
+      expect(OrchestratorSystem.Run).toHaveBeenCalledWith(
+        expect.stringContaining('/releases/latest/download/'),
+      );
     });
 
     it('should use tagged release URL when version is specified', async () => {
-      const { OrchestratorSystem } = require('../core/orchestrator-system');
       mockOs.platform.mockReturnValue('linux');
       mockOs.arch.mockReturnValue('x64');
       mockOs.tmpdir.mockReturnValue('/tmp');
-      (mockFs.existsSync as jest.Mock).mockReturnValue(true);
+      (mockFs.existsSync as vi.Mock).mockReturnValue(true);
 
       await ElasticGitStorageService.install('v2.0.0');
 
-      expect(OrchestratorSystem.Run).toHaveBeenCalledWith(expect.stringContaining('/releases/download/v2.0.0/'));
+      expect(OrchestratorSystem.Run).toHaveBeenCalledWith(
+        expect.stringContaining('/releases/download/v2.0.0/'),
+      );
     });
 
     it('should return empty string on download failure', async () => {
-      const { OrchestratorSystem } = require('../core/orchestrator-system');
       mockOs.platform.mockReturnValue('linux');
       mockOs.arch.mockReturnValue('x64');
       mockOs.tmpdir.mockReturnValue('/tmp');
@@ -282,11 +301,10 @@ describe('ElasticGitStorageService', () => {
     });
 
     it('should return empty string if binary not found after download', async () => {
-      const { OrchestratorSystem } = require('../core/orchestrator-system');
       mockOs.platform.mockReturnValue('linux');
       mockOs.arch.mockReturnValue('x64');
       mockOs.tmpdir.mockReturnValue('/tmp');
-      (mockFs.existsSync as jest.Mock).mockReturnValue(false);
+      (mockFs.existsSync as vi.Mock).mockReturnValue(false);
 
       const result = await ElasticGitStorageService.install('latest');
       expect(result).toBe('');
@@ -295,15 +313,18 @@ describe('ElasticGitStorageService', () => {
 
   describe('ensureAndConfigure', () => {
     it('should use existing installation if found', async () => {
-      const { LfsAgentService } = require('./lfs-agent-service');
-      const { OrchestratorSystem } = require('../core/orchestrator-system');
       mockOs.platform.mockReturnValue('linux');
       mockOs.homedir.mockReturnValue('/home/runner');
       // findInstalled returns a result
       OrchestratorSystem.Run.mockResolvedValue('/usr/local/bin/elastic-git-storage\n');
-      (mockFs.existsSync as jest.Mock).mockReturnValue(true);
+      (mockFs.existsSync as vi.Mock).mockReturnValue(true);
 
-      const result = await ElasticGitStorageService.ensureAndConfigure('latest', '--verbose', ['/mnt/lfs'], '/repo');
+      const result = await ElasticGitStorageService.ensureAndConfigure(
+        'latest',
+        '--verbose',
+        ['/mnt/lfs'],
+        '/repo',
+      );
 
       expect(result).toBe('/usr/local/bin/elastic-git-storage');
       expect(LfsAgentService.configure).toHaveBeenCalledWith(
@@ -315,8 +336,6 @@ describe('ElasticGitStorageService', () => {
     });
 
     it('should install when not found and configure', async () => {
-      const { LfsAgentService } = require('./lfs-agent-service');
-      const { OrchestratorSystem } = require('../core/orchestrator-system');
       mockOs.platform.mockReturnValue('linux');
       mockOs.arch.mockReturnValue('x64');
       mockOs.homedir.mockReturnValue('/home/runner');
@@ -327,7 +346,7 @@ describe('ElasticGitStorageService', () => {
         .mockResolvedValueOnce('') // curl download
         .mockResolvedValueOnce(''); // chmod
 
-      (mockFs.existsSync as jest.Mock)
+      (mockFs.existsSync as vi.Mock)
         .mockReturnValueOnce(false) // RUNNER_TOOL_CACHE
         .mockReturnValueOnce(false) // /usr/local/bin
         .mockReturnValueOnce(false) // ~/.local/bin
@@ -340,7 +359,6 @@ describe('ElasticGitStorageService', () => {
     });
 
     it('should return empty string when install fails', async () => {
-      const { OrchestratorSystem } = require('../core/orchestrator-system');
       mockOs.platform.mockReturnValue('linux');
       mockOs.arch.mockReturnValue('x64');
       mockOs.homedir.mockReturnValue('/home/runner');
@@ -348,7 +366,7 @@ describe('ElasticGitStorageService', () => {
 
       // findInstalled finds nothing
       OrchestratorSystem.Run.mockRejectedValue(new Error('not found'));
-      (mockFs.existsSync as jest.Mock).mockReturnValue(false);
+      (mockFs.existsSync as vi.Mock).mockReturnValue(false);
 
       const result = await ElasticGitStorageService.ensureAndConfigure('latest', '', [], '/repo');
 
@@ -356,7 +374,6 @@ describe('ElasticGitStorageService', () => {
     });
 
     it('should use default version when empty string passed', async () => {
-      const { OrchestratorSystem } = require('../core/orchestrator-system');
       mockOs.platform.mockReturnValue('linux');
       mockOs.arch.mockReturnValue('x64');
       mockOs.homedir.mockReturnValue('/home/runner');
@@ -367,7 +384,7 @@ describe('ElasticGitStorageService', () => {
         .mockResolvedValueOnce('')
         .mockResolvedValueOnce('');
 
-      (mockFs.existsSync as jest.Mock)
+      (mockFs.existsSync as vi.Mock)
         .mockReturnValueOnce(false)
         .mockReturnValueOnce(false)
         .mockReturnValueOnce(false)
@@ -375,7 +392,9 @@ describe('ElasticGitStorageService', () => {
 
       await ElasticGitStorageService.ensureAndConfigure('', '', [], '/repo');
 
-      expect(OrchestratorSystem.Run).toHaveBeenCalledWith(expect.stringContaining('/releases/latest/download/'));
+      expect(OrchestratorSystem.Run).toHaveBeenCalledWith(
+        expect.stringContaining('/releases/latest/download/'),
+      );
     });
   });
 

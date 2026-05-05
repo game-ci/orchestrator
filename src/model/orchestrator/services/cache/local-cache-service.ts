@@ -86,7 +86,9 @@ export class LocalCacheService {
         candidates.add(candidate.key);
       }
     } catch (error: any) {
-      OrchestratorLogger.logWarning(`[LocalCache] Failed to discover fallback cache keys: ${error.message}`);
+      OrchestratorLogger.logWarning(
+        `[LocalCache] Failed to discover fallback cache keys: ${error.message}`,
+      );
     }
 
     return Array.from(candidates);
@@ -105,7 +107,15 @@ export class LocalCacheService {
   ): Promise<boolean> {
     let restored = false;
     for (const folder of getEngine().cacheFolders) {
-      if (await LocalCacheService.restoreCacheFolder(projectPath, cacheRoot, cacheKey, folder, options)) {
+      if (
+        await LocalCacheService.restoreCacheFolder(
+          projectPath,
+          cacheRoot,
+          cacheKey,
+          folder,
+          options,
+        )
+      ) {
         restored = true;
       }
     }
@@ -114,7 +124,11 @@ export class LocalCacheService {
   }
 
   /** @deprecated Use restoreEngineCache() — kept for backward compatibility */
-  static async restoreLibraryCache(projectPath: string, cacheRoot: string, cacheKey: string): Promise<boolean> {
+  static async restoreLibraryCache(
+    projectPath: string,
+    cacheRoot: string,
+    cacheKey: string,
+  ): Promise<boolean> {
     return LocalCacheService.restoreEngineCache(projectPath, cacheRoot, cacheKey);
   }
 
@@ -134,7 +148,11 @@ export class LocalCacheService {
   }
 
   /** @deprecated Use saveEngineCache() — kept for backward compatibility */
-  static async saveLibraryCache(projectPath: string, cacheRoot: string, cacheKey: string): Promise<void> {
+  static async saveLibraryCache(
+    projectPath: string,
+    cacheRoot: string,
+    cacheKey: string,
+  ): Promise<void> {
     return LocalCacheService.saveEngineCache(projectPath, cacheRoot, cacheKey);
   }
 
@@ -145,7 +163,10 @@ export class LocalCacheService {
     folder: string,
     options: LocalCacheRestoreOptions = {},
   ): Promise<boolean> {
-    const candidates = [cacheKey, ...(options.fallbackKeys || []).filter((key) => key !== cacheKey)];
+    const candidates = [
+      cacheKey,
+      ...(options.fallbackKeys || []).filter((key) => key !== cacheKey),
+    ];
 
     for (const candidateKey of candidates) {
       const isFallback = candidateKey !== cacheKey;
@@ -155,7 +176,13 @@ export class LocalCacheService {
           : options;
 
       if (
-        await LocalCacheService.restoreCacheFolderCandidate(projectPath, cacheRoot, candidateKey, folder, candidateOptions)
+        await LocalCacheService.restoreCacheFolderCandidate(
+          projectPath,
+          cacheRoot,
+          candidateKey,
+          folder,
+          candidateOptions,
+        )
       ) {
         if (isFallback) {
           LocalCacheService.clearProfileDependentArtifacts(projectPath, folder);
@@ -215,8 +242,13 @@ export class LocalCacheService {
       OrchestratorLogger.log(`[LocalCache] ${folder} cache hit: restoring from ${tarPath}`);
       await OrchestratorSystem.Run(`tar -xf "${tarPath}" -C "${projectPath}"`, true);
 
-      if (options.validateRestored !== false && !LocalCacheService.isCacheFolderComplete(dest, folder)) {
-        OrchestratorLogger.logWarning(`[LocalCache] ${folder} restored from ${tarPath} is incomplete; discarding`);
+      if (
+        options.validateRestored !== false &&
+        !LocalCacheService.isCacheFolderComplete(dest, folder)
+      ) {
+        OrchestratorLogger.logWarning(
+          `[LocalCache] ${folder} restored from ${tarPath} is incomplete; discarding`,
+        );
         fs.rmSync(dest, { recursive: true, force: true });
 
         return false;
@@ -226,7 +258,9 @@ export class LocalCacheService {
 
       return true;
     } catch (error: any) {
-      OrchestratorLogger.logWarning(`[LocalCache] ${folder} cache restore failed: ${error.message}`);
+      OrchestratorLogger.logWarning(
+        `[LocalCache] ${folder} cache restore failed: ${error.message}`,
+      );
 
       return false;
     }
@@ -243,7 +277,9 @@ export class LocalCacheService {
 
     try {
       if (options.skipOnCrashEvidence && options.diagnostics?.crashEvidenceFound) {
-        OrchestratorLogger.logWarning(`[LocalCache] ${folder} save skipped because Unity crash evidence was found`);
+        OrchestratorLogger.logWarning(
+          `[LocalCache] ${folder} save skipped because Unity crash evidence was found`,
+        );
 
         return;
       }
@@ -302,7 +338,9 @@ export class LocalCacheService {
 
     try {
       if (!LocalCacheService.isCacheFolderComplete(cachePath, folder)) {
-        OrchestratorLogger.log(`[LocalCache] ${folder} directory cache miss or incomplete: ${cachePath}`);
+        OrchestratorLogger.log(
+          `[LocalCache] ${folder} directory cache miss or incomplete: ${cachePath}`,
+        );
 
         return false;
       }
@@ -327,8 +365,13 @@ export class LocalCacheService {
         fs.renameSync(cachePath, dest);
       }
 
-      if (options.validateRestored !== false && !LocalCacheService.isCacheFolderComplete(dest, folder)) {
-        OrchestratorLogger.logWarning(`[LocalCache] ${folder} directory cache restored incomplete; discarding`);
+      if (
+        options.validateRestored !== false &&
+        !LocalCacheService.isCacheFolderComplete(dest, folder)
+      ) {
+        OrchestratorLogger.logWarning(
+          `[LocalCache] ${folder} directory cache restored incomplete; discarding`,
+        );
         fs.rmSync(dest, { recursive: true, force: true });
 
         return false;
@@ -338,7 +381,9 @@ export class LocalCacheService {
 
       return true;
     } catch (error: any) {
-      OrchestratorLogger.logWarning(`[LocalCache] ${folder} directory cache restore failed: ${error.message}`);
+      OrchestratorLogger.logWarning(
+        `[LocalCache] ${folder} directory cache restore failed: ${error.message}`,
+      );
 
       return false;
     }
@@ -360,14 +405,20 @@ export class LocalCacheService {
       fs.renameSync(folderPath, cachePath);
     }
 
-    OrchestratorLogger.log(`[LocalCache] ${path.basename(folderPath)} directory cache saved successfully`);
+    OrchestratorLogger.log(
+      `[LocalCache] ${path.basename(folderPath)} directory cache saved successfully`,
+    );
   }
 
   /**
    * Restore LFS cache from the local filesystem.
    * Returns true if cache was restored, false on cache miss.
    */
-  static async restoreLfsCache(repoPath: string, cacheRoot: string, cacheKey: string): Promise<boolean> {
+  static async restoreLfsCache(
+    repoPath: string,
+    cacheRoot: string,
+    cacheKey: string,
+  ): Promise<boolean> {
     const cachePath = path.join(cacheRoot, cacheKey, 'lfs');
 
     try {
@@ -402,7 +453,10 @@ export class LocalCacheService {
       fs.mkdirSync(lfsDest, { recursive: true });
 
       OrchestratorLogger.log(`[LocalCache] LFS cache hit: restoring from ${tarPath}`);
-      await OrchestratorSystem.Run(`tar -xf "${tarPath}" -C "${path.join(repoPath, '.git')}"`, true);
+      await OrchestratorSystem.Run(
+        `tar -xf "${tarPath}" -C "${path.join(repoPath, '.git')}"`,
+        true,
+      );
       OrchestratorLogger.log(`[LocalCache] LFS cache restored successfully`);
 
       return true;
@@ -442,7 +496,10 @@ export class LocalCacheService {
       const tarPath = path.join(cachePath, tarName);
 
       OrchestratorLogger.log(`[LocalCache] Saving LFS cache to ${tarPath}`);
-      await OrchestratorSystem.Run(`tar -cf "${tarPath}" -C "${path.join(repoPath, '.git')}" lfs`, true);
+      await OrchestratorSystem.Run(
+        `tar -cf "${tarPath}" -C "${path.join(repoPath, '.git')}" lfs`,
+        true,
+      );
       OrchestratorLogger.log(`[LocalCache] LFS cache saved successfully`);
 
       // Clean up old entries - keep latest 2
@@ -478,11 +535,15 @@ export class LocalCacheService {
             OrchestratorLogger.log(`[LocalCache] Garbage collected: ${entryPath}`);
           }
         } catch (error: any) {
-          OrchestratorLogger.logWarning(`[LocalCache] Failed to garbage collect ${entryPath}: ${error.message}`);
+          OrchestratorLogger.logWarning(
+            `[LocalCache] Failed to garbage collect ${entryPath}: ${error.message}`,
+          );
         }
       }
 
-      OrchestratorLogger.log(`[LocalCache] Garbage collection complete: ${removedCount} entries removed`);
+      OrchestratorLogger.log(
+        `[LocalCache] Garbage collection complete: ${removedCount} entries removed`,
+      );
     } catch (error: any) {
       OrchestratorLogger.logWarning(`[LocalCache] Garbage collection failed: ${error.message}`);
     }
@@ -526,7 +587,10 @@ export class LocalCacheService {
         return true;
       }
 
-      const skeletonMarkers = [path.join(folderPath, 'ArtifactDB'), path.join(folderPath, 'assetDatabase.info')];
+      const skeletonMarkers = [
+        path.join(folderPath, 'ArtifactDB'),
+        path.join(folderPath, 'assetDatabase.info'),
+      ];
       for (const marker of skeletonMarkers) {
         if (fs.existsSync(marker)) {
           const stat = fs.statSync(marker);

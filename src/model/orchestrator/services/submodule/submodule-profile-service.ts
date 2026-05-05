@@ -1,7 +1,12 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import YAML from 'yaml';
-import { SubmoduleProfile, SubmoduleEntry, SubmoduleInitAction, SubmoduleInitPlan } from './submodule-profile-types';
+import {
+  SubmoduleProfile,
+  SubmoduleEntry,
+  SubmoduleInitAction,
+  SubmoduleInitPlan,
+} from './submodule-profile-types';
 import { OrchestratorSystem } from '../core/orchestrator-system';
 import OrchestratorLogger from '../core/orchestrator-logger';
 
@@ -19,7 +24,10 @@ export class SubmoduleProfileService {
     try {
       parsed = YAML.parse(raw);
     } catch (error: any) {
-      throw new Error(`Failed to parse submodule profile YAML at ${profilePath}: ${error.message}`);
+      throw new Error(
+        `Failed to parse submodule profile YAML at ${profilePath}: ${error.message}`,
+        { cause: error },
+      );
     }
 
     if (!parsed || !Array.isArray(parsed.submodules)) {
@@ -145,7 +153,11 @@ export class SubmoduleProfileService {
    * Create an initialization plan by matching .gitmodules entries against profile rules.
    * Unmatched submodules default to 'skip'.
    */
-  static async createInitPlan(profilePath: string, variantPath: string, repoPath: string): Promise<SubmoduleInitPlan> {
+  static async createInitPlan(
+    profilePath: string,
+    variantPath: string,
+    repoPath: string,
+  ): Promise<SubmoduleInitPlan> {
     let profile = SubmoduleProfileService.parseProfile(profilePath);
 
     if (variantPath) {
@@ -197,7 +209,9 @@ export class SubmoduleProfileService {
   static async execute(plan: SubmoduleInitPlan, repoPath: string, token?: string): Promise<void> {
     if (token) {
       OrchestratorLogger.log('Configuring git authentication for submodule initialization...');
-      await OrchestratorSystem.Run(`git config url."https://${token}@github.com/".insteadOf "https://github.com/"`);
+      await OrchestratorSystem.Run(
+        `git config url."https://${token}@github.com/".insteadOf "https://github.com/"`,
+      );
     }
 
     for (const action of plan) {
@@ -208,7 +222,9 @@ export class SubmoduleProfileService {
         await OrchestratorSystem.Run(`git submodule update --init ${action.path}`);
 
         if (action.branch !== 'main') {
-          OrchestratorLogger.log(`Checking out branch '${action.branch}' for submodule: ${action.name}`);
+          OrchestratorLogger.log(
+            `Checking out branch '${action.branch}' for submodule: ${action.name}`,
+          );
           await OrchestratorSystem.Run(`git -C ${action.path} checkout ${action.branch}`);
         }
       } else {

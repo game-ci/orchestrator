@@ -14,7 +14,10 @@ export class WorkflowCompositionRoot implements WorkflowInterface {
         !Orchestrator.isOrchestratorAsyncEnvironment &&
         !Orchestrator.isOrchestratorEnvironment
       ) {
-        return await AsyncWorkflow.runAsyncWorkflow(orchestratorStepState.environment, orchestratorStepState.secrets);
+        return await AsyncWorkflow.runAsyncWorkflow(
+          orchestratorStepState.environment,
+          orchestratorStepState.secrets,
+        );
       }
 
       if (Orchestrator.buildParameters.customJob !== '') {

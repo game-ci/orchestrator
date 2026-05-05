@@ -57,7 +57,10 @@ export class TaskParameterSerializer {
   }
 
   // eslint-disable-next-line no-unused-vars
-  static uniqBy(a: OrchestratorEnvironmentVariable[], key: (parameters: OrchestratorEnvironmentVariable) => string) {
+  static uniqBy(
+    a: OrchestratorEnvironmentVariable[],
+    key: (parameters: OrchestratorEnvironmentVariable) => string,
+  ) {
     const seen: { [key: string]: boolean } = {};
 
     return a.filter(function (item) {
@@ -79,7 +82,8 @@ export class TaskParameterSerializer {
 
     for (const element of keys) {
       if (element !== `customJob`) {
-        buildParameters[element] = process.env[`${TaskParameterSerializer.ToEnvVarFormat(element)}`];
+        buildParameters[element] =
+          process.env[`${TaskParameterSerializer.ToEnvVarFormat(element)}`];
       }
     }
 
@@ -140,7 +144,9 @@ export class TaskParameterSerializer {
 
   private static serializeFromObject(buildParameters: any) {
     const array: any[] = [];
-    const keys = Object.getOwnPropertyNames(buildParameters).filter((x) => !this.blockedParameterNames.has(x));
+    const keys = Object.getOwnPropertyNames(buildParameters).filter(
+      (x) => !this.blockedParameterNames.has(x),
+    );
     for (const element of keys) {
       array.push({
         name: TaskParameterSerializer.ToEnvVarFormat(element),
@@ -155,7 +161,10 @@ export class TaskParameterSerializer {
     const array: any[] = [];
     const input = OrchestratorOptionsReader.GetProperties();
     for (const element of input) {
-      if (typeof type[element] !== 'function' && array.filter((x) => x.name === element).length === 0) {
+      if (
+        typeof type[element] !== 'function' &&
+        array.filter((x) => x.name === element).length === 0
+      ) {
         array.push({
           name: element,
           value: `${type[element]}`,

@@ -1,33 +1,47 @@
+import {
+  describe,
+  it,
+  expect,
+  beforeEach,
+  afterEach,
+  beforeAll,
+  afterAll,
+  vi,
+  type Mocked,
+} from 'vitest';
 import { GitHubUrlInfo } from '../../providers/provider-url-parser';
 
 // Import the mocked ProviderGitManager
 import { ProviderGitManager } from '../../providers/provider-git-manager';
 
 // Mock @actions/core to fix fs.promises compatibility issue
-jest.mock('@actions/core', () => ({
-  info: jest.fn(),
-  warning: jest.fn(),
-  error: jest.fn(),
+vi.mock('@actions/core', () => ({
+  info: vi.fn(),
+  warning: vi.fn(),
+  error: vi.fn(),
 }));
 
 // Mock fs module
-jest.mock('fs');
+vi.mock('fs');
 
-// Mock the entire provider-git-manager module
-jest.mock('../../providers/provider-git-manager', () => {
-  const originalModule = jest.requireActual('../../providers/provider-git-manager');
+// Mock the entire provider-git-manager module. `vi.mock` factory must be
+// async to use `vi.importActual`.
+vi.mock('../../providers/provider-git-manager', async () => {
+  const originalModule = await vi.importActual<
+    typeof import('../../providers/provider-git-manager')
+  >('../../providers/provider-git-manager');
 
   return {
     ...originalModule,
     ProviderGitManager: {
       ...originalModule.ProviderGitManager,
-      cloneRepository: jest.fn(),
-      updateRepository: jest.fn(),
-      getProviderModulePath: jest.fn(),
+      cloneRepository: vi.fn(),
+      updateRepository: vi.fn(),
+      getProviderModulePath: vi.fn(),
     },
   };
 });
-const mockProviderGitManager = ProviderGitManager as jest.Mocked<typeof ProviderGitManager>;
+const mockProviderGitManager = ProviderGitManager as Mocked<typeof ProviderGitManager>;
 
 describe('ProviderGitManager', () => {
   const mockUrlInfo: GitHubUrlInfo = {
@@ -39,7 +53,7 @@ describe('ProviderGitManager', () => {
   };
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe('cloneRepository', () => {

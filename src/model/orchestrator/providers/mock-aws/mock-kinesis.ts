@@ -116,7 +116,9 @@ export class MockKinesisProducer {
       };
 
       stream.records.push(record);
-      OrchestratorLogger.log(`[mock-aws] Produced ${logLines.length} log records to Kinesis stream ${stream.StreamName}`);
+      OrchestratorLogger.log(
+        `[mock-aws] Produced ${logLines.length} log records to Kinesis stream ${stream.StreamName}`,
+      );
       break; // Only push to first stream
     }
   }

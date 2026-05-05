@@ -1,6 +1,6 @@
-import { execFileSync } from "node:child_process";
-import path from "node:path";
-import OrchestratorLogger from "../core/orchestrator-logger";
+import { execFileSync } from 'node:child_process';
+import path from 'node:path';
+import OrchestratorLogger from '../core/orchestrator-logger';
 
 export interface UnityProcessCleanupResult {
   skipped: boolean;
@@ -10,10 +10,8 @@ export interface UnityProcessCleanupResult {
 }
 
 export class UnityProcessService {
-  static cleanupWorkspaceProcesses(
-    projectPath: string
-  ): UnityProcessCleanupResult {
-    if (process.platform !== "win32") {
+  static cleanupWorkspaceProcesses(projectPath: string): UnityProcessCleanupResult {
+    if (process.platform !== 'win32') {
       return {
         skipped: true,
         killedProcessIds: [],
@@ -23,19 +21,17 @@ export class UnityProcessService {
     }
 
     const normalizedProjectPath = path.resolve(projectPath);
-    const script = UnityProcessService.buildCleanupScript(
-      normalizedProjectPath
-    );
+    const script = UnityProcessService.buildCleanupScript(normalizedProjectPath);
 
     try {
       const output = execFileSync(
-        "powershell.exe",
-        ["-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", script],
+        'powershell.exe',
+        ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command', script],
         {
-          encoding: "utf8",
+          encoding: 'utf8',
           timeout: 60_000,
           windowsHide: true,
-        }
+        },
       );
 
       const result = UnityProcessService.parseCleanupOutput(output);
@@ -43,25 +39,21 @@ export class UnityProcessService {
         OrchestratorLogger.log(
           `[UnityProcess] Cleaned ${
             result.killedProcessIds.length
-          } stale Unity process(es): ${result.killedProcessIds.join(", ")}`
+          } stale Unity process(es): ${result.killedProcessIds.join(', ')}`,
         );
       }
 
       if (!result.hubRunning) {
-        OrchestratorLogger.logWarning(
-          "[UnityProcess] Unity Hub is not running"
-        );
+        OrchestratorLogger.logWarning('[UnityProcess] Unity Hub is not running');
       }
       if (!result.licensingClientRunning) {
-        OrchestratorLogger.logWarning(
-          "[UnityProcess] Unity.Licensing.Client is not running"
-        );
+        OrchestratorLogger.logWarning('[UnityProcess] Unity.Licensing.Client is not running');
       }
 
       return result;
     } catch (error: any) {
       OrchestratorLogger.logWarning(
-        `[UnityProcess] Workspace process cleanup failed: ${error.message}`
+        `[UnityProcess] Workspace process cleanup failed: ${error.message}`,
       );
 
       return {
@@ -127,26 +119,20 @@ Write-Output ("LICENSING=" + $licensingRunning)
   }
 
   static parseCleanupOutput(output: string): UnityProcessCleanupResult {
-    const killedLine = output
-      .split(/\r?\n/)
-      .find((line) => line.startsWith("KILLED="));
-    const hubLine = output
-      .split(/\r?\n/)
-      .find((line) => line.startsWith("HUB="));
-    const licensingLine = output
-      .split(/\r?\n/)
-      .find((line) => line.startsWith("LICENSING="));
-    const killedProcessIds = (killedLine || "KILLED=")
-      .replace("KILLED=", "")
-      .split(",")
+    const killedLine = output.split(/\r?\n/).find((line) => line.startsWith('KILLED='));
+    const hubLine = output.split(/\r?\n/).find((line) => line.startsWith('HUB='));
+    const licensingLine = output.split(/\r?\n/).find((line) => line.startsWith('LICENSING='));
+    const killedProcessIds = (killedLine || 'KILLED=')
+      .replace('KILLED=', '')
+      .split(',')
       .map((id) => Number.parseInt(id, 10))
       .filter((id) => Number.isFinite(id));
 
     return {
       skipped: false,
       killedProcessIds,
-      hubRunning: /True/i.test(hubLine || ""),
-      licensingClientRunning: /True/i.test(licensingLine || ""),
+      hubRunning: /True/i.test(hubLine || ''),
+      licensingClientRunning: /True/i.test(licensingLine || ''),
     };
   }
 }

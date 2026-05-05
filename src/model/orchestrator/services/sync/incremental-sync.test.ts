@@ -1,3 +1,14 @@
+import {
+  describe,
+  it,
+  expect,
+  beforeEach,
+  afterEach,
+  beforeAll,
+  afterAll,
+  vi,
+  type Mocked,
+} from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 import { IncrementalSyncService } from './incremental-sync-service';
@@ -7,17 +18,17 @@ import { OrchestratorSystem } from '../core/orchestrator-system';
 import OrchestratorLogger from '../core/orchestrator-logger';
 
 // Mock dependencies
-jest.mock('node:fs');
-jest.mock('../core/orchestrator-system');
-jest.mock('../core/orchestrator-logger');
+vi.mock('node:fs');
+vi.mock('../core/orchestrator-system');
+vi.mock('../core/orchestrator-logger');
 
-const mockFs = fs as jest.Mocked<typeof fs>;
-const mockSystem = OrchestratorSystem as jest.Mocked<typeof OrchestratorSystem>;
-const mockLogger = OrchestratorLogger as jest.Mocked<typeof OrchestratorLogger>;
+const mockFs = fs as Mocked<typeof fs>;
+const mockSystem = OrchestratorSystem as Mocked<typeof OrchestratorSystem>;
+const mockLogger = OrchestratorLogger as Mocked<typeof OrchestratorLogger>;
 
 afterEach(() => {
-  jest.clearAllMocks();
-  jest.restoreAllMocks();
+  vi.clearAllMocks();
+  vi.restoreAllMocks();
 });
 
 describe('IncrementalSyncService', () => {
@@ -25,7 +36,9 @@ describe('IncrementalSyncService', () => {
 
   describe('parseStorageUri', () => {
     it('parses storage://remote:bucket/path format', () => {
-      const result = IncrementalSyncService.parseStorageUri('storage://myremote:mybucket/some/path');
+      const result = IncrementalSyncService.parseStorageUri(
+        'storage://myremote:mybucket/some/path',
+      );
       expect(result).toEqual({ remote: 'myremote', path: 'mybucket/some/path' });
     });
 
@@ -45,7 +58,9 @@ describe('IncrementalSyncService', () => {
     });
 
     it('throws on invalid URI without storage:// prefix', () => {
-      expect(() => IncrementalSyncService.parseStorageUri('http://example.com')).toThrow('Invalid storage URI');
+      expect(() => IncrementalSyncService.parseStorageUri('http://example.com')).toThrow(
+        'Invalid storage URI',
+      );
     });
 
     it('throws on empty URI', () => {
@@ -119,7 +134,10 @@ describe('IncrementalSyncService', () => {
         expect.stringContaining('diff --name-only abc123456..def456789'),
         true,
       );
-      expect(mockSystem.Run).toHaveBeenCalledWith(expect.stringContaining('checkout def456789'), true);
+      expect(mockSystem.Run).toHaveBeenCalledWith(
+        expect.stringContaining('checkout def456789'),
+        true,
+      );
     });
 
     it('skips checkout when no files changed', async () => {
@@ -137,9 +155,9 @@ describe('IncrementalSyncService', () => {
     it('throws when no sync state exists', async () => {
       mockFs.existsSync.mockReturnValue(false);
 
-      await expect(IncrementalSyncService.syncGitDelta(workspacePath, targetReference)).rejects.toThrow(
-        'Cannot git-delta sync without existing sync state',
-      );
+      await expect(
+        IncrementalSyncService.syncGitDelta(workspacePath, targetReference),
+      ).rejects.toThrow('Cannot git-delta sync without existing sync state');
     });
 
     it('saves updated sync state after delta sync', async () => {
@@ -170,7 +188,10 @@ describe('IncrementalSyncService', () => {
       const result = await IncrementalSyncService.applyDirectInput(workspacePath, archivePath);
 
       expect(result).toEqual([archivePath]);
-      expect(mockSystem.Run).toHaveBeenCalledWith(expect.stringContaining('tar -xf "/tmp/overlay.tar"'), true);
+      expect(mockSystem.Run).toHaveBeenCalledWith(
+        expect.stringContaining('tar -xf "/tmp/overlay.tar"'),
+        true,
+      );
     });
 
     it('fetches archive from storage URI via rclone then extracts', async () => {
@@ -196,9 +217,9 @@ describe('IncrementalSyncService', () => {
     it('throws when local archive does not exist', async () => {
       mockFs.existsSync.mockReturnValue(false);
 
-      await expect(IncrementalSyncService.applyDirectInput(workspacePath, '/missing/archive.tar')).rejects.toThrow(
-        'Input archive not found',
-      );
+      await expect(
+        IncrementalSyncService.applyDirectInput(workspacePath, '/missing/archive.tar'),
+      ).rejects.toThrow('Input archive not found');
     });
 
     it('tracks overlay in sync state', async () => {
@@ -275,17 +296,17 @@ describe('IncrementalSyncService', () => {
     });
 
     it('throws on invalid storage URI', async () => {
-      await expect(IncrementalSyncService.syncStoragePull(workspacePath, 'http://example.com')).rejects.toThrow(
-        'Invalid storage URI',
-      );
+      await expect(
+        IncrementalSyncService.syncStoragePull(workspacePath, 'http://example.com'),
+      ).rejects.toThrow('Invalid storage URI');
     });
 
     it('throws when rclone binary is not available', async () => {
       mockSystem.Run.mockRejectedValueOnce(new Error('command not found: rclone'));
 
-      await expect(IncrementalSyncService.syncStoragePull(workspacePath, storageUri)).rejects.toThrow(
-        'rclone binary not found',
-      );
+      await expect(
+        IncrementalSyncService.syncStoragePull(workspacePath, storageUri),
+      ).rejects.toThrow('rclone binary not found');
     });
 
     it('saves sync state with overlay tracking', async () => {
@@ -309,7 +330,9 @@ describe('IncrementalSyncService', () => {
       const result = await IncrementalSyncService.syncStoragePull(workspacePath, storageUri);
 
       expect(result).toEqual([]);
-      expect(mockLogger.logWarning).toHaveBeenCalledWith(expect.stringContaining('Could not list pulled files'));
+      expect(mockLogger.logWarning).toHaveBeenCalledWith(
+        expect.stringContaining('Could not list pulled files'),
+      );
     });
   });
 
@@ -394,7 +417,10 @@ describe('SyncStateManager', () => {
       const result = SyncStateManager.loadState(workspacePath);
 
       expect(result).toEqual(state);
-      expect(mockFs.readFileSync).toHaveBeenCalledWith(path.join(workspacePath, '.game-ci/sync-state.json'), 'utf8');
+      expect(mockFs.readFileSync).toHaveBeenCalledWith(
+        path.join(workspacePath, '.game-ci/sync-state.json'),
+        'utf8',
+      );
     });
 
     it('uses custom state path when provided', () => {
@@ -408,7 +434,10 @@ describe('SyncStateManager', () => {
 
       SyncStateManager.loadState(workspacePath, 'custom/state.json');
 
-      expect(mockFs.readFileSync).toHaveBeenCalledWith(path.join(workspacePath, 'custom/state.json'), 'utf8');
+      expect(mockFs.readFileSync).toHaveBeenCalledWith(
+        path.join(workspacePath, 'custom/state.json'),
+        'utf8',
+      );
     });
 
     it('returns undefined when state file does not exist', () => {
@@ -426,7 +455,9 @@ describe('SyncStateManager', () => {
       const result = SyncStateManager.loadState(workspacePath);
 
       expect(result).toBeUndefined();
-      expect(mockLogger.logWarning).toHaveBeenCalledWith(expect.stringContaining('Failed to load sync state'));
+      expect(mockLogger.logWarning).toHaveBeenCalledWith(
+        expect.stringContaining('Failed to load sync state'),
+      );
     });
   });
 
@@ -458,7 +489,9 @@ describe('SyncStateManager', () => {
 
       SyncStateManager.saveState(workspacePath, state);
 
-      expect(mockFs.mkdirSync).toHaveBeenCalledWith(expect.stringContaining('.game-ci'), { recursive: true });
+      expect(mockFs.mkdirSync).toHaveBeenCalledWith(expect.stringContaining('.game-ci'), {
+        recursive: true,
+      });
     });
 
     it('logs warning on write failure instead of throwing', () => {
@@ -475,7 +508,9 @@ describe('SyncStateManager', () => {
       // Should not throw
       SyncStateManager.saveState(workspacePath, state);
 
-      expect(mockLogger.logWarning).toHaveBeenCalledWith(expect.stringContaining('Failed to save sync state'));
+      expect(mockLogger.logWarning).toHaveBeenCalledWith(
+        expect.stringContaining('Failed to save sync state'),
+      );
     });
   });
 
@@ -536,7 +571,10 @@ describe('SyncStateManager', () => {
     it('returns true when workspace hash differs', () => {
       mockFs.existsSync.mockReturnValue(false);
 
-      const result = SyncStateManager.hasDrifted(workspacePath, 'some-old-hash-that-will-not-match');
+      const result = SyncStateManager.hasDrifted(
+        workspacePath,
+        'some-old-hash-that-will-not-match',
+      );
 
       expect(result).toBe(true);
     });

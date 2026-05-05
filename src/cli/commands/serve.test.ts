@@ -1,3 +1,4 @@
+import { describe, it, expect, beforeEach, afterEach, beforeAll, afterAll, vi } from 'vitest';
 import serveCommand from './serve';
 
 describe('serve command', () => {
@@ -11,8 +12,8 @@ describe('serve command', () => {
 
   it('should register expected yargs options', () => {
     const mockYargs: any = {
-      option: jest.fn().mockReturnThis(),
-      example: jest.fn().mockReturnThis(),
+      option: vi.fn().mockReturnThis(),
+      example: vi.fn().mockReturnThis(),
     };
 
     (serveCommand.builder as any)(mockYargs);

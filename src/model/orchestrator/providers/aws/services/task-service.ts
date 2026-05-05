@@ -5,7 +5,10 @@ import {
 } from '@aws-sdk/client-cloudformation';
 import type { StackSummary } from '@aws-sdk/client-cloudformation';
 // eslint-disable-next-line import/named
-import { DescribeLogGroupsCommand, DescribeLogGroupsCommandInput } from '@aws-sdk/client-cloudwatch-logs';
+import {
+  DescribeLogGroupsCommand,
+  DescribeLogGroupsCommandInput,
+} from '@aws-sdk/client-cloudwatch-logs';
 import type { LogGroup } from '@aws-sdk/client-cloudwatch-logs';
 import { DescribeTasksCommand, ListClustersCommand, ListTasksCommand } from '@aws-sdk/client-ecs';
 import type { Task } from '@aws-sdk/client-ecs';
@@ -38,7 +41,8 @@ export class TaskService {
     const stacks =
       (await CF.send(new ListStacksCommand({}))).StackSummaries?.filter(
         (_x) =>
-          _x.StackStatus !== 'DELETE_COMPLETE' && _x.TemplateDescription !== BaseStackFormation.baseStackDecription,
+          _x.StackStatus !== 'DELETE_COMPLETE' &&
+          _x.TemplateDescription !== BaseStackFormation.baseStackDecription,
       ) || [];
     OrchestratorLogger.log(``);
     OrchestratorLogger.log(`Cloud Formation Stacks ${stacks.length}`);
@@ -59,7 +63,8 @@ export class TaskService {
     const baseStacks =
       (await CF.send(new ListStacksCommand({}))).StackSummaries?.filter(
         (_x) =>
-          _x.StackStatus !== 'DELETE_COMPLETE' && _x.TemplateDescription === BaseStackFormation.baseStackDecription,
+          _x.StackStatus !== 'DELETE_COMPLETE' &&
+          _x.TemplateDescription === BaseStackFormation.baseStackDecription,
       ) || [];
     OrchestratorLogger.log(``);
     OrchestratorLogger.log(`Base Stacks ${baseStacks.length}`);
@@ -102,7 +107,9 @@ export class TaskService {
       {
         let nextToken: string | undefined;
         do {
-          const taskResponse = await ecs.send(new ListTasksCommand({ cluster: element, nextToken }));
+          const taskResponse = await ecs.send(
+            new ListTasksCommand({ cluster: element, nextToken }),
+          );
           taskArns.push(...(taskResponse.taskArns ?? []));
           nextToken = taskResponse.nextToken;
         } while (nextToken);
@@ -136,9 +143,13 @@ export class TaskService {
     const CF = AwsClientFactory.getCloudFormation();
     try {
       const stack =
-        (await CF.send(new ListStacksCommand({}))).StackSummaries?.find((_x) => _x.StackName === job) || undefined;
-      const stackInfo = (await CF.send(new DescribeStackResourcesCommand({ StackName: job }))) || undefined;
-      const stackInfo2 = (await CF.send(new DescribeStacksCommand({ StackName: job }))) || undefined;
+        (await CF.send(new ListStacksCommand({}))).StackSummaries?.find(
+          (_x) => _x.StackName === job,
+        ) || undefined;
+      const stackInfo =
+        (await CF.send(new DescribeStackResourcesCommand({ StackName: job }))) || undefined;
+      const stackInfo2 =
+        (await CF.send(new DescribeStacksCommand({ StackName: job }))) || undefined;
       if (stack === undefined) {
         throw new Error('stack not defined');
       }
@@ -204,7 +215,9 @@ export class TaskService {
     if (Orchestrator.buildParameters.storageProvider === 'rclone') {
       // eslint-disable-next-line no-unused-vars
       type ListObjectsFunction = (prefix: string) => Promise<string[]>;
-      const objects = await (SharedWorkspaceLocking as unknown as { listObjects: ListObjectsFunction }).listObjects('');
+      const objects = await (
+        SharedWorkspaceLocking as unknown as { listObjects: ListObjectsFunction }
+      ).listObjects('');
 
       return objects.map((x: string) => ({ Key: x }));
     }

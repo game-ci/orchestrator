@@ -1,25 +1,26 @@
+import { describe, it, expect, beforeEach, afterEach, beforeAll, afterAll, vi } from 'vitest';
 import { FollowLogStreamService } from './follow-log-stream-service';
 import * as core from '@actions/core';
 import GitHub from '../../../github';
 
 // Mock dependencies
-jest.mock('../../../github', () => ({
+vi.mock('../../../github', () => ({
   __esModule: true,
   default: {
-    updateGitHubCheck: jest.fn(),
+    updateGitHubCheck: vi.fn(),
     githubInputEnabled: false,
   },
 }));
 
-jest.mock('@actions/core', () => ({
-  warning: jest.fn(),
-  setOutput: jest.fn(),
-  setFailed: jest.fn(),
-  error: jest.fn(),
-  getInput: jest.fn().mockReturnValue(''),
+vi.mock('@actions/core', () => ({
+  warning: vi.fn(),
+  setOutput: vi.fn(),
+  setFailed: vi.fn(),
+  error: vi.fn(),
+  getInput: vi.fn().mockReturnValue(''),
 }));
 
-jest.mock('../../orchestrator', () => ({
+vi.mock('../../orchestrator', () => ({
   __esModule: true,
   default: {
     buildParameters: {
@@ -28,22 +29,22 @@ jest.mock('../../orchestrator', () => ({
   },
 }));
 
-jest.mock('../../options/orchestrator-statics', () => ({
+vi.mock('../../options/orchestrator-statics', () => ({
   OrchestratorStatics: {
     logPrefix: 'TEST',
   },
 }));
 
-jest.mock('./orchestrator-logger', () => ({
+vi.mock('./orchestrator-logger', () => ({
   __esModule: true,
   default: {
-    log: jest.fn(),
+    log: vi.fn(),
   },
 }));
 
 describe('FollowLogStreamService', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     FollowLogStreamService.Reset();
     FollowLogStreamService.errors = '';
   });
@@ -76,7 +77,10 @@ describe('FollowLogStreamService', () => {
         false,
         '',
       );
-      expect(GitHub.updateGitHubCheck).toHaveBeenCalledWith('Library was not found, importing new Library', '');
+      expect(GitHub.updateGitHubCheck).toHaveBeenCalledWith(
+        'Library was not found, importing new Library',
+        '',
+      );
       expect(core.warning).toHaveBeenCalledWith('LIBRARY NOT FOUND!');
       expect(core.setOutput).toHaveBeenCalledWith('library-found', 'false');
     });
@@ -122,7 +126,12 @@ describe('FollowLogStreamService', () => {
     });
 
     it('appends message to output', () => {
-      const result = FollowLogStreamService.handleIteration('Some normal log line', true, false, 'previous output\n');
+      const result = FollowLogStreamService.handleIteration(
+        'Some normal log line',
+        true,
+        false,
+        'previous output\n',
+      );
       expect(result.output).toContain('Some normal log line');
       expect(result.output).toContain('previous output');
     });
@@ -133,14 +142,19 @@ describe('FollowLogStreamService', () => {
     });
 
     it('does not change shouldReadLogs for normal messages', () => {
-      const result = FollowLogStreamService.handleIteration('Just a regular build log', true, false, '');
+      const result = FollowLogStreamService.handleIteration(
+        'Just a regular build log',
+        true,
+        false,
+        '',
+      );
       expect(result.shouldReadLogs).toBe(true);
     });
 
     it('includes accumulated errors in Build fail GitHub check message', () => {
       FollowLogStreamService.errors = '\nprevious error';
       FollowLogStreamService.handleIteration('Build fail', true, false, '');
-      const updateCall = (GitHub.updateGitHubCheck as jest.Mock).mock.calls[0];
+      const updateCall = (GitHub.updateGitHubCheck as vi.Mock).mock.calls[0];
       expect(updateCall[0]).toContain('previous error');
     });
   });

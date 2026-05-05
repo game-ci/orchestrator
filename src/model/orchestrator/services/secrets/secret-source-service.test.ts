@@ -1,33 +1,45 @@
+import {
+  describe,
+  it,
+  expect,
+  beforeEach,
+  afterEach,
+  beforeAll,
+  afterAll,
+  vi,
+  type Mocked,
+} from 'vitest';
 import fs from 'node:fs';
 import * as core from '@actions/core';
 import { SecretSourceService, validateSecretKey } from './secret-source-service';
+import { OrchestratorSystem } from '../core/orchestrator-system';
 
-jest.mock('node:fs');
-jest.mock('@actions/core', () => ({
-  setSecret: jest.fn(),
-  info: jest.fn(),
-  warning: jest.fn(),
-  error: jest.fn(),
+vi.mock('node:fs');
+vi.mock('@actions/core', () => ({
+  setSecret: vi.fn(),
+  info: vi.fn(),
+  warning: vi.fn(),
+  error: vi.fn(),
 }));
-jest.mock('../core/orchestrator-system', () => ({
+vi.mock('../core/orchestrator-system', () => ({
   OrchestratorSystem: {
-    Run: jest.fn().mockResolvedValue(''),
+    Run: vi.fn().mockResolvedValue(''),
   },
 }));
-jest.mock('../core/orchestrator-logger', () => ({
+vi.mock('../core/orchestrator-logger', () => ({
   __esModule: true,
   default: {
-    log: jest.fn(),
-    logWarning: jest.fn(),
-    error: jest.fn(),
+    log: vi.fn(),
+    logWarning: vi.fn(),
+    error: vi.fn(),
   },
 }));
 
-const mockFs = fs as jest.Mocked<typeof fs>;
+const mockFs = fs as Mocked<typeof fs>;
 
 describe('SecretSourceService', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe('validateSecretKey', () => {
@@ -174,18 +186,20 @@ describe('SecretSourceService', () => {
 
   describe('fetchSecret', () => {
     it('should run the command with {0} replaced by key', async () => {
-      const { OrchestratorSystem } = require('../core/orchestrator-system');
       OrchestratorSystem.Run.mockResolvedValue('my-secret-value');
 
       const source = SecretSourceService.resolveSource('aws-secrets-manager')!;
       const result = await SecretSourceService.fetchSecret(source, 'MY_SECRET');
 
       expect(result).toBe('my-secret-value');
-      expect(OrchestratorSystem.Run).toHaveBeenCalledWith(expect.stringContaining('MY_SECRET'), false, true);
+      expect(OrchestratorSystem.Run).toHaveBeenCalledWith(
+        expect.stringContaining('MY_SECRET'),
+        false,
+        true,
+      );
     });
 
     it('should parse JSON output when parseOutput is json-field', async () => {
-      const { OrchestratorSystem } = require('../core/orchestrator-system');
       OrchestratorSystem.Run.mockResolvedValue(JSON.stringify({ value: 'extracted-secret' }));
 
       const source = {
@@ -200,7 +214,6 @@ describe('SecretSourceService', () => {
     });
 
     it('should fall back to raw output on invalid JSON with json-field mode', async () => {
-      const { OrchestratorSystem } = require('../core/orchestrator-system');
       OrchestratorSystem.Run.mockResolvedValue('not-json');
 
       const source = {
@@ -215,7 +228,6 @@ describe('SecretSourceService', () => {
     });
 
     it('should return empty string on command failure', async () => {
-      const { OrchestratorSystem } = require('../core/orchestrator-system');
       OrchestratorSystem.Run.mockRejectedValue(new Error('command not found'));
 
       const source = SecretSourceService.resolveSource('aws-secrets-manager')!;
@@ -227,13 +239,17 @@ describe('SecretSourceService', () => {
     it('should reject keys with shell injection characters', async () => {
       const source = SecretSourceService.resolveSource('aws-secrets-manager')!;
 
-      await expect(SecretSourceService.fetchSecret(source, '; rm -rf /')).rejects.toThrow('Invalid secret key name');
+      await expect(SecretSourceService.fetchSecret(source, '; rm -rf /')).rejects.toThrow(
+        'Invalid secret key name',
+      );
     });
 
     it('should reject keys with command substitution', async () => {
       const source = SecretSourceService.resolveSource('aws-secrets-manager')!;
 
-      await expect(SecretSourceService.fetchSecret(source, '$(whoami)')).rejects.toThrow('Invalid secret key name');
+      await expect(SecretSourceService.fetchSecret(source, '$(whoami)')).rejects.toThrow(
+        'Invalid secret key name',
+      );
     });
 
     it('should reject keys with backtick command substitution', async () => {
@@ -245,7 +261,6 @@ describe('SecretSourceService', () => {
     });
 
     it('should accept keys with valid path-like patterns', async () => {
-      const { OrchestratorSystem } = require('../core/orchestrator-system');
       OrchestratorSystem.Run.mockResolvedValue('secret-value');
 
       const source = SecretSourceService.resolveSource('aws-secrets-manager')!;
@@ -255,7 +270,6 @@ describe('SecretSourceService', () => {
     });
 
     it('should mask fetched secret values with core.setSecret', async () => {
-      const { OrchestratorSystem } = require('../core/orchestrator-system');
       OrchestratorSystem.Run.mockResolvedValue('super-secret-value');
 
       const source = SecretSourceService.resolveSource('aws-secrets-manager')!;
@@ -265,7 +279,6 @@ describe('SecretSourceService', () => {
     });
 
     it('should not mask empty secret values', async () => {
-      const { OrchestratorSystem } = require('../core/orchestrator-system');
       OrchestratorSystem.Run.mockResolvedValue('');
 
       const source = SecretSourceService.resolveSource('aws-secrets-manager')!;
@@ -275,7 +288,6 @@ describe('SecretSourceService', () => {
     });
 
     it('should mask JSON-extracted secret values', async () => {
-      const { OrchestratorSystem } = require('../core/orchestrator-system');
       OrchestratorSystem.Run.mockResolvedValue(JSON.stringify({ value: 'json-secret' }));
 
       const source = {
@@ -332,10 +344,12 @@ describe('SecretSourceService', () => {
     });
 
     it('should fetch all keys from premade source', async () => {
-      const { OrchestratorSystem } = require('../core/orchestrator-system');
       OrchestratorSystem.Run.mockResolvedValueOnce('secret-1').mockResolvedValueOnce('secret-2');
 
-      const results = await SecretSourceService.fetchAll('aws-parameter-store', ['param1', 'param2']);
+      const results = await SecretSourceService.fetchAll('aws-parameter-store', [
+        'param1',
+        'param2',
+      ]);
 
       expect(results.param1).toBe('secret-1');
       expect(results.param2).toBe('secret-2');
@@ -350,14 +364,14 @@ describe('SecretSourceService', () => {
 
   describe('loadFromYaml', () => {
     it('should return empty array when file does not exist', () => {
-      (mockFs.existsSync as jest.Mock).mockReturnValue(false);
+      (mockFs.existsSync as vi.Mock).mockReturnValue(false);
       const result = SecretSourceService.loadFromYaml('/nonexistent.yml');
       expect(result).toEqual([]);
     });
 
     it('should parse valid YAML source definitions', () => {
-      (mockFs.existsSync as jest.Mock).mockReturnValue(true);
-      (mockFs.readFileSync as jest.Mock).mockReturnValue(`
+      (mockFs.existsSync as vi.Mock).mockReturnValue(true);
+      (mockFs.readFileSync as vi.Mock).mockReturnValue(`
 sources:
   - name: my-vault
     command: 'vault kv get -field=value secret/{0}'
@@ -378,8 +392,8 @@ sources:
     });
 
     it('should handle YAML with single source', () => {
-      (mockFs.existsSync as jest.Mock).mockReturnValue(true);
-      (mockFs.readFileSync as jest.Mock).mockReturnValue(`
+      (mockFs.existsSync as vi.Mock).mockReturnValue(true);
+      (mockFs.readFileSync as vi.Mock).mockReturnValue(`
 sources:
   - name: simple
     command: echo {0}
@@ -391,8 +405,8 @@ sources:
     });
 
     it('should return empty array on parse error', () => {
-      (mockFs.existsSync as jest.Mock).mockReturnValue(true);
-      (mockFs.readFileSync as jest.Mock).mockImplementation(() => {
+      (mockFs.existsSync as vi.Mock).mockReturnValue(true);
+      (mockFs.readFileSync as vi.Mock).mockImplementation(() => {
         throw new Error('Permission denied');
       });
 

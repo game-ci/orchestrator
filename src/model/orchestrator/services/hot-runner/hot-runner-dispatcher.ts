@@ -1,6 +1,11 @@
 import OrchestratorLogger from '../core/orchestrator-logger';
 import { HotRunnerRegistry } from './hot-runner-registry';
-import { HotRunnerJobRequest, HotRunnerJobResult, HotRunnerStatus, HotRunnerTransport } from './hot-runner-types';
+import {
+  HotRunnerJobRequest,
+  HotRunnerJobResult,
+  HotRunnerStatus,
+  HotRunnerTransport,
+} from './hot-runner-types';
 
 const POLL_INTERVAL_MS = 1000;
 
@@ -25,7 +30,9 @@ export class HotRunnerDispatcher {
     unityVersion: string,
     onOutput?: OutputCallback,
   ): Promise<HotRunnerJobResult> {
-    OrchestratorLogger.log(`[HotRunner] Dispatching job ${request.jobId} (target: ${request.buildTarget})`);
+    OrchestratorLogger.log(
+      `[HotRunner] Dispatching job ${request.jobId} (target: ${request.buildTarget})`,
+    );
 
     // Find or wait for an available runner
     let runner = registry.findAvailableRunner({
@@ -37,7 +44,11 @@ export class HotRunnerDispatcher {
       OrchestratorLogger.log(
         `[HotRunner] No idle runner available for ${unityVersion}/${request.buildTarget}, waiting...`,
       );
-      runner = await this.waitForRunner({ unityVersion, platform: request.buildTarget }, request.timeout, registry);
+      runner = await this.waitForRunner(
+        { unityVersion, platform: request.buildTarget },
+        request.timeout,
+        registry,
+      );
     }
 
     // Mark runner as busy
@@ -79,7 +90,9 @@ export class HotRunnerDispatcher {
 
       return result;
     } catch (error: any) {
-      OrchestratorLogger.logWarning(`[HotRunner] Job ${request.jobId} failed on runner ${runner.id}: ${error.message}`);
+      OrchestratorLogger.logWarning(
+        `[HotRunner] Job ${request.jobId} failed on runner ${runner.id}: ${error.message}`,
+      );
 
       // Mark runner as idle despite failure -- the health monitor will recycle if needed
       registry.updateRunner(runner.id, {

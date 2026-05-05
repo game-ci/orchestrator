@@ -17,7 +17,10 @@ describe('Orchestrator Retain Workspace', () => {
   setups();
   if (OrchestratorOptions.orchestratorDebug) {
     it('Run one build it should not already be retained, run subsequent build which should use retained workspace', async () => {
-      const unityVersion = await UnityVersioning.determineUnityVersion('test-project', UnityVersioning.read('test-project'));
+      const unityVersion = await UnityVersioning.determineUnityVersion(
+        'test-project',
+        UnityVersioning.read('test-project'),
+      );
       const overrides: any = {
         versioning: 'None',
         image: 'node:20',
@@ -32,7 +35,11 @@ describe('Orchestrator Retain Workspace', () => {
       // For local AWS emulator tests, set provider strategy to 'aws' so the orchestrator's
       // built-in auto-fallback routes to local-docker for container execution
       // while S3 locking/caching still uses the local emulator.
-      const awsEndpoint = process.env.AWS_S3_ENDPOINT || process.env.AWS_ENDPOINT || process.env.AWS_ENDPOINT_URL || '';
+      const awsEndpoint =
+        process.env.AWS_S3_ENDPOINT ||
+        process.env.AWS_ENDPOINT ||
+        process.env.AWS_ENDPOINT_URL ||
+        '';
       const isLocalStack = /localhost|127\.0\.0\.1|ministack|localstack/i.test(awsEndpoint);
       if (isLocalStack && OrchestratorOptions.providerStrategy !== 'k8s') {
         overrides.providerStrategy = 'aws';
@@ -74,7 +81,9 @@ describe('Orchestrator Retain Workspace', () => {
               true,
             );
           }
-          OrchestratorLogger.log('Cleanup between builds completed (containers removed, images preserved)');
+          OrchestratorLogger.log(
+            'Cleanup between builds completed (containers removed, images preserved)',
+          );
         } catch (cleanupError) {
           OrchestratorLogger.logWarning(`Failed to cleanup between builds: ${cleanupError}`);
 
@@ -92,9 +101,13 @@ describe('Orchestrator Retain Workspace', () => {
       OrchestratorLogger.log(`run 2 succeeded`);
 
       const build2ContainsCacheKey = results2.includes(buildParameter.cacheKey);
-      const build2ContainsBuildGuid1FromRetainedWorkspace = results2.includes(buildParameter.buildGuid);
+      const build2ContainsBuildGuid1FromRetainedWorkspace = results2.includes(
+        buildParameter.buildGuid,
+      );
       const build2ContainsRetainedWorkspacePhrase = results2.includes(`Retained Workspace:`);
-      const build2ContainsWorkspaceExistsAlreadyPhrase = results2.includes(`Retained Workspace Already Exists!`);
+      const build2ContainsWorkspaceExistsAlreadyPhrase = results2.includes(
+        `Retained Workspace Already Exists!`,
+      );
       const build2NotContainsZeroLibraryCacheFilesMessage = !results2.includes(
         'There is 0 files/dir in the cache pulled contents for Library',
       );
@@ -113,9 +126,14 @@ describe('Orchestrator Retain Workspace', () => {
       expect(splitResults[splitResults.length - 1]).not.toContain(libraryString);
     }, 1_000_000_000);
     afterAll(async () => {
-      await SharedWorkspaceLocking.CleanupWorkspace(Orchestrator.lockedWorkspace || ``, Orchestrator.buildParameters);
+      await SharedWorkspaceLocking.CleanupWorkspace(
+        Orchestrator.lockedWorkspace || ``,
+        Orchestrator.buildParameters,
+      );
       if (
-        fs.existsSync(`./orchestrator-cache/${path.basename(OrchestratorFolders.uniqueOrchestratorJobFolderAbsolute)}`)
+        fs.existsSync(
+          `./orchestrator-cache/${path.basename(OrchestratorFolders.uniqueOrchestratorJobFolderAbsolute)}`,
+        )
       ) {
         OrchestratorLogger.log(
           `Cleaning up ./orchestrator-cache/${path.basename(OrchestratorFolders.uniqueOrchestratorJobFolderAbsolute)}`,
@@ -142,7 +160,9 @@ describe('Orchestrator Retain Workspace', () => {
           );
 
           // Remove empty directories
-          await OrchestratorSystem.Run(`find ${workspaceCachePath} -type d -empty -delete 2>/dev/null || true`);
+          await OrchestratorSystem.Run(
+            `find ${workspaceCachePath} -type d -empty -delete 2>/dev/null || true`,
+          );
         } catch (error: any) {
           OrchestratorLogger.log(`Failed to cleanup workspace: ${error.message}`);
 
@@ -174,7 +194,9 @@ describe('Orchestrator Retain Workspace', () => {
           );
 
           // Remove empty directories
-          await OrchestratorSystem.Run(`find ${cachePath} -type d -empty -delete 2>/dev/null || true`);
+          await OrchestratorSystem.Run(
+            `find ${cachePath} -type d -empty -delete 2>/dev/null || true`,
+          );
         } catch (error: any) {
           OrchestratorLogger.log(`Failed to cleanup cache: ${error.message}`);
 

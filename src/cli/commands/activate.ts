@@ -41,7 +41,8 @@ const activateCommand: CommandModule<object, ActivateArguments> = {
 
       const unitySerial = process.env.UNITY_SERIAL;
       const unityLicense = process.env.UNITY_LICENSE;
-      const licensingServer = cliArguments.unityLicensingServer || process.env.UNITY_LICENSING_SERVER || '';
+      const licensingServer =
+        cliArguments.unityLicensingServer || process.env.UNITY_LICENSING_SERVER || '';
 
       if (licensingServer) {
         core.info(`Activating Unity via licensing server: ${licensingServer}`);
@@ -63,7 +64,8 @@ const activateCommand: CommandModule<object, ActivateArguments> = {
       }
 
       if (unitySerial) {
-        const maskedSerial = unitySerial.length > 8 ? `${unitySerial.slice(0, 4)}...${unitySerial.slice(-4)}` : '****';
+        const maskedSerial =
+          unitySerial.length > 8 ? `${unitySerial.slice(0, 4)}...${unitySerial.slice(-4)}` : '****';
         core.info(`Unity serial detected: ${maskedSerial}`);
         core.info('License will be activated automatically when running a build.');
       } else if (unityLicense) {
@@ -71,7 +73,9 @@ const activateCommand: CommandModule<object, ActivateArguments> = {
         core.info('License will be activated automatically when running a build.');
       }
 
-      core.info('\nActivation verified. You can now run: game-ci build --target-platform <platform>');
+      core.info(
+        '\nActivation verified. You can now run: game-ci build --target-platform <platform>',
+      );
     } catch (error: any) {
       core.setFailed(`Activation failed: ${error.message}`);
 

@@ -142,19 +142,22 @@ const orchestrateCommand: CommandModule<object, OrchestrateArguments> = {
       .option('kube-storage-class', {
         alias: 'kubeStorageClass',
         type: 'string',
-        description: 'Kubernetes storage class to use for orchestrator jobs. Leave empty to install rook cluster.',
+        description:
+          'Kubernetes storage class to use for orchestrator jobs. Leave empty to install rook cluster.',
         default: '',
       })
       .option('read-input-from-override-list', {
         alias: 'readInputFromOverrideList',
         type: 'string',
-        description: 'Comma separated list of input value names to read from the input override command',
+        description:
+          'Comma separated list of input value names to read from the input override command',
         default: '',
       })
       .option('read-input-override-command', {
         alias: 'readInputOverrideCommand',
         type: 'string',
-        description: 'Command to execute to pull input from an external source (e.g. cloud provider secret managers)',
+        description:
+          'Command to execute to pull input from an external source (e.g. cloud provider secret managers)',
         default: '',
       })
       .option('post-build-steps', {
@@ -190,7 +193,9 @@ const orchestrateCommand: CommandModule<object, OrchestrateArguments> = {
   handler: async (cliArguments) => {
     try {
       if (!cliArguments.targetPlatform) {
-        throw new Error('--target-platform is required for orchestrate builds. Run game-ci orchestrate --help.');
+        throw new Error(
+          '--target-platform is required for orchestrate builds. Run game-ci orchestrate --help.',
+        );
       }
 
       mapCliArgumentsToInput(cliArguments);

@@ -28,7 +28,10 @@ describe('Orchestrator Kubernetes', () => {
         return;
       }
       process.env.USE_IL2CPP = 'false';
-      const unityVersion = await UnityVersioning.determineUnityVersion('test-project', UnityVersioning.read('test-project'));
+      const unityVersion = await UnityVersioning.determineUnityVersion(
+        'test-project',
+        UnityVersioning.read('test-project'),
+      );
       const overrides = {
         versioning: 'None',
         projectPath: 'test-project',
@@ -77,7 +80,9 @@ describe('Orchestrator Kubernetes', () => {
       if (results.includes(fallbackLogsUnavailableMessage)) {
         // Complete failure - no logs at all (acceptable for eviction scenarios)
         expect(results).toContain(fallbackLogsUnavailableMessage);
-        OrchestratorLogger.log('Test passed with fallback message (pod was evicted before any logs were written)');
+        OrchestratorLogger.log(
+          'Test passed with fallback message (pod was evicted before any logs were written)',
+        );
       } else if (results.includes(incompleteLogsMessage)) {
         // Incomplete logs - we got some output but missing "Collected Logs" (build didn't complete)
         // This should fail the test as the build didn't succeed

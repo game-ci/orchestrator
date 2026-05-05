@@ -34,21 +34,31 @@ class RemotePowershellProvider implements ProviderInterface {
     // eslint-disable-next-line no-unused-vars
     branchName: string,
     // eslint-disable-next-line no-unused-vars
-    defaultSecretsArray: { ParameterKey: string; EnvironmentVariable: string; ParameterValue: string }[],
+    defaultSecretsArray: {
+      ParameterKey: string;
+      EnvironmentVariable: string;
+      ParameterValue: string;
+    }[],
   ): Promise<void> {
-    OrchestratorLogger.log(`[RemotePowershell] Setting up remote session to ${this.host} via ${this.transport}`);
+    OrchestratorLogger.log(
+      `[RemotePowershell] Setting up remote session to ${this.host} via ${this.transport}`,
+    );
 
     if (!this.host) {
       throw new Error('remotePowershellHost is required for the remote-powershell provider');
     }
 
     // Test connectivity
-    const testCommand = this.buildPwshCommand(`Test-WSMan -ComputerName "${this.host}" -ErrorAction Stop`);
+    const testCommand = this.buildPwshCommand(
+      `Test-WSMan -ComputerName "${this.host}" -ErrorAction Stop`,
+    );
     try {
       await OrchestratorSystem.Run(testCommand);
       OrchestratorLogger.log(`[RemotePowershell] Connection test passed`);
     } catch (error: any) {
-      throw new Error(`Failed to connect to remote host ${this.host}: ${error.message || error}`);
+      throw new Error(`Failed to connect to remote host ${this.host}: ${error.message || error}`, {
+        cause: error,
+      });
     }
 
     this.sessionId = buildGuid;
@@ -67,7 +77,9 @@ class RemotePowershellProvider implements ProviderInterface {
     OrchestratorLogger.log(`[RemotePowershell] Executing task on ${this.host}`);
 
     // Build environment variable block for remote session
-    const environmentBlock = environment.map((element) => `$env:${element.name} = '${element.value}'`).join('; ');
+    const environmentBlock = environment
+      .map((element) => `$env:${element.name} = '${element.value}'`)
+      .join('; ');
 
     const secretBlock = secrets
       .map((secret) => `$env:${secret.EnvironmentVariable} = '${secret.ParameterValue}'`)
@@ -97,7 +109,11 @@ class RemotePowershellProvider implements ProviderInterface {
     // eslint-disable-next-line no-unused-vars
     branchName: string,
     // eslint-disable-next-line no-unused-vars
-    defaultSecretsArray: { ParameterKey: string; EnvironmentVariable: string; ParameterValue: string }[],
+    defaultSecretsArray: {
+      ParameterKey: string;
+      EnvironmentVariable: string;
+      ParameterValue: string;
+    }[],
   ): Promise<void> {
     OrchestratorLogger.log(`[RemotePowershell] Cleaning up session ${this.sessionId}`);
 
@@ -110,13 +126,15 @@ class RemotePowershellProvider implements ProviderInterface {
     // eslint-disable-next-line no-unused-vars
     previewOnly: boolean,
     // eslint-disable-next-line no-unused-vars
-    olderThan: Number,
+    olderThan: number,
     // eslint-disable-next-line no-unused-vars
     fullCache: boolean,
     // eslint-disable-next-line no-unused-vars
     baseDependencies: boolean,
   ): Promise<string> {
-    OrchestratorLogger.log(`[RemotePowershell] Garbage collection not supported for remote PowerShell provider`);
+    OrchestratorLogger.log(
+      `[RemotePowershell] Garbage collection not supported for remote PowerShell provider`,
+    );
 
     return '';
   }
@@ -153,7 +171,9 @@ class RemotePowershellProvider implements ProviderInterface {
     if (this.credential) {
       const colonIndex = this.credential.indexOf(':');
       if (colonIndex === -1) {
-        throw new Error('remotePowershellCredential must be in "username:password" format (no colon found)');
+        throw new Error(
+          'remotePowershellCredential must be in "username:password" format (no colon found)',
+        );
       }
       const user = this.credential.substring(0, colonIndex);
       const pass = this.credential.substring(colonIndex + 1);

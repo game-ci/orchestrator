@@ -1,3 +1,4 @@
+import { describe, it, expect, beforeEach, afterEach, beforeAll, afterAll, vi } from 'vitest';
 import buildCommand from '../commands/build';
 import activateCommand from '../commands/activate';
 import orchestrateCommand from '../commands/orchestrate';
@@ -8,11 +9,11 @@ import updateCommand from '../commands/update';
 function createFakeYargs(): { yargs: any; options: Record<string, any> } {
   const options: Record<string, any> = {};
   const yargs: any = {
-    option: jest.fn(),
-    positional: jest.fn(),
-    example: jest.fn(),
-    env: jest.fn(),
-    command: jest.fn(),
+    option: vi.fn(),
+    positional: vi.fn(),
+    example: vi.fn(),
+    env: vi.fn(),
+    command: vi.fn(),
   };
 
   yargs.option.mockImplementation((name: string, config: any) => {

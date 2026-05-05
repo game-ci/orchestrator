@@ -89,7 +89,11 @@ class KubernetesTaskRunner {
 
           // If kubectl logs has failed multiple times, try reading the log file directly from the pod
           // This works even if the pod is terminated, as long as it hasn't been deleted
-          if (kubectlLogsFailedCount >= maxKubectlLogsFailures && !isRunning && !continueStreaming) {
+          if (
+            kubectlLogsFailedCount >= maxKubectlLogsFailures &&
+            !isRunning &&
+            !continueStreaming
+          ) {
             OrchestratorLogger.log(`Attempting to read log file directly from pod as fallback...`);
             try {
               // Try to read the log file from the pod
@@ -106,7 +110,9 @@ class KubernetesTaskRunner {
               } else {
                 // Pod is terminated, try to create a temporary pod to read from the PVC
                 // First, check if we can still access the pod's filesystem
-                OrchestratorLogger.log(`Pod is terminated, attempting to read log file via temporary pod...`);
+                OrchestratorLogger.log(
+                  `Pod is terminated, attempting to read log file via temporary pod...`,
+                );
 
                 // For terminated pods, we might not be able to exec, so we'll skip this fallback
                 // and rely on the log file being written to the PVC (if mounted)
@@ -114,18 +120,21 @@ class KubernetesTaskRunner {
               }
 
               if (logFileContent && logFileContent.trim()) {
-                OrchestratorLogger.log(`Successfully read log file from pod (${logFileContent.length} chars)`);
+                OrchestratorLogger.log(
+                  `Successfully read log file from pod (${logFileContent.length} chars)`,
+                );
 
                 // Process the log file content line by line
                 for (const line of logFileContent.split(`\n`)) {
                   const lowerLine = line.toLowerCase();
                   if (line.trim() && !lowerLine.includes('unable to retrieve container logs')) {
-                    ({ shouldReadLogs, shouldCleanup, output } = FollowLogStreamService.handleIteration(
-                      line,
-                      shouldReadLogs,
-                      shouldCleanup,
-                      output,
-                    ));
+                    ({ shouldReadLogs, shouldCleanup, output } =
+                      FollowLogStreamService.handleIteration(
+                        line,
+                        shouldReadLogs,
+                        shouldCleanup,
+                        output,
+                      ));
                   }
                 }
 
@@ -135,7 +144,9 @@ class KubernetesTaskRunner {
                   break;
                 }
               } else {
-                OrchestratorLogger.logWarning(`Log file read returned empty content, continuing with available logs`);
+                OrchestratorLogger.logWarning(
+                  `Log file read returned empty content, continuing with available logs`,
+                );
 
                 // If we can't read the log file, break out of the loop to return whatever logs we have
                 // This prevents infinite retries when kubectl logs consistently fails
@@ -151,7 +162,11 @@ class KubernetesTaskRunner {
         }
 
         // If pod is not running and we tried --previous but it failed, try without --previous
-        if (!isRunning && !continueStreaming && error?.message?.includes('previous terminated container')) {
+        if (
+          !isRunning &&
+          !continueStreaming &&
+          error?.message?.includes('previous terminated container')
+        ) {
           OrchestratorLogger.log(`Previous container not found, trying current container logs...`);
           try {
             await OrchestratorSystem.Run(
@@ -241,8 +256,8 @@ class KubernetesTaskRunner {
         const reason = needsFallback
           ? 'output is empty'
           : missingCollectedLogs
-          ? 'Collected Logs missing from output'
-          : 'pod is terminated';
+            ? 'Collected Logs missing from output'
+            : 'pod is terminated';
         OrchestratorLogger.log(
           `Pod is ${isPodStillRunning ? 'running' : 'terminated'} and ${reason}, reading log file as fallback...`,
         );
@@ -273,8 +288,14 @@ class KubernetesTaskRunner {
 
           for (const attempt of attempts) {
             // If we already have content with "Collected Logs", no need to try more
-            if (logFileContent && logFileContent.trim() && logFileContent.includes('Collected Logs')) {
-              OrchestratorLogger.log('Found "Collected Logs" in fallback content, stopping attempts.');
+            if (
+              logFileContent &&
+              logFileContent.trim() &&
+              logFileContent.includes('Collected Logs')
+            ) {
+              OrchestratorLogger.log(
+                'Found "Collected Logs" in fallback content, stopping attempts.',
+              );
               break;
             }
             try {
@@ -293,14 +314,20 @@ class KubernetesTaskRunner {
 
                   // If this content has "Collected Logs", we're done
                   if (logFileContent.includes('Collected Logs')) {
-                    OrchestratorLogger.log('Fallback method successfully captured "Collected Logs".');
+                    OrchestratorLogger.log(
+                      'Fallback method successfully captured "Collected Logs".',
+                    );
                     break;
                   }
                 } else {
-                  OrchestratorLogger.log(`Skipping this result - already have content with "Collected Logs".`);
+                  OrchestratorLogger.log(
+                    `Skipping this result - already have content with "Collected Logs".`,
+                  );
                 }
               } else {
-                OrchestratorLogger.log(`Fallback method returned empty result: ${attempt.slice(0, 50)}...`);
+                OrchestratorLogger.log(
+                  `Fallback method returned empty result: ${attempt.slice(0, 50)}...`,
+                );
               }
             } catch (attemptError: any) {
               OrchestratorLogger.log(
@@ -358,7 +385,10 @@ class KubernetesTaskRunner {
 
       // If output is still empty or missing "Collected Logs" after fallback attempts, add a warning message
       // This ensures BuildResults is not completely empty, which would cause test failures
-      if ((needsFallback && output.trim().length === 0) || (!output.includes('Collected Logs') && shouldTryFallback)) {
+      if (
+        (needsFallback && output.trim().length === 0) ||
+        (!output.includes('Collected Logs') && shouldTryFallback)
+      ) {
         OrchestratorLogger.logWarning(
           'Could not retrieve "Collected Logs" from pod after all attempts. Pod may have been killed before logs were written.',
         );
@@ -366,7 +396,8 @@ class KubernetesTaskRunner {
         // Add a minimal message so BuildResults is not completely empty
         // This helps with debugging and prevents test failures due to empty results
         if (output.trim().length === 0) {
-          output = 'Pod logs unavailable - pod may have been terminated before logs could be collected.\n';
+          output =
+            'Pod logs unavailable - pod may have been terminated before logs could be collected.\n';
         } else if (!output.includes('Collected Logs')) {
           // We have some output but missing "Collected Logs" - append the fallback message
           output +=
@@ -390,7 +421,9 @@ class KubernetesTaskRunner {
     // These errors can be added via stderr even when kubectl fails
     // We filter them out so they don't pollute the BuildResults
     const lines = output.split('\n');
-    const filteredLines = lines.filter((line) => !line.toLowerCase().includes('unable to retrieve container logs'));
+    const filteredLines = lines.filter(
+      (line) => !line.toLowerCase().includes('unable to retrieve container logs'),
+    );
     const filteredOutput = filteredLines.join('\n');
 
     // Log if we filtered out significant content
@@ -442,8 +475,11 @@ class KubernetesTaskRunner {
             permanentFailureReasons.some((reason) => condition.reason?.includes(reason)),
           );
 
-          const hasPermanentFailureContainerStatus = containerStatuses.some((containerStatus: any) =>
-            permanentFailureReasons.some((reason) => containerStatus.state?.waiting?.reason?.includes(reason)),
+          const hasPermanentFailureContainerStatus = containerStatuses.some(
+            (containerStatus: any) =>
+              permanentFailureReasons.some((reason) =>
+                containerStatus.state?.waiting?.reason?.includes(reason),
+              ),
           );
 
           // Only treat permanent failures as errors - pods that completed (Failed/Succeeded) should continue
@@ -453,7 +489,9 @@ class KubernetesTaskRunner {
               permanentFailureReasons.some((reason) => condition.reason?.includes(reason)),
             );
             const failureContainer = containerStatuses.find((containerStatus: any) =>
-              permanentFailureReasons.some((reason) => containerStatus.state?.waiting?.reason?.includes(reason)),
+              permanentFailureReasons.some((reason) =>
+                containerStatus.state?.waiting?.reason?.includes(reason),
+              ),
             );
 
             message = `Pod ${podName} failed to start (permanent failure):\nPhase: ${phase}\n`;
@@ -496,7 +534,9 @@ class KubernetesTaskRunner {
 
           // If pod completed (Succeeded/Failed), log it but don't throw - we'll try to get logs
           if (waitComplete && phase !== 'Running') {
-            OrchestratorLogger.log(`Pod ${podName} completed with phase: ${phase}. Will attempt to retrieve logs.`);
+            OrchestratorLogger.log(
+              `Pod ${podName} completed with phase: ${phase}. Will attempt to retrieve logs.`,
+            );
           }
 
           if (phase === 'Pending') {
@@ -523,10 +563,15 @@ class KubernetesTaskRunner {
 
               // Check if pod is actively pulling an image - if so, allow more time
               const isPullingImage = podEvents.some(
-                (x) => x.reason === 'Pulling' || x.reason === 'Pulled' || x.message?.includes('Pulling image'),
+                (x) =>
+                  x.reason === 'Pulling' ||
+                  x.reason === 'Pulled' ||
+                  x.message?.includes('Pulling image'),
               );
               const hasImagePullError = podEvents.some(
-                (x) => x.reason === 'Failed' && (x.message?.includes('pull') || x.message?.includes('image')),
+                (x) =>
+                  x.reason === 'Failed' &&
+                  (x.message?.includes('pull') || x.message?.includes('image')),
               );
 
               if (hasImagePullError) {
@@ -556,7 +601,9 @@ class KubernetesTaskRunner {
             const isTest = process.env['orchestratorTests'] === 'true';
             const isPullingImage =
               containerStatuses.some(
-                (cs: any) => cs.state?.waiting?.reason === 'ImagePull' || cs.state?.waiting?.reason === 'ErrImagePull',
+                (cs: any) =>
+                  cs.state?.waiting?.reason === 'ImagePull' ||
+                  cs.state?.waiting?.reason === 'ErrImagePull',
               ) || conditions.some((c: any) => c.reason?.includes('Pulling'));
 
             // Allow up to 20 minutes for image pulls in tests (80 checks), 2 minutes otherwise
@@ -669,7 +716,9 @@ class KubernetesTaskRunner {
               const conditionMessages = conditions
                 .map((c: any) => `${c.type}: ${c.reason || 'N/A'} - ${c.message || 'N/A'}`)
                 .join('; ');
-              OrchestratorLogger.log(`${pendingMessage}. Conditions: ${conditionMessages || 'None'}`);
+              OrchestratorLogger.log(
+                `${pendingMessage}. Conditions: ${conditionMessages || 'None'}`,
+              );
 
               // Log events periodically to help diagnose
               if (consecutivePendingCount % 8 === 0) {
@@ -732,7 +781,9 @@ class KubernetesTaskRunner {
         OrchestratorLogger.logWarning(message);
       }
 
-      throw new Error(`Pod ${podName} failed to start within timeout. ${message}`);
+      throw new Error(`Pod ${podName} failed to start within timeout. ${message}`, {
+        cause: waitError,
+      });
     }
 
     // Only throw if we detected a permanent failure condition

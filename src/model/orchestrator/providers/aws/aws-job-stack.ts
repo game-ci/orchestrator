@@ -91,11 +91,17 @@ export class AWSJobStack {
       taskDefCloudFormation = AWSCloudFormationTemplates.insertAtTemplate(
         taskDefCloudFormation,
         'p3 - container def',
-        AWSCloudFormationTemplates.getSecretDefinitionTemplate(secret.EnvironmentVariable, secret.ParameterKey),
+        AWSCloudFormationTemplates.getSecretDefinitionTemplate(
+          secret.EnvironmentVariable,
+          secret.ParameterKey,
+        ),
       );
     }
     const secretsMappedToCloudFormationParameters = secrets.map((x) => {
-      return { ParameterKey: x.ParameterKey.replace(/[^\dA-Za-z]/g, ''), ParameterValue: x.ParameterValue };
+      return {
+        ParameterKey: x.ParameterKey.replace(/[^\dA-Za-z]/g, ''),
+        ParameterValue: x.ParameterValue,
+      };
     });
     const logGroupName = `${this.baseStackName}/${taskDefStackName}`;
     const parameters = [
@@ -171,9 +177,15 @@ export class AWSJobStack {
         },
         { StackName: taskDefStackName },
       );
-      const describeStack = await CF.send(new DescribeStacksCommand({ StackName: taskDefStackName }));
+      const describeStack = await CF.send(
+        new DescribeStacksCommand({ StackName: taskDefStackName }),
+      );
       for (const parameter of parameters) {
-        if (!describeStack.Stacks?.[0].Parameters?.some((x) => x.ParameterKey === parameter.ParameterKey)) {
+        if (
+          !describeStack.Stacks?.[0].Parameters?.some(
+            (x) => x.ParameterKey === parameter.ParameterKey,
+          )
+        ) {
           throw new Error(`Parameter ${parameter.ParameterKey} not found in stack`);
         }
       }
@@ -229,8 +241,9 @@ export class AWSJobStack {
       )
     ).StackResources;
 
-    const baseResources = (await CF.send(new DescribeStackResourcesCommand({ StackName: this.baseStackName })))
-      .StackResources;
+    const baseResources = (
+      await CF.send(new DescribeStackResourcesCommand({ StackName: this.baseStackName }))
+    ).StackResources;
 
     return {
       taskDefStackName,

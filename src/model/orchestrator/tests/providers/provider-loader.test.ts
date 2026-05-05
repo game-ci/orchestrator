@@ -1,14 +1,25 @@
+import {
+  describe,
+  it,
+  expect,
+  beforeEach,
+  afterEach,
+  beforeAll,
+  afterAll,
+  vi,
+  type Mocked,
+} from 'vitest';
 import loadProvider, { ProviderLoader } from '../../providers/provider-loader';
 import { ProviderInterface } from '../../providers/provider-interface';
 import { ProviderGitManager } from '../../providers/provider-git-manager';
 
 // Mock the git manager
-jest.mock('../../providers/provider-git-manager');
-const mockProviderGitManager = ProviderGitManager as jest.Mocked<typeof ProviderGitManager>;
+vi.mock('../../providers/provider-git-manager');
+const mockProviderGitManager = ProviderGitManager as Mocked<typeof ProviderGitManager>;
 
 describe('provider-loader', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe('loadProvider', () => {
@@ -36,7 +47,9 @@ describe('provider-loader', () => {
     });
 
     it('throws when provider package is missing', async () => {
-      await expect(loadProvider('non-existent-package', {} as any)).rejects.toThrow('non-existent-package');
+      await expect(loadProvider('non-existent-package', {} as any)).rejects.toThrow(
+        'non-existent-package',
+      );
     });
 
     it('throws when provider does not implement ProviderInterface', async () => {

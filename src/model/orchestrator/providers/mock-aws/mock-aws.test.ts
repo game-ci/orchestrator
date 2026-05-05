@@ -21,8 +21,10 @@ describe('Mock AWS Services', () => {
       expect(stack).toBeDefined();
       expect(stack!.StackStatus).toBe('CREATE_COMPLETE');
 
-      const resources = MockCloudFormation.describeStackResources({ StackName: 'test-base' }).StackResources;
-      const resourceIds = resources.map(r => r.LogicalResourceId);
+      const resources = MockCloudFormation.describeStackResources({
+        StackName: 'test-base',
+      }).StackResources;
+      const resourceIds = resources.map((r) => r.LogicalResourceId);
 
       expect(resourceIds).toContain('ECSCluster');
       expect(resourceIds).toContain('PublicSubnetOne');
@@ -34,8 +36,10 @@ describe('Mock AWS Services', () => {
     it('creates a job stack with task definition and kinesis stream', () => {
       MockCloudFormation.createStack({ StackName: 'test-job' });
 
-      const resources = MockCloudFormation.describeStackResources({ StackName: 'test-job' }).StackResources;
-      const resourceIds = resources.map(r => r.LogicalResourceId);
+      const resources = MockCloudFormation.describeStackResources({
+        StackName: 'test-job',
+      }).StackResources;
+      const resourceIds = resources.map((r) => r.LogicalResourceId);
 
       expect(resourceIds).toContain('TaskDefinition');
       expect(resourceIds).toContain('KinesisStream');
@@ -43,7 +47,10 @@ describe('Mock AWS Services', () => {
     });
 
     it('lists stacks', () => {
-      MockCloudFormation.createStack({ StackName: 'stack-a', TemplateBody: 'ECSCluster base stack' });
+      MockCloudFormation.createStack({
+        StackName: 'stack-a',
+        TemplateBody: 'ECSCluster base stack',
+      });
       MockCloudFormation.createStack({ StackName: 'stack-b' });
 
       const result = MockCloudFormation.listStacks();
@@ -69,8 +76,9 @@ describe('Mock AWS Services', () => {
     it('runs a task and transitions through lifecycle', async () => {
       // Setup cluster
       MockCloudFormation.createStack({ StackName: 'base', TemplateBody: 'ECSCluster base stack' });
-      const cluster = MockCloudFormation.describeStackResources({ StackName: 'base' })
-        .StackResources.find(r => r.LogicalResourceId === 'ECSCluster')!.PhysicalResourceId;
+      const cluster = MockCloudFormation.describeStackResources({
+        StackName: 'base',
+      }).StackResources.find((r) => r.LogicalResourceId === 'ECSCluster')!.PhysicalResourceId;
 
       const result = await MockEcs.runTask({
         cluster,
@@ -88,7 +96,7 @@ describe('Mock AWS Services', () => {
       await MockEcs.waitUntilTasksRunning({ tasks: [taskArn], cluster });
 
       // Task should eventually stop
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise((resolve) => setTimeout(resolve, 1000));
       const described = MockEcs.describeTasks({ cluster, tasks: [taskArn] });
       expect(described.tasks[0].lastStatus).toBe('STOPPED');
       expect(described.tasks[0].containers[0].exitCode).toBe(0);

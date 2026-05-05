@@ -1,21 +1,32 @@
+import {
+  describe,
+  it,
+  expect,
+  beforeEach,
+  afterEach,
+  beforeAll,
+  afterAll,
+  vi,
+  type MockedFunction,
+} from 'vitest';
 import GitHubActionsProvider from '.';
 import BuildParameters from '../../../build-parameters';
 import { OrchestratorSystem } from '../../services/core/orchestrator-system';
 import OrchestratorLogger from '../../services/core/orchestrator-logger';
 import * as core from '@actions/core';
 
-jest.mock('../../services/core/orchestrator-system');
-jest.mock('../../services/core/orchestrator-logger');
-jest.mock('@actions/core', () => ({
-  info: jest.fn(),
-  warning: jest.fn(),
-  error: jest.fn(),
-  setOutput: jest.fn(),
-  getInput: jest.fn(() => ''),
+vi.mock('../../services/core/orchestrator-system');
+vi.mock('../../services/core/orchestrator-logger');
+vi.mock('@actions/core', () => ({
+  info: vi.fn(),
+  warning: vi.fn(),
+  error: vi.fn(),
+  setOutput: vi.fn(),
+  getInput: vi.fn(() => ''),
 }));
 
-const mockRun = OrchestratorSystem.Run as jest.MockedFunction<typeof OrchestratorSystem.Run>;
-const mockLog = OrchestratorLogger.log as jest.MockedFunction<typeof OrchestratorLogger.log>;
+const mockRun = OrchestratorSystem.Run as MockedFunction<typeof OrchestratorSystem.Run>;
+const mockLog = OrchestratorLogger.log as MockedFunction<typeof OrchestratorLogger.log>;
 
 function createBuildParameters(overrides: Partial<BuildParameters> = {}): BuildParameters {
   return {
@@ -42,7 +53,7 @@ describe('GitHubActionsProvider', () => {
   let provider: GitHubActionsProvider;
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     provider = new GitHubActionsProvider(createBuildParameters());
   });
 
@@ -104,9 +115,9 @@ describe('GitHubActionsProvider', () => {
     it('throws descriptive error when workflow verification fails', async () => {
       mockRun.mockRejectedValueOnce(new Error('Not Found'));
 
-      await expect(provider.setupWorkflow('guid-123', createBuildParameters(), 'main', [])).rejects.toThrow(
-        'Failed to verify workflow build.yml in owner/repo',
-      );
+      await expect(
+        provider.setupWorkflow('guid-123', createBuildParameters(), 'main', []),
+      ).rejects.toThrow('Failed to verify workflow build.yml in owner/repo');
     });
   });
 
@@ -152,7 +163,15 @@ describe('GitHubActionsProvider', () => {
       mockRun.mockResolvedValueOnce(JSON.stringify({ status: 'completed', conclusion: 'success' })); // status
       mockRun.mockResolvedValueOnce('logs'); // logs
 
-      await provider.runTaskInWorkflow('guid-1', 'image:latest', 'echo hello && build', '/mnt', '/w', [], []);
+      await provider.runTaskInWorkflow(
+        'guid-1',
+        'image:latest',
+        'echo hello && build',
+        '/mnt',
+        '/w',
+        [],
+        [],
+      );
 
       const dispatchCommand = mockRun.mock.calls[0][0];
       const expectedB64 = Buffer.from('echo hello && build').toString('base64');
@@ -180,9 +199,9 @@ describe('GitHubActionsProvider', () => {
     it('throws when workflow dispatch fails', async () => {
       mockRun.mockRejectedValueOnce(new Error('403 Forbidden'));
 
-      await expect(provider.runTaskInWorkflow('guid-err', 'img', 'cmd', '/m', '/w', [], [])).rejects.toThrow(
-        'Failed to dispatch workflow',
-      );
+      await expect(
+        provider.runTaskInWorkflow('guid-err', 'img', 'cmd', '/m', '/w', [], []),
+      ).rejects.toThrow('Failed to dispatch workflow');
     });
 
     it('throws when workflow run does not start within timeout', async () => {
@@ -193,9 +212,9 @@ describe('GitHubActionsProvider', () => {
         mockRun.mockRejectedValueOnce(new Error('not found'));
       }
 
-      await expect(provider.runTaskInWorkflow('guid-timeout', 'img', 'cmd', '/m', '/w', [], [])).rejects.toThrow(
-        'Workflow run did not start within',
-      );
+      await expect(
+        provider.runTaskInWorkflow('guid-timeout', 'img', 'cmd', '/m', '/w', [], []),
+      ).rejects.toThrow('Workflow run did not start within');
     });
 
     it('throws when workflow run fails with non-success conclusion', async () => {
@@ -203,9 +222,9 @@ describe('GitHubActionsProvider', () => {
       mockRun.mockResolvedValueOnce(JSON.stringify({ id: 300, status: 'in_progress' })); // run appears
       mockRun.mockResolvedValueOnce(JSON.stringify({ status: 'completed', conclusion: 'failure' })); // fails
 
-      await expect(provider.runTaskInWorkflow('guid-fail', 'img', 'cmd', '/m', '/w', [], [])).rejects.toThrow(
-        'Workflow run failed with conclusion: failure',
-      );
+      await expect(
+        provider.runTaskInWorkflow('guid-fail', 'img', 'cmd', '/m', '/w', [], []),
+      ).rejects.toThrow('Workflow run failed with conclusion: failure');
     });
 
     it('returns fallback message when log fetch fails', async () => {
@@ -214,7 +233,15 @@ describe('GitHubActionsProvider', () => {
       mockRun.mockResolvedValueOnce(JSON.stringify({ status: 'completed', conclusion: 'success' })); // completes
       mockRun.mockRejectedValueOnce(new Error('logs unavailable')); // log fetch fails
 
-      const result = await provider.runTaskInWorkflow('guid-nologs', 'img', 'cmd', '/m', '/w', [], []);
+      const result = await provider.runTaskInWorkflow(
+        'guid-nologs',
+        'img',
+        'cmd',
+        '/m',
+        '/w',
+        [],
+        [],
+      );
 
       expect(result).toContain('completed successfully');
       expect(result).toContain('logs unavailable');
@@ -223,11 +250,13 @@ describe('GitHubActionsProvider', () => {
     it('handles cancelled workflow run conclusion', async () => {
       mockRun.mockResolvedValueOnce(''); // dispatch
       mockRun.mockResolvedValueOnce(JSON.stringify({ id: 500, status: 'in_progress' })); // run
-      mockRun.mockResolvedValueOnce(JSON.stringify({ status: 'completed', conclusion: 'cancelled' })); // cancelled
+      mockRun.mockResolvedValueOnce(
+        JSON.stringify({ status: 'completed', conclusion: 'cancelled' }),
+      ); // cancelled
 
-      await expect(provider.runTaskInWorkflow('guid-cancel', 'img', 'cmd', '/m', '/w', [], [])).rejects.toThrow(
-        'Workflow run failed with conclusion: cancelled',
-      );
+      await expect(
+        provider.runTaskInWorkflow('guid-cancel', 'img', 'cmd', '/m', '/w', [], []),
+      ).rejects.toThrow('Workflow run failed with conclusion: cancelled');
     });
 
     it('throws timeout error when polling exceeds maximum duration', async () => {
@@ -250,11 +279,13 @@ describe('GitHubActionsProvider', () => {
       };
 
       try {
-        await expect(provider.runTaskInWorkflow('guid-poll-timeout', 'img', 'cmd', '/m', '/w', [], [])).rejects.toThrow(
-          'did not complete within 4 hours',
-        );
+        await expect(
+          provider.runTaskInWorkflow('guid-poll-timeout', 'img', 'cmd', '/m', '/w', [], []),
+        ).rejects.toThrow('did not complete within 4 hours');
 
-        expect(core.error).toHaveBeenCalledWith(expect.stringContaining('did not complete within 4 hours'));
+        expect(core.error).toHaveBeenCalledWith(
+          expect.stringContaining('did not complete within 4 hours'),
+        );
       } finally {
         Date.now = realDateNow;
       }

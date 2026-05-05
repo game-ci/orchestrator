@@ -61,7 +61,9 @@ echo "---${buildParameters.logId}"`;
         }
       }
     } catch (error) {
-      RemoteClientLogger.log(`Failed Getting: ${hookLifecycle} \n ${OrchestratorLogger.stringifyError(error)}`);
+      RemoteClientLogger.log(
+        `Failed Getting: ${hookLifecycle} \n ${OrchestratorLogger.stringifyError(error)}`,
+      );
     }
 
     // RemoteClientLogger.log(`Active Steps From Hooks: \n ${JSON.stringify(results, undefined, 4)}`);
@@ -110,9 +112,11 @@ echo "---${buildParameters.logId}"`;
   }
 
   public static getSecrets(hooks: any) {
-    const secrets = hooks.map((x: any) => x.secrets).filter((x: any) => x !== undefined && x.length > 0);
+    const secrets = hooks
+      .map((x: any) => x.secrets)
+      .filter((x: any) => x !== undefined && x.length > 0);
 
     // eslint-disable-next-line unicorn/no-array-reduce
-    return secrets.length > 0 ? secrets.reduce((x: any, y: any) => [...x, ...y]) : [];
+    return secrets.length > 0 ? secrets.flat() : [];
   }
 }

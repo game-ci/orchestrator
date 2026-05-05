@@ -173,7 +173,8 @@ function getExecutablePath(): string | undefined {
     return process.execPath;
   }
 
-  const installDirectory = process.env.GAME_CI_INSTALL || path.join(os.homedir(), '.game-ci', 'bin');
+  const installDirectory =
+    process.env.GAME_CI_INSTALL || path.join(os.homedir(), '.game-ci', 'bin');
   const binaryName = process.platform === 'win32' ? 'game-ci.exe' : 'game-ci';
   const installedPath = path.join(installDirectory, binaryName);
 
@@ -256,7 +257,9 @@ const updateCommand: CommandModule<object, UpdateArguments> = {
       }
 
       if (comparison > 0 && !targetVersion) {
-        core.info(`Current version (v${currentVersion}) is newer than latest release (${latestVersion}).`);
+        core.info(
+          `Current version (v${currentVersion}) is newer than latest release (${latestVersion}).`,
+        );
         core.info('Use --force to downgrade, or --version to target a specific release.');
 
         return;
@@ -286,7 +289,9 @@ const updateCommand: CommandModule<object, UpdateArguments> = {
         core.info('  npm install -g @game-ci/orchestrator@latest');
         core.info('');
         core.info('To install the standalone binary instead:');
-        core.info('  curl -fsSL https://raw.githubusercontent.com/game-ci/orchestrator/main/install.sh | sh');
+        core.info(
+          '  curl -fsSL https://raw.githubusercontent.com/game-ci/orchestrator/main/install.sh | sh',
+        );
 
         return;
       }
@@ -301,11 +306,16 @@ const updateCommand: CommandModule<object, UpdateArguments> = {
       }
 
       try {
-        const output = execFileSync(temporaryPath, ['version'], { encoding: 'utf8', timeout: 10_000 });
+        const output = execFileSync(temporaryPath, ['version'], {
+          encoding: 'utf8',
+          timeout: 10_000,
+        });
         core.info(`Verified new binary: ${output.trim().split('\n')[0]}`);
       } catch (verifyError: any) {
         fs.unlinkSync(temporaryPath);
-        throw new Error(`Downloaded binary failed verification: ${verifyError.message}`);
+        throw new Error(`Downloaded binary failed verification: ${verifyError.message}`, {
+          cause: verifyError,
+        });
       }
 
       try {
@@ -328,7 +338,9 @@ const updateCommand: CommandModule<object, UpdateArguments> = {
         if (fs.existsSync(temporaryPath)) {
           fs.unlinkSync(temporaryPath);
         }
-        throw new Error(`Failed to replace binary: ${replaceError.message}`);
+        throw new Error(`Failed to replace binary: ${replaceError.message}`, {
+          cause: replaceError,
+        });
       }
 
       core.info('');

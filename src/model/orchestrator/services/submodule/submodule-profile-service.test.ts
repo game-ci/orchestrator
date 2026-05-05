@@ -1,24 +1,35 @@
+import {
+  describe,
+  it,
+  expect,
+  beforeEach,
+  afterEach,
+  beforeAll,
+  afterAll,
+  vi,
+  type Mocked,
+} from 'vitest';
 import fs from 'node:fs';
 import { SubmoduleProfileService } from './submodule-profile-service';
 import { OrchestratorSystem } from '../core/orchestrator-system';
 
-jest.mock('node:fs');
-jest.mock('../core/orchestrator-system');
-jest.mock('../core/orchestrator-logger', () => ({
+vi.mock('node:fs');
+vi.mock('../core/orchestrator-system');
+vi.mock('../core/orchestrator-logger', () => ({
   __esModule: true,
   default: {
-    log: jest.fn(),
-    logWarning: jest.fn(),
-    error: jest.fn(),
+    log: vi.fn(),
+    logWarning: vi.fn(),
+    error: vi.fn(),
   },
 }));
 
-const mockedFs = fs as jest.Mocked<typeof fs>;
-const mockedSystem = OrchestratorSystem as jest.Mocked<typeof OrchestratorSystem>;
+const mockedFs = fs as Mocked<typeof fs>;
+const mockedSystem = OrchestratorSystem as Mocked<typeof OrchestratorSystem>;
 
 describe('SubmoduleProfileService', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe('parseProfile', () => {
@@ -50,14 +61,18 @@ submodules:
     it('throws if profile file does not exist', () => {
       mockedFs.existsSync.mockReturnValue(false);
 
-      expect(() => SubmoduleProfileService.parseProfile('/missing/profile.yml')).toThrow('Submodule profile not found');
+      expect(() => SubmoduleProfileService.parseProfile('/missing/profile.yml')).toThrow(
+        'Submodule profile not found',
+      );
     });
 
     it('throws if YAML is missing submodules array', () => {
       mockedFs.existsSync.mockReturnValue(true);
       mockedFs.readFileSync.mockReturnValue('product_name: Test\n');
 
-      expect(() => SubmoduleProfileService.parseProfile('/path/to/bad.yml')).toThrow("expected 'submodules' array");
+      expect(() => SubmoduleProfileService.parseProfile('/path/to/bad.yml')).toThrow(
+        "expected 'submodules' array",
+      );
     });
   });
 
@@ -109,7 +124,9 @@ submodules:
     });
 
     it('matches exact leaf folder name against full path', () => {
-      expect(SubmoduleProfileService.matchSubmodule('Assets/_Game/Submodules/TurnOfWar', 'TurnOfWar')).toBe(true);
+      expect(
+        SubmoduleProfileService.matchSubmodule('Assets/_Game/Submodules/TurnOfWar', 'TurnOfWar'),
+      ).toBe(true);
     });
 
     it('does not match unrelated names', () => {
@@ -117,7 +134,9 @@ submodules:
     });
 
     it('matches trailing wildcard against full path', () => {
-      expect(SubmoduleProfileService.matchSubmodule('Assets/_Engine/Submodules/PluginsFoo', 'Plugins*')).toBe(true);
+      expect(
+        SubmoduleProfileService.matchSubmodule('Assets/_Engine/Submodules/PluginsFoo', 'Plugins*'),
+      ).toBe(true);
     });
 
     it('matches trailing wildcard against full path prefix', () => {
@@ -130,7 +149,12 @@ submodules:
     });
 
     it('does not match wildcard that does not align', () => {
-      expect(SubmoduleProfileService.matchSubmodule('Assets/_Engine/Submodules/SensorToolkit', 'Plugins*')).toBe(false);
+      expect(
+        SubmoduleProfileService.matchSubmodule(
+          'Assets/_Engine/Submodules/SensorToolkit',
+          'Plugins*',
+        ),
+      ).toBe(false);
     });
   });
 
@@ -153,9 +177,15 @@ submodules:
       const result = SubmoduleProfileService.parseGitmodules('/repo');
 
       expect(result.size).toBe(3);
-      expect(result.get('Assets/_Game/Submodules/TurnOfWar')).toBe('Assets/_Game/Submodules/TurnOfWar');
-      expect(result.get('Assets/_Game/Submodules/EndlessCrusade')).toBe('Assets/_Game/Submodules/EndlessCrusade');
-      expect(result.get('Assets/_Engine/Submodules/SensorToolkit')).toBe('Assets/_Engine/Submodules/SensorToolkit');
+      expect(result.get('Assets/_Game/Submodules/TurnOfWar')).toBe(
+        'Assets/_Game/Submodules/TurnOfWar',
+      );
+      expect(result.get('Assets/_Game/Submodules/EndlessCrusade')).toBe(
+        'Assets/_Game/Submodules/EndlessCrusade',
+      );
+      expect(result.get('Assets/_Engine/Submodules/SensorToolkit')).toBe(
+        'Assets/_Engine/Submodules/SensorToolkit',
+      );
     });
 
     it('returns empty map when .gitmodules does not exist', () => {
@@ -201,7 +231,11 @@ submodules:
         return '';
       });
 
-      const plan = await SubmoduleProfileService.createInitPlan('/path/to/profile.yml', '', '/repo');
+      const plan = await SubmoduleProfileService.createInitPlan(
+        '/path/to/profile.yml',
+        '',
+        '/repo',
+      );
 
       expect(plan).toHaveLength(4);
 
@@ -291,7 +325,9 @@ submodules:
       expect(mockedSystem.Run).toHaveBeenCalledWith('git -C Assets/ModuleB checkout develop');
 
       // ModuleC: deinit
-      expect(mockedSystem.Run).toHaveBeenCalledWith('git submodule deinit -f Assets/ModuleC 2>/dev/null || true');
+      expect(mockedSystem.Run).toHaveBeenCalledWith(
+        'git submodule deinit -f Assets/ModuleC 2>/dev/null || true',
+      );
     });
 
     it('configures auth when token is provided', async () => {
@@ -328,7 +364,9 @@ submodules:
 
       await SubmoduleProfileService.execute(plan, '/repo');
 
-      expect(mockedSystem.Run).toHaveBeenCalledWith('git submodule update --init Assets/_Game/Submodules/TurnOfWar');
+      expect(mockedSystem.Run).toHaveBeenCalledWith(
+        'git submodule update --init Assets/_Game/Submodules/TurnOfWar',
+      );
     });
 
     it('passes path directly into git commands (paths with spaces are not quoted)', async () => {
@@ -339,13 +377,20 @@ submodules:
       // This is acceptable because submodule paths come from .gitmodules (trusted source),
       // not from user input. Still, this test documents the behavior for awareness.
       const plan = [
-        { name: 'Module With Spaces', path: 'Assets/Module With Spaces', branch: 'main', action: 'init' as const },
+        {
+          name: 'Module With Spaces',
+          path: 'Assets/Module With Spaces',
+          branch: 'main',
+          action: 'init' as const,
+        },
       ];
 
       await SubmoduleProfileService.execute(plan, '/repo');
 
       // The current implementation passes the path directly — no shell quoting
-      expect(mockedSystem.Run).toHaveBeenCalledWith('git submodule update --init Assets/Module With Spaces');
+      expect(mockedSystem.Run).toHaveBeenCalledWith(
+        'git submodule update --init Assets/Module With Spaces',
+      );
     });
 
     it('passes branch name directly into git checkout command', async () => {
@@ -353,21 +398,34 @@ submodules:
 
       // Document that branch names are passed as-is into shell commands.
       // Branch names come from the trusted profile YAML, not user input.
-      const plan = [{ name: 'ModuleX', path: 'Assets/ModuleX', branch: 'feature/my-branch', action: 'init' as const }];
+      const plan = [
+        {
+          name: 'ModuleX',
+          path: 'Assets/ModuleX',
+          branch: 'feature/my-branch',
+          action: 'init' as const,
+        },
+      ];
 
       await SubmoduleProfileService.execute(plan, '/repo');
 
-      expect(mockedSystem.Run).toHaveBeenCalledWith('git -C Assets/ModuleX checkout feature/my-branch');
+      expect(mockedSystem.Run).toHaveBeenCalledWith(
+        'git -C Assets/ModuleX checkout feature/my-branch',
+      );
     });
 
     it('constructs deinit command with error suppression for skip actions', async () => {
       mockedSystem.Run.mockResolvedValue('');
 
-      const plan = [{ name: 'Unused', path: 'Assets/Unused', branch: 'empty', action: 'skip' as const }];
+      const plan = [
+        { name: 'Unused', path: 'Assets/Unused', branch: 'empty', action: 'skip' as const },
+      ];
 
       await SubmoduleProfileService.execute(plan, '/repo');
 
-      expect(mockedSystem.Run).toHaveBeenCalledWith('git submodule deinit -f Assets/Unused 2>/dev/null || true');
+      expect(mockedSystem.Run).toHaveBeenCalledWith(
+        'git submodule deinit -f Assets/Unused 2>/dev/null || true',
+      );
     });
 
     it('injects token into git config URL insteadOf pattern', async () => {
@@ -377,9 +435,13 @@ submodules:
       // This is the standard Git credential approach for CI.
       await SubmoduleProfileService.execute([], '/repo', 'ghp_abc123xyz');
 
-      const configCall = mockedSystem.Run.mock.calls.find((call: any[]) => String(call[0]).includes('git config url'));
+      const configCall = mockedSystem.Run.mock.calls.find((call: any[]) =>
+        String(call[0]).includes('git config url'),
+      );
       expect(configCall).toBeDefined();
-      expect(configCall![0]).toBe('git config url."https://ghp_abc123xyz@github.com/".insteadOf "https://github.com/"');
+      expect(configCall![0]).toBe(
+        'git config url."https://ghp_abc123xyz@github.com/".insteadOf "https://github.com/"',
+      );
     });
   });
 });

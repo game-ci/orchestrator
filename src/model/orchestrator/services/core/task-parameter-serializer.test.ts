@@ -1,18 +1,19 @@
+import { describe, it, expect, beforeEach, afterEach, beforeAll, afterAll, vi } from 'vitest';
 import { TaskParameterSerializer } from './task-parameter-serializer';
 
 // Mock dependencies that TaskParameterSerializer uses internally
-jest.mock('@actions/core', () => ({
-  getInput: jest.fn().mockReturnValue(''),
-  setOutput: jest.fn(),
-  info: jest.fn(),
-  warning: jest.fn(),
-  error: jest.fn(),
+vi.mock('@actions/core', () => ({
+  getInput: vi.fn().mockReturnValue(''),
+  setOutput: vi.fn(),
+  info: vi.fn(),
+  warning: vi.fn(),
+  error: vi.fn(),
 }));
 
-jest.mock('../../options/orchestrator-options', () => ({
+vi.mock('../../options/orchestrator-options', () => ({
   __esModule: true,
   default: {
-    getInput: jest.fn().mockReturnValue(undefined),
+    getInput: vi.fn().mockReturnValue(undefined),
     ToEnvVarFormat: (input: string) => {
       if (input.toUpperCase() === input) {
         return input;
@@ -26,33 +27,33 @@ jest.mock('../../options/orchestrator-options', () => ({
   },
 }));
 
-jest.mock('../../options/orchestrator-options-reader', () => ({
+vi.mock('../../options/orchestrator-options-reader', () => ({
   __esModule: true,
   default: {
-    GetProperties: jest.fn().mockReturnValue([]),
+    GetProperties: vi.fn().mockReturnValue([]),
   },
 }));
 
-jest.mock('../../options/orchestrator-query-override', () => ({
+vi.mock('../../options/orchestrator-query-override', () => ({
   __esModule: true,
   default: {
     queryOverrides: undefined,
   },
 }));
 
-jest.mock('../hooks/command-hook-service', () => ({
+vi.mock('../hooks/command-hook-service', () => ({
   CommandHookService: {
-    getHooks: jest.fn().mockReturnValue([]),
-    getSecrets: jest.fn().mockReturnValue([]),
+    getHooks: vi.fn().mockReturnValue([]),
+    getSecrets: vi.fn().mockReturnValue([]),
   },
 }));
 
-jest.mock('../../../input', () => ({
+vi.mock('../../../input', () => ({
   __esModule: true,
   default: {},
 }));
 
-jest.mock('../../../github', () => ({
+vi.mock('../../../github', () => ({
   __esModule: true,
   default: {
     githubInputEnabled: false,
@@ -74,7 +75,9 @@ describe('TaskParameterSerializer', () => {
     });
 
     it('handles multi-word camelCase', () => {
-      expect(TaskParameterSerializer.ToEnvVarFormat('buildPlatformTarget')).toBe('BUILD_PLATFORM_TARGET');
+      expect(TaskParameterSerializer.ToEnvVarFormat('buildPlatformTarget')).toBe(
+        'BUILD_PLATFORM_TARGET',
+      );
     });
 
     it('handles string starting with uppercase', () => {
@@ -92,7 +95,9 @@ describe('TaskParameterSerializer', () => {
     });
 
     it('handles multiple underscores', () => {
-      expect(TaskParameterSerializer.UndoEnvVarFormat('BUILD_PLATFORM_TARGET')).toBe('buildPlatformTarget');
+      expect(TaskParameterSerializer.UndoEnvVarFormat('BUILD_PLATFORM_TARGET')).toBe(
+        'buildPlatformTarget',
+      );
     });
   });
 

@@ -32,7 +32,11 @@ export class IncrementalSyncService {
   /**
    * Determine the appropriate sync strategy based on workspace state and configuration.
    */
-  static resolveStrategy(requestedStrategy: SyncStrategy, workspacePath: string, statePath?: string): SyncStrategy {
+  static resolveStrategy(
+    requestedStrategy: SyncStrategy,
+    workspacePath: string,
+    statePath?: string,
+  ): SyncStrategy {
     if (requestedStrategy === 'full') {
       return 'full';
     }
@@ -60,13 +64,19 @@ export class IncrementalSyncService {
    * @param statePath - Optional custom path for sync state file
    * @returns Number of files changed
    */
-  static async syncGitDelta(workspacePath: string, targetReference: string, statePath?: string): Promise<number> {
+  static async syncGitDelta(
+    workspacePath: string,
+    targetReference: string,
+    statePath?: string,
+  ): Promise<number> {
     const state = SyncStateManager.loadState(workspacePath, statePath);
     if (!state) {
       throw new Error('Cannot git-delta sync without existing sync state');
     }
 
-    OrchestratorLogger.log(`[Sync] Git delta: ${state.lastSyncCommit.slice(0, 8)} -> ${targetReference.slice(0, 8)}`);
+    OrchestratorLogger.log(
+      `[Sync] Git delta: ${state.lastSyncCommit.slice(0, 8)} -> ${targetReference.slice(0, 8)}`,
+    );
 
     // Fetch latest
     await OrchestratorSystem.Run(`git -C "${workspacePath}" fetch origin`, true);
@@ -126,7 +136,11 @@ export class IncrementalSyncService {
       localArchive = path.join(workspacePath, '.game-ci-input-overlay.tar');
       OrchestratorLogger.log(`[Sync] Fetching input from storage: ${inputReference}`);
 
-      await IncrementalSyncService.executeRcloneCopy(remote, remotePath, path.dirname(localArchive));
+      await IncrementalSyncService.executeRcloneCopy(
+        remote,
+        remotePath,
+        path.dirname(localArchive),
+      );
     }
 
     if (!fs.existsSync(localArchive)) {
@@ -200,7 +214,10 @@ export class IncrementalSyncService {
 
     // Pull from remote storage directly into workspace
     const rcloneSource = `${remote}:${remotePath}`;
-    await OrchestratorSystem.Run(`rclone copy "${rcloneSource}" "${workspacePath}" --transfers 8 --checkers 16`, true);
+    await OrchestratorSystem.Run(
+      `rclone copy "${rcloneSource}" "${workspacePath}" --transfers 8 --checkers 16`,
+      true,
+    );
 
     // List what was pulled for tracking
     let pulledFiles: string[] = [];
@@ -283,7 +300,11 @@ export class IncrementalSyncService {
   /**
    * Execute rclone copy with standard flags.
    */
-  private static async executeRcloneCopy(remote: string, remotePath: string, destinationPath: string): Promise<void> {
+  private static async executeRcloneCopy(
+    remote: string,
+    remotePath: string,
+    destinationPath: string,
+  ): Promise<void> {
     await OrchestratorSystem.Run(
       `rclone copy "${remote}:${remotePath}" "${destinationPath}" --transfers 8 --checkers 16`,
       true,

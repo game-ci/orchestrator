@@ -12,20 +12,20 @@
  *   await PluginLoader.load('@game-ci/orchestrator/cli-plugin')
  */
 
-import AwsBuildPlatform from '../model/orchestrator/providers/aws'
-import Kubernetes from '../model/orchestrator/providers/k8s'
-import LocalDockerOrchestrator from '../model/orchestrator/providers/docker'
-import LocalOrchestrator from '../model/orchestrator/providers/local'
-import TestOrchestrator from '../model/orchestrator/providers/test'
-import GcpCloudRunProvider from '../model/orchestrator/providers/gcp-cloud-run'
-import AzureAciProvider from '../model/orchestrator/providers/azure-aci'
-import GitHubActionsProvider from '../model/orchestrator/providers/github-actions'
-import GitLabCiProvider from '../model/orchestrator/providers/gitlab-ci'
-import RemotePowershellProvider from '../model/orchestrator/providers/remote-powershell'
-import AnsibleProvider from '../model/orchestrator/providers/ansible'
-import CliProvider from '../model/orchestrator/providers/cli'
-import { configureOrchestratorOptions } from './orchestrator-options-plugin'
-import { createProviderAdapter, createCliProviderAdapter } from './provider-adapter'
+import AwsBuildPlatform from '../model/orchestrator/providers/aws';
+import Kubernetes from '../model/orchestrator/providers/k8s';
+import LocalDockerOrchestrator from '../model/orchestrator/providers/docker';
+import LocalOrchestrator from '../model/orchestrator/providers/local';
+import TestOrchestrator from '../model/orchestrator/providers/test';
+import GcpCloudRunProvider from '../model/orchestrator/providers/gcp-cloud-run';
+import AzureAciProvider from '../model/orchestrator/providers/azure-aci';
+import GitHubActionsProvider from '../model/orchestrator/providers/github-actions';
+import GitLabCiProvider from '../model/orchestrator/providers/gitlab-ci';
+import RemotePowershellProvider from '../model/orchestrator/providers/remote-powershell';
+import AnsibleProvider from '../model/orchestrator/providers/ansible';
+import CliProvider from '../model/orchestrator/providers/cli';
+import { configureOrchestratorOptions } from './orchestrator-options-plugin';
+import { createProviderAdapter, createCliProviderAdapter } from './provider-adapter';
 
 /**
  * GameCIPlugin-compatible export.
@@ -70,10 +70,10 @@ const orchestratorPlugin = {
     ansible: createProviderAdapter(AnsibleProvider),
     cli: createCliProviderAdapter(CliProvider),
   },
-}
+};
 
-export default orchestratorPlugin
-export { orchestratorPlugin }
-export { createBuildParametersFromCliOptions } from './build-parameters-adapter'
-export { configureOrchestratorOptions } from './orchestrator-options-plugin'
-export { createProviderAdapter } from './provider-adapter'
+export default orchestratorPlugin;
+export { orchestratorPlugin };
+export { createBuildParametersFromCliOptions } from './build-parameters-adapter';
+export { configureOrchestratorOptions } from './orchestrator-options-plugin';
+export { createProviderAdapter } from './provider-adapter';

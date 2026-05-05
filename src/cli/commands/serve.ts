@@ -1,5 +1,8 @@
 import type { CommandModule } from 'yargs';
-import { CliProviderRequest, CliProviderResponse } from '../../model/orchestrator/providers/cli/cli-provider-protocol';
+import {
+  CliProviderRequest,
+  CliProviderResponse,
+} from '../../model/orchestrator/providers/cli/cli-provider-protocol';
 import { ProviderInterface } from '../../model/orchestrator/providers/provider-interface';
 import { BuildParameters } from '../../model';
 import { mapCliArgumentsToInput, CliArguments } from '../input-mapper';
@@ -121,7 +124,10 @@ const serveCommand: CommandModule<object, ServeArguments> = {
       // Read the JSON request from stdin
       const rawInput = await readStdin();
       if (!rawInput.trim()) {
-        writeResponse({ success: false, error: 'No input received on stdin. Expected a JSON request.' });
+        writeResponse({
+          success: false,
+          error: 'No input received on stdin. Expected a JSON request.',
+        });
         process.exit(1);
         return;
       }
@@ -130,7 +136,10 @@ const serveCommand: CommandModule<object, ServeArguments> = {
       try {
         request = JSON.parse(rawInput.trim());
       } catch {
-        writeResponse({ success: false, error: `Invalid JSON on stdin: ${rawInput.substring(0, 200)}` });
+        writeResponse({
+          success: false,
+          error: `Invalid JSON on stdin: ${rawInput.substring(0, 200)}`,
+        });
         process.exit(1);
         return;
       }
@@ -169,7 +178,11 @@ const serveCommand: CommandModule<object, ServeArguments> = {
   },
 };
 
-async function dispatchCommand(provider: any, request: CliProviderRequest, cliArgs: Record<string, any> = {}): Promise<CliProviderResponse> {
+async function dispatchCommand(
+  provider: any,
+  request: CliProviderRequest,
+  cliArgs: Record<string, any> = {},
+): Promise<CliProviderResponse> {
   const { command, params } = request;
 
   switch (command) {
@@ -243,7 +256,10 @@ async function dispatchCommand(provider: any, request: CliProviderRequest, cliAr
  * Uses direct imports to avoid the provider-loader URL parser routing
  * built-in names like "test" or "aws" to the npm case.
  */
-async function loadBuiltinProvider(strategy: string, buildParameters: BuildParameters): Promise<ProviderInterface> {
+async function loadBuiltinProvider(
+  strategy: string,
+  buildParameters: BuildParameters,
+): Promise<ProviderInterface> {
   const providerMap: Record<string, () => Promise<any>> = {
     aws: () => import('../../model/orchestrator/providers/aws'),
     k8s: () => import('../../model/orchestrator/providers/k8s'),
@@ -262,7 +278,8 @@ async function loadBuiltinProvider(strategy: string, buildParameters: BuildParam
   const loader = providerMap[strategy];
   if (!loader) {
     // Fall back to dynamic import for external/custom providers
-    const loadProvider = (await import('../../model/orchestrator/providers/provider-loader')).default;
+    const loadProvider = (await import('../../model/orchestrator/providers/provider-loader'))
+      .default;
     return loadProvider(strategy, buildParameters);
   }
 

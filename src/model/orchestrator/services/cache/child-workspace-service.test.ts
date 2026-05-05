@@ -1,18 +1,29 @@
+import {
+  describe,
+  it,
+  expect,
+  beforeEach,
+  afterEach,
+  beforeAll,
+  afterAll,
+  vi,
+  type Mocked,
+} from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 import { ChildWorkspaceService, ChildWorkspaceConfig } from './child-workspace-service';
 
-jest.mock('node:fs');
-jest.mock('../core/orchestrator-logger', () => ({
+vi.mock('node:fs');
+vi.mock('../core/orchestrator-logger', () => ({
   __esModule: true,
   default: {
-    log: jest.fn(),
-    logWarning: jest.fn(),
-    error: jest.fn(),
+    log: vi.fn(),
+    logWarning: vi.fn(),
+    error: vi.fn(),
   },
 }));
 
-const mockFs = fs as jest.Mocked<typeof fs>;
+const mockFs = fs as Mocked<typeof fs>;
 
 function createConfig(overrides: Partial<ChildWorkspaceConfig> = {}): ChildWorkspaceConfig {
   return {
@@ -27,12 +38,12 @@ function createConfig(overrides: Partial<ChildWorkspaceConfig> = {}): ChildWorks
 
 describe('ChildWorkspaceService', () => {
   beforeEach(() => {
-    jest.resetAllMocks();
+    vi.resetAllMocks();
   });
 
   describe('initializeWorkspace', () => {
     it('should return false when no cached workspace exists', () => {
-      (mockFs.existsSync as jest.Mock).mockReturnValue(false);
+      (mockFs.existsSync as vi.Mock).mockReturnValue(false);
 
       const result = ChildWorkspaceService.initializeWorkspace('/project', createConfig());
 
@@ -40,10 +51,10 @@ describe('ChildWorkspaceService', () => {
     });
 
     it('should return false when cached workspace is empty', () => {
-      (mockFs.existsSync as jest.Mock).mockImplementation(
+      (mockFs.existsSync as vi.Mock).mockImplementation(
         (p: string) => String(p) === path.join('/cache/workspaces', 'TurnOfWar'),
       );
-      (mockFs.readdirSync as jest.Mock).mockReturnValue([]);
+      (mockFs.readdirSync as vi.Mock).mockReturnValue([]);
 
       const result = ChildWorkspaceService.initializeWorkspace('/project', createConfig());
 
@@ -56,14 +67,14 @@ describe('ChildWorkspaceService', () => {
 
     it('should restore workspace via atomic move when cache exists', () => {
       const cachedPath = path.join('/cache/workspaces', 'TurnOfWar');
-      (mockFs.existsSync as jest.Mock).mockImplementation((p: string) => {
+      (mockFs.existsSync as vi.Mock).mockImplementation((p: string) => {
         if (String(p) === cachedPath) return true;
         if (String(p) === '/project') return false;
         if (String(p) === '/') return true;
 
         return false;
       });
-      (mockFs.readdirSync as jest.Mock).mockReturnValue(['Assets', '.git', 'Library']);
+      (mockFs.readdirSync as vi.Mock).mockReturnValue(['Assets', '.git', 'Library']);
 
       const config = createConfig({ separateLibraryCache: false });
       const result = ChildWorkspaceService.initializeWorkspace('/project', config);
@@ -74,13 +85,13 @@ describe('ChildWorkspaceService', () => {
 
     it('should remove existing target path before restoring', () => {
       const cachedPath = path.join('/cache/workspaces', 'TurnOfWar');
-      (mockFs.existsSync as jest.Mock).mockImplementation((p: string) => {
+      (mockFs.existsSync as vi.Mock).mockImplementation((p: string) => {
         if (String(p) === cachedPath) return true;
         if (String(p) === '/project') return true;
 
         return false;
       });
-      (mockFs.readdirSync as jest.Mock).mockReturnValue(['Assets']);
+      (mockFs.readdirSync as vi.Mock).mockReturnValue(['Assets']);
 
       const config = createConfig({ separateLibraryCache: false });
       const result = ChildWorkspaceService.initializeWorkspace('/project', config);
@@ -94,7 +105,7 @@ describe('ChildWorkspaceService', () => {
       const libraryBackupPath = path.join('/cache/workspaces', 'TurnOfWar-Library');
       const libraryDestination = path.join('/project', 'Library');
 
-      (mockFs.existsSync as jest.Mock).mockImplementation((p: string) => {
+      (mockFs.existsSync as vi.Mock).mockImplementation((p: string) => {
         if (String(p) === cachedPath) return true;
         if (String(p) === '/project') return false;
         if (String(p) === libraryBackupPath) return true;
@@ -102,7 +113,7 @@ describe('ChildWorkspaceService', () => {
 
         return true; // parent dirs
       });
-      (mockFs.readdirSync as jest.Mock).mockReturnValue(['Assets', 'ProjectSettings']);
+      (mockFs.readdirSync as vi.Mock).mockReturnValue(['Assets', 'ProjectSettings']);
 
       const result = ChildWorkspaceService.initializeWorkspace('/project', createConfig());
 
@@ -115,7 +126,7 @@ describe('ChildWorkspaceService', () => {
     });
 
     it('should return false and log warning on error', () => {
-      (mockFs.existsSync as jest.Mock).mockImplementation(() => {
+      (mockFs.existsSync as vi.Mock).mockImplementation(() => {
         throw new Error('Access denied');
       });
 
@@ -127,7 +138,7 @@ describe('ChildWorkspaceService', () => {
 
   describe('saveWorkspace', () => {
     it('should skip save when project path does not exist', () => {
-      (mockFs.existsSync as jest.Mock).mockReturnValue(false);
+      (mockFs.existsSync as vi.Mock).mockReturnValue(false);
 
       ChildWorkspaceService.saveWorkspace('/project', createConfig());
 
@@ -136,7 +147,7 @@ describe('ChildWorkspaceService', () => {
 
     it('should save workspace via atomic move', () => {
       const cachedPath = path.join('/cache/workspaces', 'TurnOfWar');
-      (mockFs.existsSync as jest.Mock).mockImplementation((p: string) => {
+      (mockFs.existsSync as vi.Mock).mockImplementation((p: string) => {
         if (String(p) === '/project') return true;
         if (String(p) === path.join('/project', 'Library')) return false;
         if (String(p) === '/cache/workspaces') return true;
@@ -153,7 +164,7 @@ describe('ChildWorkspaceService', () => {
 
     it('should remove .git directory when preserveGit is false', () => {
       const gitDirectory = path.join('/project', '.git');
-      (mockFs.existsSync as jest.Mock).mockImplementation((p: string) => {
+      (mockFs.existsSync as vi.Mock).mockImplementation((p: string) => {
         if (String(p) === '/project') return true;
         if (String(p) === gitDirectory) return true;
         if (String(p) === path.join('/project', 'Library')) return false;
@@ -169,7 +180,7 @@ describe('ChildWorkspaceService', () => {
     });
 
     it('should not remove .git directory when preserveGit is true', () => {
-      (mockFs.existsSync as jest.Mock).mockImplementation((p: string) => {
+      (mockFs.existsSync as vi.Mock).mockImplementation((p: string) => {
         if (String(p) === '/project') return true;
         if (String(p) === path.join('/project', 'Library')) return false;
         if (String(p) === '/cache/workspaces') return true;
@@ -181,14 +192,14 @@ describe('ChildWorkspaceService', () => {
       ChildWorkspaceService.saveWorkspace('/project', config);
 
       // rmSync should not have been called with .git path
-      const rmSyncCalls = (mockFs.rmSync as jest.Mock).mock.calls;
+      const rmSyncCalls = (mockFs.rmSync as vi.Mock).mock.calls;
       const gitRmCalls = rmSyncCalls.filter((call: any[]) => String(call[0]).includes('.git'));
       expect(gitRmCalls).toHaveLength(0);
     });
 
     it('should remove existing cached workspace before saving', () => {
       const cachedPath = path.join('/cache/workspaces', 'TurnOfWar');
-      (mockFs.existsSync as jest.Mock).mockImplementation((p: string) => {
+      (mockFs.existsSync as vi.Mock).mockImplementation((p: string) => {
         if (String(p) === '/project') return true;
         if (String(p) === path.join('/project', 'Library')) return false;
         if (String(p) === '/cache/workspaces') return true;
@@ -207,7 +218,7 @@ describe('ChildWorkspaceService', () => {
     it('should save Library separately when separateLibraryCache is true', () => {
       const libraryPath = path.join('/project', 'Library');
       const libraryBackupPath = path.join('/cache/workspaces', 'TurnOfWar-Library');
-      (mockFs.existsSync as jest.Mock).mockImplementation((p: string) => {
+      (mockFs.existsSync as vi.Mock).mockImplementation((p: string) => {
         if (String(p) === '/project') return true;
         if (String(p) === libraryPath) return true;
         if (String(p) === libraryBackupPath) return false;
@@ -215,7 +226,7 @@ describe('ChildWorkspaceService', () => {
 
         return false;
       });
-      (mockFs.readdirSync as jest.Mock).mockReturnValue(['ScriptAssemblies', 'ShaderCache']);
+      (mockFs.readdirSync as vi.Mock).mockReturnValue(['ScriptAssemblies', 'ShaderCache']);
 
       ChildWorkspaceService.saveWorkspace('/project', createConfig());
 
@@ -223,20 +234,23 @@ describe('ChildWorkspaceService', () => {
     });
 
     it('should handle save errors gracefully', () => {
-      (mockFs.existsSync as jest.Mock).mockReturnValue(true);
-      (mockFs.renameSync as jest.Mock).mockImplementation(() => {
+      (mockFs.existsSync as vi.Mock).mockReturnValue(true);
+      (mockFs.renameSync as vi.Mock).mockImplementation(() => {
         throw new Error('Cross-device link');
       });
-      (mockFs.readdirSync as jest.Mock).mockReturnValue([]);
+      (mockFs.readdirSync as vi.Mock).mockReturnValue([]);
 
       // Should not throw
-      ChildWorkspaceService.saveWorkspace('/project', createConfig({ separateLibraryCache: false }));
+      ChildWorkspaceService.saveWorkspace(
+        '/project',
+        createConfig({ separateLibraryCache: false }),
+      );
     });
   });
 
   describe('restoreLibraryCache', () => {
     it('should return false when no Library backup exists', () => {
-      (mockFs.existsSync as jest.Mock).mockReturnValue(false);
+      (mockFs.existsSync as vi.Mock).mockReturnValue(false);
 
       const result = ChildWorkspaceService.restoreLibraryCache('/project', createConfig());
 
@@ -245,8 +259,8 @@ describe('ChildWorkspaceService', () => {
 
     it('should return false when Library backup is empty', () => {
       const libraryBackup = path.join('/cache/workspaces', 'TurnOfWar-Library');
-      (mockFs.existsSync as jest.Mock).mockImplementation((p: string) => String(p) === libraryBackup);
-      (mockFs.readdirSync as jest.Mock).mockReturnValue([]);
+      (mockFs.existsSync as vi.Mock).mockImplementation((p: string) => String(p) === libraryBackup);
+      (mockFs.readdirSync as vi.Mock).mockReturnValue([]);
 
       const result = ChildWorkspaceService.restoreLibraryCache('/project', createConfig());
 
@@ -257,13 +271,13 @@ describe('ChildWorkspaceService', () => {
     it('should restore Library via atomic move', () => {
       const libraryBackup = path.join('/cache/workspaces', 'TurnOfWar-Library');
       const libraryDestination = path.join('/project', 'Library');
-      (mockFs.existsSync as jest.Mock).mockImplementation((p: string) => {
+      (mockFs.existsSync as vi.Mock).mockImplementation((p: string) => {
         if (String(p) === libraryBackup) return true;
         if (String(p) === libraryDestination) return false;
 
         return false;
       });
-      (mockFs.readdirSync as jest.Mock).mockReturnValue(['ScriptAssemblies']);
+      (mockFs.readdirSync as vi.Mock).mockReturnValue(['ScriptAssemblies']);
 
       const result = ChildWorkspaceService.restoreLibraryCache('/project', createConfig());
 
@@ -274,13 +288,13 @@ describe('ChildWorkspaceService', () => {
     it('should use custom libraryBackupPath when provided', () => {
       const customBackup = '/custom/library/cache';
       const libraryDestination = path.join('/project', 'Library');
-      (mockFs.existsSync as jest.Mock).mockImplementation((p: string) => {
+      (mockFs.existsSync as vi.Mock).mockImplementation((p: string) => {
         if (String(p) === customBackup) return true;
         if (String(p) === libraryDestination) return false;
 
         return false;
       });
-      (mockFs.readdirSync as jest.Mock).mockReturnValue(['ScriptAssemblies']);
+      (mockFs.readdirSync as vi.Mock).mockReturnValue(['ScriptAssemblies']);
 
       const config = createConfig({ libraryBackupPath: customBackup });
       const result = ChildWorkspaceService.restoreLibraryCache('/project', config);
@@ -292,23 +306,26 @@ describe('ChildWorkspaceService', () => {
     it('should remove existing Library directory before restore', () => {
       const libraryBackup = path.join('/cache/workspaces', 'TurnOfWar-Library');
       const libraryDestination = path.join('/project', 'Library');
-      (mockFs.existsSync as jest.Mock).mockImplementation((p: string) => {
+      (mockFs.existsSync as vi.Mock).mockImplementation((p: string) => {
         if (String(p) === libraryBackup) return true;
         if (String(p) === libraryDestination) return true;
 
         return false;
       });
-      (mockFs.readdirSync as jest.Mock).mockReturnValue(['ScriptAssemblies']);
+      (mockFs.readdirSync as vi.Mock).mockReturnValue(['ScriptAssemblies']);
 
       ChildWorkspaceService.restoreLibraryCache('/project', createConfig());
 
-      expect(mockFs.rmSync).toHaveBeenCalledWith(libraryDestination, { recursive: true, force: true });
+      expect(mockFs.rmSync).toHaveBeenCalledWith(libraryDestination, {
+        recursive: true,
+        force: true,
+      });
     });
   });
 
   describe('getWorkspaceSize', () => {
     it('should return "0 B" for non-existent directory', () => {
-      (mockFs.existsSync as jest.Mock).mockReturnValue(false);
+      (mockFs.existsSync as vi.Mock).mockReturnValue(false);
 
       const result = ChildWorkspaceService.getWorkspaceSize('/nonexistent');
 
@@ -316,12 +333,12 @@ describe('ChildWorkspaceService', () => {
     });
 
     it('should calculate and format directory size', () => {
-      (mockFs.existsSync as jest.Mock).mockReturnValue(true);
-      (mockFs.readdirSync as jest.Mock).mockReturnValue([
+      (mockFs.existsSync as vi.Mock).mockReturnValue(true);
+      (mockFs.readdirSync as vi.Mock).mockReturnValue([
         { name: 'file1.txt', isDirectory: () => false, isFile: () => true },
         { name: 'file2.bin', isDirectory: () => false, isFile: () => true },
       ]);
-      (mockFs.statSync as jest.Mock).mockReturnValue({ size: 1024 * 1024 }); // 1 MB each
+      (mockFs.statSync as vi.Mock).mockReturnValue({ size: 1024 * 1024 }); // 1 MB each
 
       const result = ChildWorkspaceService.getWorkspaceSize('/workspace');
 
@@ -329,7 +346,7 @@ describe('ChildWorkspaceService', () => {
     });
 
     it('should return "unknown" when existsSync throws', () => {
-      (mockFs.existsSync as jest.Mock).mockImplementation(() => {
+      (mockFs.existsSync as vi.Mock).mockImplementation(() => {
         throw new Error('Permission denied');
       });
 
@@ -339,9 +356,9 @@ describe('ChildWorkspaceService', () => {
     });
 
     it('should recurse into subdirectories', () => {
-      (mockFs.existsSync as jest.Mock).mockReturnValue(true);
+      (mockFs.existsSync as vi.Mock).mockReturnValue(true);
       let callCount = 0;
-      (mockFs.readdirSync as jest.Mock).mockImplementation(() => {
+      (mockFs.readdirSync as vi.Mock).mockImplementation(() => {
         callCount++;
         if (callCount === 1) {
           return [
@@ -352,7 +369,7 @@ describe('ChildWorkspaceService', () => {
 
         return [{ name: 'nested.txt', isDirectory: () => false, isFile: () => true }];
       });
-      (mockFs.statSync as jest.Mock).mockReturnValue({ size: 512 });
+      (mockFs.statSync as vi.Mock).mockReturnValue({ size: 512 });
 
       const result = ChildWorkspaceService.getWorkspaceSize('/workspace');
 
@@ -362,7 +379,7 @@ describe('ChildWorkspaceService', () => {
 
   describe('cleanStaleWorkspaces', () => {
     it('should skip when cache root does not exist', () => {
-      (mockFs.existsSync as jest.Mock).mockReturnValue(false);
+      (mockFs.existsSync as vi.Mock).mockReturnValue(false);
 
       ChildWorkspaceService.cleanStaleWorkspaces('/nonexistent', 7);
 
@@ -374,15 +391,15 @@ describe('ChildWorkspaceService', () => {
       const tenDaysAgo = now - 10 * 24 * 60 * 60 * 1000;
       const oneDayAgo = now - 1 * 24 * 60 * 60 * 1000;
 
-      (mockFs.existsSync as jest.Mock).mockReturnValue(true);
-      (mockFs.readdirSync as jest.Mock).mockImplementation((directoryPath: string) => {
+      (mockFs.existsSync as vi.Mock).mockReturnValue(true);
+      (mockFs.readdirSync as vi.Mock).mockImplementation((directoryPath: string) => {
         if (String(directoryPath) === '/cache') {
           return ['old-workspace', 'recent-workspace'];
         }
 
         return [];
       });
-      (mockFs.statSync as jest.Mock).mockImplementation((filePath: string) => ({
+      (mockFs.statSync as vi.Mock).mockImplementation((filePath: string) => ({
         isDirectory: () => true,
         mtimeMs: String(filePath).includes('old') ? tenDaysAgo : oneDayAgo,
         size: 0,
@@ -400,9 +417,9 @@ describe('ChildWorkspaceService', () => {
     it('should not remove workspaces newer than retention period', () => {
       const oneDayAgo = Date.now() - 1 * 24 * 60 * 60 * 1000;
 
-      (mockFs.existsSync as jest.Mock).mockReturnValue(true);
-      (mockFs.readdirSync as jest.Mock).mockReturnValue(['recent-workspace']);
-      (mockFs.statSync as jest.Mock).mockReturnValue({
+      (mockFs.existsSync as vi.Mock).mockReturnValue(true);
+      (mockFs.readdirSync as vi.Mock).mockReturnValue(['recent-workspace']);
+      (mockFs.statSync as vi.Mock).mockReturnValue({
         isDirectory: () => true,
         mtimeMs: oneDayAgo,
       });
@@ -413,9 +430,9 @@ describe('ChildWorkspaceService', () => {
     });
 
     it('should handle errors during cleanup gracefully', () => {
-      (mockFs.existsSync as jest.Mock).mockReturnValue(true);
-      (mockFs.readdirSync as jest.Mock).mockReturnValue(['broken-workspace']);
-      (mockFs.statSync as jest.Mock).mockImplementation(() => {
+      (mockFs.existsSync as vi.Mock).mockReturnValue(true);
+      (mockFs.readdirSync as vi.Mock).mockReturnValue(['broken-workspace']);
+      (mockFs.statSync as vi.Mock).mockImplementation(() => {
         throw new Error('Access denied');
       });
 

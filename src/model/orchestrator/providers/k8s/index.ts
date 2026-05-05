@@ -46,7 +46,9 @@ class Kubernetes implements ProviderInterface {
     this.kubeClientApps = this.kubeConfig.makeApiClient(k8s.AppsV1Api);
     this.kubeClientBatch = this.kubeConfig.makeApiClient(k8s.BatchV1Api);
     this.rbacAuthorizationV1Api = this.kubeConfig.makeApiClient(k8s.RbacAuthorizationV1Api);
-    this.namespace = buildParameters.containerNamespace ? buildParameters.containerNamespace : 'default';
+    this.namespace = buildParameters.containerNamespace
+      ? buildParameters.containerNamespace
+      : 'default';
     OrchestratorLogger.log('Loaded default Kubernetes configuration for this environment');
   }
 
@@ -97,7 +99,7 @@ class Kubernetes implements ProviderInterface {
   async garbageCollect(
     filter: string,
     previewOnly: boolean,
-    olderThan: Number,
+    olderThan: number,
     // eslint-disable-next-line no-unused-vars
     fullCache: boolean,
     // eslint-disable-next-line no-unused-vars
@@ -207,14 +209,22 @@ class Kubernetes implements ProviderInterface {
     // eslint-disable-next-line no-unused-vars
     branchName: string,
     // eslint-disable-next-line no-unused-vars
-    defaultSecretsArray: { ParameterKey: string; EnvironmentVariable: string; ParameterValue: string }[],
+    defaultSecretsArray: {
+      ParameterKey: string;
+      EnvironmentVariable: string;
+      ParameterValue: string;
+    }[],
   ) {
     try {
       this.buildParameters = buildParameters;
       this.cleanupCronJobName = `unity-builder-cronjob-${buildParameters.buildGuid}`;
       this.serviceAccountName = `service-account-${buildParameters.buildGuid}`;
 
-      await KubernetesServiceAccount.createServiceAccount(this.serviceAccountName, this.namespace, this.kubeClient);
+      await KubernetesServiceAccount.createServiceAccount(
+        this.serviceAccountName,
+        this.namespace,
+        this.kubeClient,
+      );
     } catch (error) {
       throw error;
     }
@@ -251,16 +261,20 @@ class Kubernetes implements ProviderInterface {
       this.secretName = `build-credentials-${this.buildGuid}`;
       this.jobName = `unity-builder-job-${this.buildGuid}`;
       this.containerName = `main`;
-      await KubernetesSecret.createSecret(secrets, this.secretName, this.namespace, this.kubeClient);
+      await KubernetesSecret.createSecret(
+        secrets,
+        this.secretName,
+        this.namespace,
+        this.kubeClient,
+      );
 
       // For tests, clean up old images before creating job to free space for image pull
       // IMPORTANT: Preserve the Unity image to avoid re-pulling it
       if (process.env['orchestratorTests'] === 'true') {
         try {
           OrchestratorLogger.log('Cleaning up old images in k3d node before pulling new image...');
-          const { OrchestratorSystem: OrchestratorSystemModule } = await import(
-            '../../services/core/orchestrator-system'
-          );
+          const { OrchestratorSystem: OrchestratorSystemModule } =
+            await import('../../services/core/orchestrator-system');
 
           // Aggressive cleanup: remove stopped containers and non-Unity images
           // IMPORTANT: Preserve Unity images (unityci/editor) to avoid re-pulling the 3.9GB image
@@ -284,9 +298,13 @@ class Kubernetes implements ProviderInterface {
               OrchestratorLogger.log(`Cleanup command failed (non-fatal): ${cmdError}`);
             }
           }
-          OrchestratorLogger.log('Cleanup completed (containers and non-Unity images removed, Unity images preserved)');
+          OrchestratorLogger.log(
+            'Cleanup completed (containers and non-Unity images removed, Unity images preserved)',
+          );
         } catch (cleanupError) {
-          OrchestratorLogger.logWarning(`Failed to cleanup images before job creation: ${cleanupError}`);
+          OrchestratorLogger.logWarning(
+            `Failed to cleanup images before job creation: ${cleanupError}`,
+          );
 
           // Continue anyway - image might already be cached
         }
@@ -298,9 +316,8 @@ class Kubernetes implements ProviderInterface {
         // If not cached, try to ensure it's available to avoid disk pressure during pull
         if (process.env['orchestratorTests'] === 'true' && image.includes('unityci/editor')) {
           try {
-            const { OrchestratorSystem: OrchestratorSystemModule2 } = await import(
-              '../../services/core/orchestrator-system'
-            );
+            const { OrchestratorSystem: OrchestratorSystemModule2 } =
+              await import('../../services/core/orchestrator-system');
 
             // Check if image is cached on agent node (where pods run)
             const agentImageCheck = await OrchestratorSystemModule2.Run(
@@ -366,7 +383,9 @@ class Kubernetes implements ProviderInterface {
                 }
               }
             } else {
-              OrchestratorLogger.log('Unity image is cached on agent node - pod should start without pulling');
+              OrchestratorLogger.log(
+                'Unity image is cached on agent node - pod should start without pulling',
+              );
             }
           } catch (checkError) {
             // Ignore check errors - continue with job creation
@@ -377,7 +396,11 @@ class Kubernetes implements ProviderInterface {
         OrchestratorLogger.log('Job does not exist');
         await this.createJob(commands, image, mountdir, workingdir, environment, secrets);
         OrchestratorLogger.log('Watching pod until running');
-        await KubernetesTaskRunner.watchUntilPodRunning(this.kubeClient, this.podName, this.namespace);
+        await KubernetesTaskRunner.watchUntilPodRunning(
+          this.kubeClient,
+          this.podName,
+          this.namespace,
+        );
 
         OrchestratorLogger.log('Pod is running');
         output += await KubernetesTaskRunner.runTask(
@@ -500,7 +523,11 @@ class Kubernetes implements ProviderInterface {
     try {
       await this.kubeClientBatch.deleteNamespacedJob(this.jobName, this.namespace);
       await this.kubeClient.deleteNamespacedPod(this.podName, this.namespace);
-      await KubernetesRole.deleteRole(this.serviceAccountName, this.namespace, this.rbacAuthorizationV1Api);
+      await KubernetesRole.deleteRole(
+        this.serviceAccountName,
+        this.namespace,
+        this.rbacAuthorizationV1Api,
+      );
     } catch (error: any) {
       OrchestratorLogger.log(`Failed to cleanup`);
       if (error.response.body.reason !== `NotFound`) {
@@ -523,7 +550,11 @@ class Kubernetes implements ProviderInterface {
     // eslint-disable-next-line no-unused-vars
     branchName: string,
     // eslint-disable-next-line no-unused-vars
-    defaultSecretsArray: { ParameterKey: string; EnvironmentVariable: string; ParameterValue: string }[],
+    defaultSecretsArray: {
+      ParameterKey: string;
+      EnvironmentVariable: string;
+      ParameterValue: string;
+    }[],
   ) {
     if (BuildParameters && BuildParameters.shouldUseRetainedWorkspaceMode(buildParameters)) {
       return;

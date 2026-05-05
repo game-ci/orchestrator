@@ -10,7 +10,11 @@ export class HotRunnerHealthMonitor {
   /**
    * Start periodic health monitoring for all registered runners.
    */
-  startMonitoring(registry: HotRunnerRegistry, interval: number, transports: Map<string, HotRunnerTransport>): void {
+  startMonitoring(
+    registry: HotRunnerRegistry,
+    interval: number,
+    transports: Map<string, HotRunnerTransport>,
+  ): void {
     if (this.intervalHandle) {
       this.stopMonitoring();
     }
@@ -79,7 +83,9 @@ export class HotRunnerHealthMonitor {
 
       return false;
     } catch (error: any) {
-      OrchestratorLogger.logWarning(`[HotRunner] Runner ${runnerId} health check failed: ${error.message}`);
+      OrchestratorLogger.logWarning(
+        `[HotRunner] Runner ${runnerId} health check failed: ${error.message}`,
+      );
       this.registry.updateRunner(runnerId, {
         state: 'unhealthy',
         lastHealthCheck: new Date().toISOString(),
@@ -105,7 +111,9 @@ export class HotRunnerHealthMonitor {
       try {
         await transport.disconnect();
       } catch (error: any) {
-        OrchestratorLogger.logWarning(`[HotRunner] Error disconnecting runner ${runnerId}: ${error.message}`);
+        OrchestratorLogger.logWarning(
+          `[HotRunner] Error disconnecting runner ${runnerId}: ${error.message}`,
+        );
       }
       this.transports.delete(runnerId);
     }
@@ -168,7 +176,11 @@ export class HotRunnerHealthMonitor {
       }
 
       // Check for max jobs before recycle
-      if (config && config.maxJobsBeforeRecycle > 0 && runner.jobsCompleted >= config.maxJobsBeforeRecycle) {
+      if (
+        config &&
+        config.maxJobsBeforeRecycle > 0 &&
+        runner.jobsCompleted >= config.maxJobsBeforeRecycle
+      ) {
         OrchestratorLogger.log(
           `[HotRunner] Runner ${runner.id} reached max jobs (${runner.jobsCompleted}/${config.maxJobsBeforeRecycle}), recycling`,
         );
