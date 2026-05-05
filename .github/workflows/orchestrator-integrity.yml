@@ -245,10 +245,12 @@ jobs:
       # ==========================================
       - name: Run orchestrator unit tests (fast, no infra)
         timeout-minutes: 2
+        # vitest accepts a positional pattern as a substring filter against
+        # the test file path (equivalent to jest's --testPathPattern).
         run: >-
-          yarn run test
-          --testPathPattern="orchestrator-guid|orchestrator-folders|task-parameter-serializer|follow-log-stream-service|runner-availability-service|provider-url-parser|provider-loader|provider-git-manager|orchestrator-image|orchestrator-hooks|orchestrator-github-checks"
-          --verbose --detectOpenHandles --forceExit --runInBand
+          yarn vitest run
+          "orchestrator-guid|orchestrator-folders|task-parameter-serializer|follow-log-stream-service|runner-availability-service|provider-url-parser|provider-loader|provider-git-manager|orchestrator-image|orchestrator-hooks|orchestrator-github-checks"
+          --reporter=verbose --no-file-parallelism
       # ==========================================
       # K8S TESTS SECTION
       # ==========================================
@@ -319,7 +321,7 @@ jobs:
       # --- K8s Test 1: orchestrator-image ---
       - name: Run orchestrator-image test (K8s)
         timeout-minutes: 10
-        run: yarn run test "orchestrator-image" --detectOpenHandles --forceExit --runInBand
+        run: yarn vitest run "orchestrator-image" --no-file-parallelism
         env:
           UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
           UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
@@ -343,7 +345,7 @@ jobs:
       # --- K8s Test 2: orchestrator-kubernetes ---
       - name: Run orchestrator-kubernetes test
         timeout-minutes: 30
-        run: yarn run test "orchestrator-kubernetes" --detectOpenHandles --forceExit --runInBand
+        run: yarn vitest run "orchestrator-kubernetes" --no-file-parallelism
         env:
           UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
           UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
@@ -375,7 +377,7 @@ jobs:
       # --- K8s Test 3: orchestrator-s3-steps ---
       - name: Run orchestrator-s3-steps test (K8s)
         timeout-minutes: 30
-        run: yarn run test "orchestrator-s3-steps" --detectOpenHandles --forceExit --runInBand
+        run: yarn vitest run "orchestrator-s3-steps" --no-file-parallelism
         env:
           UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
           UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
@@ -407,7 +409,7 @@ jobs:
       # --- K8s Test 4: orchestrator-end2end-caching ---
       - name: Run orchestrator-end2end-caching test (K8s)
         timeout-minutes: 60
-        run: yarn run test "orchestrator-end2end-caching" --detectOpenHandles --forceExit --runInBand
+        run: yarn vitest run "orchestrator-end2end-caching" --no-file-parallelism
         env:
           UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
           UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
@@ -448,7 +450,7 @@ jobs:
           df -h
       - name: Run orchestrator-end2end-retaining test (K8s)
         timeout-minutes: 60
-        run: yarn run test "orchestrator-end2end-retaining" --detectOpenHandles --forceExit --runInBand
+        run: yarn vitest run "orchestrator-end2end-retaining" --no-file-parallelism
         env:
           UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
           UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
@@ -614,7 +616,7 @@ jobs:
       # --- AWS Test 1: orchestrator-image ---
       - name: Run orchestrator-image test (AWS)
         timeout-minutes: 10
-        run: yarn run test "orchestrator-image" --detectOpenHandles --forceExit --runInBand
+        run: yarn vitest run "orchestrator-image" --no-file-parallelism
         env:
           UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
           UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
@@ -635,7 +637,7 @@ jobs:
       # --- AWS Test 2: orchestrator-environment ---
       - name: Run orchestrator-environment test (AWS)
         timeout-minutes: 30
-        run: yarn run test "orchestrator-environment" --detectOpenHandles --forceExit --runInBand
+        run: yarn vitest run "orchestrator-environment" --no-file-parallelism
         env:
           UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
           UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
@@ -656,7 +658,7 @@ jobs:
       # --- AWS Test 3: orchestrator-s3-steps ---
       - name: Run orchestrator-s3-steps test (AWS)
         timeout-minutes: 30
-        run: yarn run test "orchestrator-s3-steps" --detectOpenHandles --forceExit --runInBand
+        run: yarn vitest run "orchestrator-s3-steps" --no-file-parallelism
         env:
           UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
           UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
@@ -677,7 +679,7 @@ jobs:
       # --- AWS Test 4: orchestrator-hooks ---
       - name: Run orchestrator-hooks test (AWS)
         timeout-minutes: 30
-        run: yarn run test "orchestrator-hooks" --detectOpenHandles --forceExit --runInBand
+        run: yarn vitest run "orchestrator-hooks" --no-file-parallelism
         env:
           UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
           UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
@@ -698,7 +700,7 @@ jobs:
       # --- AWS Test 5: orchestrator-end2end-caching ---
       - name: Run orchestrator-end2end-caching test (AWS)
         timeout-minutes: 60
-        run: yarn run test "orchestrator-end2end-caching" --detectOpenHandles --forceExit --runInBand
+        run: yarn vitest run "orchestrator-end2end-caching" --no-file-parallelism
         env:
           UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
           UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
@@ -719,7 +721,7 @@ jobs:
       # --- AWS Test 6: orchestrator-end2end-retaining ---
       - name: Run orchestrator-end2end-retaining test (AWS)
         timeout-minutes: 60
-        run: yarn run test "orchestrator-end2end-retaining" --detectOpenHandles --forceExit --runInBand
+        run: yarn vitest run "orchestrator-end2end-retaining" --no-file-parallelism
         env:
           UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
           UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
@@ -740,7 +742,7 @@ jobs:
       # --- AWS Test 7: orchestrator-caching ---
       - name: Run orchestrator-caching test (AWS)
         timeout-minutes: 60
-        run: yarn run test "orchestrator-caching" --detectOpenHandles --forceExit --runInBand
+        run: yarn vitest run "orchestrator-caching" --no-file-parallelism
         env:
           UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
           UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
@@ -761,7 +763,7 @@ jobs:
       # --- AWS Test 8: orchestrator-locking-core ---
       - name: Run orchestrator-locking-core test (AWS)
         timeout-minutes: 60
-        run: yarn run test "orchestrator-locking-core" --detectOpenHandles --forceExit --runInBand
+        run: yarn vitest run "orchestrator-locking-core" --no-file-parallelism
         env:
           UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
           UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
@@ -782,7 +784,7 @@ jobs:
       # --- AWS Test 9: orchestrator-locking-get-locked ---
       - name: Run orchestrator-locking-get-locked test (AWS)
         timeout-minutes: 60
-        run: yarn run test "orchestrator-locking-get-locked" --detectOpenHandles --forceExit --runInBand
+        run: yarn vitest run "orchestrator-locking-get-locked" --no-file-parallelism
         env:
           UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
           UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
@@ -803,7 +805,7 @@ jobs:
       # --- AWS Test 10: orchestrator-end2end-locking ---
       - name: Run orchestrator-end2end-locking test (AWS)
         timeout-minutes: 60
-        run: yarn run test "orchestrator-end2end-locking" --detectOpenHandles --forceExit --runInBand
+        run: yarn vitest run "orchestrator-end2end-locking" --no-file-parallelism
         env:
           UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
           UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
@@ -939,7 +941,7 @@ jobs:
       # --- Docker Test 1: orchestrator-image ---
       - name: Run orchestrator-image test (local-docker)
         timeout-minutes: 10
-        run: yarn run test "orchestrator-image" --detectOpenHandles --forceExit --runInBand
+        run: yarn vitest run "orchestrator-image" --no-file-parallelism
         env:
           UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
           UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
@@ -959,7 +961,7 @@ jobs:
       # --- Docker Test 2: orchestrator-hooks ---
       - name: Run orchestrator-hooks test (local-docker)
         timeout-minutes: 30
-        run: yarn run test "orchestrator-hooks" --detectOpenHandles --forceExit --runInBand
+        run: yarn vitest run "orchestrator-hooks" --no-file-parallelism
         env:
           UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
           UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
@@ -979,7 +981,7 @@ jobs:
       # --- Docker Test 3: orchestrator-local-persistence ---
       - name: Run orchestrator-local-persistence test (local-docker)
         timeout-minutes: 30
-        run: yarn run test "orchestrator-local-persistence" --detectOpenHandles --forceExit --runInBand
+        run: yarn vitest run "orchestrator-local-persistence" --no-file-parallelism
         env:
           UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
           UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
@@ -999,7 +1001,7 @@ jobs:
       # --- Docker Test 4: orchestrator-locking-core (with S3) ---
       - name: Run orchestrator-locking-core test (local-docker with S3)
         timeout-minutes: 30
-        run: yarn run test "orchestrator-locking-core" --detectOpenHandles --forceExit --runInBand
+        run: yarn vitest run "orchestrator-locking-core" --no-file-parallelism
         env:
           UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
           UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
@@ -1029,7 +1031,7 @@ jobs:
       # --- Docker Test 5: orchestrator-locking-get-locked (with S3) ---
       - name: Run orchestrator-locking-get-locked test (local-docker with S3)
         timeout-minutes: 30
-        run: yarn run test "orchestrator-locking-get-locked" --detectOpenHandles --forceExit --runInBand
+        run: yarn vitest run "orchestrator-locking-get-locked" --no-file-parallelism
         env:
           UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
           UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
@@ -1059,7 +1061,7 @@ jobs:
       # --- Docker Test 6: orchestrator-caching ---
       - name: Run orchestrator-caching test (local-docker)
         timeout-minutes: 30
-        run: yarn run test "orchestrator-caching" --detectOpenHandles --forceExit --runInBand
+        run: yarn vitest run "orchestrator-caching" --no-file-parallelism
         env:
           UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
           UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
@@ -1079,7 +1081,7 @@ jobs:
       # --- Docker Test 7: orchestrator-github-checks ---
       - name: Run orchestrator-github-checks test (local-docker)
         timeout-minutes: 30
-        run: yarn run test "orchestrator-github-checks" --detectOpenHandles --forceExit --runInBand
+        run: yarn vitest run "orchestrator-github-checks" --no-file-parallelism
         env:
           UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
           UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
@@ -1099,7 +1101,7 @@ jobs:
       # --- Docker Test 8: orchestrator-s3-steps (with S3) ---
       - name: Run orchestrator-s3-steps test (local-docker with S3)
         timeout-minutes: 30
-        run: yarn run test "orchestrator-s3-steps" --detectOpenHandles --forceExit --runInBand
+        run: yarn vitest run "orchestrator-s3-steps" --no-file-parallelism
         env:
           UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
           UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
@@ -1129,7 +1131,7 @@ jobs:
       # --- Docker Test 9: orchestrator-end2end-caching (with S3) ---
       - name: Run orchestrator-end2end-caching test (local-docker with S3)
         timeout-minutes: 60
-        run: yarn run test "orchestrator-end2end-caching" --detectOpenHandles --forceExit --runInBand
+        run: yarn vitest run "orchestrator-end2end-caching" --no-file-parallelism
         env:
           UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
           UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
@@ -1275,7 +1277,7 @@ jobs:
       # --- Rclone Test 1: orchestrator-rclone-steps ---
       - name: Run orchestrator-rclone-steps test
         timeout-minutes: 30
-        run: yarn run test "orchestrator-rclone-steps" --detectOpenHandles --forceExit --runInBand
+        run: yarn vitest run "orchestrator-rclone-steps" --no-file-parallelism
         env:
           UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
           UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
@@ -1343,7 +1345,7 @@ jobs:
       - run: yarn build
       # --- Mock AWS unit tests (CloudFormation, ECS, S3, Kinesis, CloudWatch) ---
       - name: Run mock AWS service tests
-        run: npx jest src/model/orchestrator/providers/mock-aws/mock-aws.test.ts --no-coverage --forceExit
+        run: yarn vitest run src/model/orchestrator/providers/mock-aws/mock-aws.test.ts --coverage=false
 
       # --- Mock AWS provider integration (exercises full ProviderInterface) ---
       - name: Validate mock-aws provider loads

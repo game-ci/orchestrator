@@ -96,7 +96,7 @@ jobs:
       # Test 1: AWS provider with aws-local mode (validates CloudFormation templates, executes via local-docker)
       - name: 'Test: orchestrator-image (aws-local mode)'
         timeout-minutes: 10
-        run: yarn run test "orchestrator-image" --detectOpenHandles --forceExit --runInBand
+        run: yarn vitest run "orchestrator-image" --no-file-parallelism
         env:
           PROVIDER_STRATEGY: aws
           orchestratorTests: true
@@ -114,7 +114,7 @@ jobs:
       # Test 2: S3 integration via MiniStack (local-docker provider + S3 hooks)
       - name: 'Test: orchestrator-s3-steps (local-docker + MiniStack S3)'
         timeout-minutes: 15
-        run: yarn run test "orchestrator-s3-steps" --detectOpenHandles --forceExit --runInBand
+        run: yarn vitest run "orchestrator-s3-steps" --no-file-parallelism
         env:
           PROVIDER_STRATEGY: local-docker
           orchestratorTests: true
@@ -263,7 +263,7 @@ jobs:
       # Test: K8s provider with k3d cluster
       - name: 'Test: orchestrator-image (k8s)'
         timeout-minutes: 10
-        run: yarn run test "orchestrator-image" --detectOpenHandles --forceExit --runInBand
+        run: yarn vitest run "orchestrator-image" --no-file-parallelism
         env:
           PROVIDER_STRATEGY: k8s
           orchestratorTests: true
