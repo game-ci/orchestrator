@@ -67,6 +67,13 @@ jobs:
       AWS_FORCE_PROVIDER: aws-local
       RESOURCE_TRACKING: 'true'
       K8S_MINISTACK_HOST: localstack-main
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+      AWS_ENDPOINT: http://localhost:4566
+      AWS_ENDPOINT_URL: http://localhost:4566
+      AWS_S3_ENDPOINT: http://localhost:4566
+      AWS_S3_FORCE_PATH_STYLE: 'true'
+      AWS_EC2_METADATA_DISABLED: 'true'
     steps:
       # --- Setup ---
       - uses: actions/checkout@v4
@@ -334,8 +341,8 @@ jobs:
           KUBE_VOLUME_SIZE: 2Gi
           containerCpu: '512'
           containerMemory: '512'
-          GIT_PRIVATE_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN }}
-          GITHUB_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN }}
+          GIT_PRIVATE_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN || github.token }}
+          GITHUB_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN || github.token }}
       - name: Cleanup after orchestrator-image (K8s)
         if: always()
         run: |
@@ -366,8 +373,8 @@ jobs:
           INPUT_AWSENDPOINT: http://localhost:4566
           AWS_S3_FORCE_PATH_STYLE: 'true'
           AWS_EC2_METADATA_DISABLED: 'true'
-          GIT_PRIVATE_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN }}
-          GITHUB_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN }}
+          GIT_PRIVATE_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN || github.token }}
+          GITHUB_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN || github.token }}
       - name: Cleanup after orchestrator-kubernetes
         if: always()
         run: |
@@ -398,8 +405,8 @@ jobs:
           INPUT_AWSENDPOINT: http://localhost:4566
           AWS_S3_FORCE_PATH_STYLE: 'true'
           AWS_EC2_METADATA_DISABLED: 'true'
-          GIT_PRIVATE_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN }}
-          GITHUB_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN }}
+          GIT_PRIVATE_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN || github.token }}
+          GITHUB_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN || github.token }}
       - name: Cleanup after orchestrator-s3-steps (K8s)
         if: always()
         run: |
@@ -430,8 +437,8 @@ jobs:
           INPUT_AWSENDPOINT: http://localhost:4566
           AWS_S3_FORCE_PATH_STYLE: 'true'
           AWS_EC2_METADATA_DISABLED: 'true'
-          GIT_PRIVATE_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN }}
-          GITHUB_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN }}
+          GIT_PRIVATE_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN || github.token }}
+          GITHUB_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN || github.token }}
       - name: Cleanup after orchestrator-end2end-caching (K8s)
         if: always()
         run: |
@@ -471,8 +478,8 @@ jobs:
           INPUT_AWSENDPOINT: http://localhost:4566
           AWS_S3_FORCE_PATH_STYLE: 'true'
           AWS_EC2_METADATA_DISABLED: 'true'
-          GIT_PRIVATE_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN }}
-          GITHUB_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN }}
+          GIT_PRIVATE_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN || github.token }}
+          GITHUB_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN || github.token }}
 
       # --- K8s teardown ---
       - name: Delete k3d cluster and final cleanup
@@ -626,8 +633,8 @@ jobs:
           versioning: None
           KUBE_STORAGE_CLASS: local-path
           PROVIDER_STRATEGY: aws
-          GIT_PRIVATE_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN }}
-          GITHUB_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN }}
+          GIT_PRIVATE_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN || github.token }}
+          GITHUB_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN || github.token }}
       - name: Cleanup after orchestrator-image (AWS)
         if: always()
         run: |
@@ -647,8 +654,8 @@ jobs:
           versioning: None
           KUBE_STORAGE_CLASS: local-path
           PROVIDER_STRATEGY: aws
-          GIT_PRIVATE_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN }}
-          GITHUB_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN }}
+          GIT_PRIVATE_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN || github.token }}
+          GITHUB_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN || github.token }}
       - name: Cleanup after orchestrator-environment (AWS)
         if: always()
         run: |
@@ -668,8 +675,8 @@ jobs:
           versioning: None
           KUBE_STORAGE_CLASS: local-path
           PROVIDER_STRATEGY: aws
-          GIT_PRIVATE_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN }}
-          GITHUB_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN }}
+          GIT_PRIVATE_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN || github.token }}
+          GITHUB_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN || github.token }}
       - name: Cleanup after orchestrator-s3-steps (AWS)
         if: always()
         run: |
@@ -689,8 +696,8 @@ jobs:
           versioning: None
           KUBE_STORAGE_CLASS: local-path
           PROVIDER_STRATEGY: aws
-          GIT_PRIVATE_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN }}
-          GITHUB_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN }}
+          GIT_PRIVATE_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN || github.token }}
+          GITHUB_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN || github.token }}
       - name: Cleanup after orchestrator-hooks (AWS)
         if: always()
         run: |
@@ -710,8 +717,8 @@ jobs:
           versioning: None
           KUBE_STORAGE_CLASS: local-path
           PROVIDER_STRATEGY: aws
-          GIT_PRIVATE_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN }}
-          GITHUB_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN }}
+          GIT_PRIVATE_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN || github.token }}
+          GITHUB_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN || github.token }}
       - name: Cleanup after orchestrator-end2end-caching (AWS)
         if: always()
         run: |
@@ -731,8 +738,8 @@ jobs:
           versioning: None
           KUBE_STORAGE_CLASS: local-path
           PROVIDER_STRATEGY: aws
-          GIT_PRIVATE_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN }}
-          GITHUB_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN }}
+          GIT_PRIVATE_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN || github.token }}
+          GITHUB_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN || github.token }}
       - name: Cleanup after orchestrator-end2end-retaining (AWS)
         if: always()
         run: |
@@ -752,8 +759,8 @@ jobs:
           versioning: None
           KUBE_STORAGE_CLASS: local-path
           PROVIDER_STRATEGY: aws
-          GIT_PRIVATE_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN }}
-          GITHUB_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN }}
+          GIT_PRIVATE_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN || github.token }}
+          GITHUB_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN || github.token }}
       - name: Cleanup after orchestrator-caching (AWS)
         if: always()
         run: |
@@ -773,8 +780,8 @@ jobs:
           versioning: None
           KUBE_STORAGE_CLASS: local-path
           PROVIDER_STRATEGY: aws
-          GIT_PRIVATE_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN }}
-          GITHUB_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN }}
+          GIT_PRIVATE_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN || github.token }}
+          GITHUB_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN || github.token }}
       - name: Cleanup after orchestrator-locking-core (AWS)
         if: always()
         run: |
@@ -794,8 +801,8 @@ jobs:
           versioning: None
           KUBE_STORAGE_CLASS: local-path
           PROVIDER_STRATEGY: aws
-          GIT_PRIVATE_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN }}
-          GITHUB_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN }}
+          GIT_PRIVATE_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN || github.token }}
+          GITHUB_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN || github.token }}
       - name: Cleanup after orchestrator-locking-get-locked (AWS)
         if: always()
         run: |
@@ -815,8 +822,8 @@ jobs:
           versioning: None
           KUBE_STORAGE_CLASS: local-path
           PROVIDER_STRATEGY: aws
-          GIT_PRIVATE_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN }}
-          GITHUB_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN }}
+          GIT_PRIVATE_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN || github.token }}
+          GITHUB_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN || github.token }}
 
       # --- Final cleanup ---
       - name: Final cleanup
@@ -834,6 +841,14 @@ jobs:
   local-docker-tests:
     name: Local Docker Provider Tests
     runs-on: ubuntu-latest
+    env:
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+      AWS_ENDPOINT: http://localhost:4566
+      AWS_ENDPOINT_URL: http://localhost:4566
+      AWS_S3_ENDPOINT: http://localhost:4566
+      AWS_S3_FORCE_PATH_STYLE: 'true'
+      AWS_EC2_METADATA_DISABLED: 'true'
     steps:
       # --- Setup ---
       - uses: actions/checkout@v4
@@ -950,8 +965,8 @@ jobs:
           orchestratorTests: true
           versioning: None
           PROVIDER_STRATEGY: local-docker
-          GIT_PRIVATE_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN }}
-          GITHUB_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN }}
+          GIT_PRIVATE_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN || github.token }}
+          GITHUB_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN || github.token }}
       - name: Cleanup after orchestrator-image (local-docker)
         if: always()
         run: |
@@ -970,8 +985,8 @@ jobs:
           orchestratorTests: true
           versioning: None
           PROVIDER_STRATEGY: local-docker
-          GIT_PRIVATE_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN }}
-          GITHUB_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN }}
+          GIT_PRIVATE_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN || github.token }}
+          GITHUB_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN || github.token }}
       - name: Cleanup after orchestrator-hooks (local-docker)
         if: always()
         run: |
@@ -990,8 +1005,8 @@ jobs:
           orchestratorTests: true
           versioning: None
           PROVIDER_STRATEGY: local-docker
-          GIT_PRIVATE_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN }}
-          GITHUB_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN }}
+          GIT_PRIVATE_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN || github.token }}
+          GITHUB_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN || github.token }}
       - name: Cleanup after orchestrator-local-persistence (local-docker)
         if: always()
         run: |
@@ -1020,8 +1035,8 @@ jobs:
           INPUT_AWSENDPOINT: http://localhost:4566
           AWS_S3_FORCE_PATH_STYLE: 'true'
           AWS_EC2_METADATA_DISABLED: 'true'
-          GIT_PRIVATE_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN }}
-          GITHUB_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN }}
+          GIT_PRIVATE_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN || github.token }}
+          GITHUB_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN || github.token }}
       - name: Cleanup after orchestrator-locking-core (local-docker)
         if: always()
         run: |
@@ -1050,8 +1065,8 @@ jobs:
           INPUT_AWSENDPOINT: http://localhost:4566
           AWS_S3_FORCE_PATH_STYLE: 'true'
           AWS_EC2_METADATA_DISABLED: 'true'
-          GIT_PRIVATE_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN }}
-          GITHUB_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN }}
+          GIT_PRIVATE_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN || github.token }}
+          GITHUB_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN || github.token }}
       - name: Cleanup after orchestrator-locking-get-locked (local-docker)
         if: always()
         run: |
@@ -1070,8 +1085,8 @@ jobs:
           orchestratorTests: true
           versioning: None
           PROVIDER_STRATEGY: local-docker
-          GIT_PRIVATE_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN }}
-          GITHUB_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN }}
+          GIT_PRIVATE_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN || github.token }}
+          GITHUB_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN || github.token }}
       - name: Cleanup after orchestrator-caching (local-docker)
         if: always()
         run: |
@@ -1090,8 +1105,8 @@ jobs:
           orchestratorTests: true
           versioning: None
           PROVIDER_STRATEGY: local-docker
-          GIT_PRIVATE_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN }}
-          GITHUB_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN }}
+          GIT_PRIVATE_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN || github.token }}
+          GITHUB_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN || github.token }}
       - name: Cleanup after orchestrator-github-checks (local-docker)
         if: always()
         run: |
@@ -1120,8 +1135,8 @@ jobs:
           INPUT_AWSENDPOINT: http://localhost:4566
           AWS_S3_FORCE_PATH_STYLE: 'true'
           AWS_EC2_METADATA_DISABLED: 'true'
-          GIT_PRIVATE_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN }}
-          GITHUB_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN }}
+          GIT_PRIVATE_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN || github.token }}
+          GITHUB_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN || github.token }}
       - name: Cleanup after orchestrator-s3-steps (local-docker)
         if: always()
         run: |
@@ -1150,8 +1165,8 @@ jobs:
           INPUT_AWSENDPOINT: http://localhost:4566
           AWS_S3_FORCE_PATH_STYLE: 'true'
           AWS_EC2_METADATA_DISABLED: 'true'
-          GIT_PRIVATE_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN }}
-          GITHUB_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN }}
+          GIT_PRIVATE_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN || github.token }}
+          GITHUB_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN || github.token }}
 
       # --- Final cleanup ---
       - name: Final cleanup
@@ -1169,6 +1184,14 @@ jobs:
   rclone-tests:
     name: Rclone Provider Tests
     runs-on: ubuntu-latest
+    env:
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+      AWS_ENDPOINT: http://localhost:4566
+      AWS_ENDPOINT_URL: http://localhost:4566
+      AWS_S3_ENDPOINT: http://localhost:4566
+      AWS_S3_FORCE_PATH_STYLE: 'true'
+      AWS_EC2_METADATA_DISABLED: 'true'
     steps:
       # --- Setup ---
       - uses: actions/checkout@v4
@@ -1288,8 +1311,8 @@ jobs:
           PROVIDER_STRATEGY: local-docker
           RCLONE_REMOTE: 'ministack-s3:game-ci-team-pipelines'
           rcloneRemote: 'ministack-s3:game-ci-team-pipelines'
-          GIT_PRIVATE_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN }}
-          GITHUB_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN }}
+          GIT_PRIVATE_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN || github.token }}
+          GITHUB_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN || github.token }}
 
       # --- Final cleanup ---
       - name: Final cleanup
