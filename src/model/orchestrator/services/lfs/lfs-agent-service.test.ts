@@ -1,35 +1,46 @@
+import {
+  describe,
+  it,
+  expect,
+  beforeEach,
+  afterEach,
+  beforeAll,
+  afterAll,
+  vi,
+  type Mocked,
+} from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 import { LfsAgentService } from './lfs-agent-service';
+import { OrchestratorSystem } from '../core/orchestrator-system';
+import OrchestratorLogger from '../core/orchestrator-logger';
 
 // Mock dependencies
-jest.mock('node:fs');
-jest.mock('../core/orchestrator-system', () => ({
+vi.mock('node:fs');
+vi.mock('../core/orchestrator-system', () => ({
   OrchestratorSystem: {
-    Run: jest.fn().mockResolvedValue(''),
+    Run: vi.fn().mockResolvedValue(''),
   },
 }));
-jest.mock('../core/orchestrator-logger', () => ({
+vi.mock('../core/orchestrator-logger', () => ({
   __esModule: true,
   default: {
-    log: jest.fn(),
-    logWarning: jest.fn(),
-    error: jest.fn(),
+    log: vi.fn(),
+    logWarning: vi.fn(),
+    error: vi.fn(),
   },
 }));
 
-const mockFs = fs as jest.Mocked<typeof fs>;
+const mockFs = fs as Mocked<typeof fs>;
 
 describe('LfsAgentService', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe('configure', () => {
     it('should call correct git config commands when agent exists', async () => {
-      (mockFs.existsSync as jest.Mock).mockReturnValue(true);
-
-      const { OrchestratorSystem } = require('../core/orchestrator-system');
+      (mockFs.existsSync as vi.Mock).mockReturnValue(true);
 
       await LfsAgentService.configure(
         '/usr/local/bin/elastic-git-storage',
@@ -50,17 +61,20 @@ describe('LfsAgentService', () => {
     });
 
     it('should set LFS_STORAGE_PATHS environment variable when storagePaths provided', async () => {
-      (mockFs.existsSync as jest.Mock).mockReturnValue(true);
+      (mockFs.existsSync as vi.Mock).mockReturnValue(true);
 
-      await LfsAgentService.configure('/usr/local/bin/elastic-git-storage', '', ['/path/a', '/path/b'], '/repo');
+      await LfsAgentService.configure(
+        '/usr/local/bin/elastic-git-storage',
+        '',
+        ['/path/a', '/path/b'],
+        '/repo',
+      );
 
       expect(process.env.LFS_STORAGE_PATHS).toBe('/path/a;/path/b');
     });
 
     it('should log warning and return early when agent executable does not exist', async () => {
-      (mockFs.existsSync as jest.Mock).mockReturnValue(false);
-
-      const { OrchestratorSystem } = require('../core/orchestrator-system');
+      (mockFs.existsSync as vi.Mock).mockReturnValue(false);
 
       await LfsAgentService.configure('/nonexistent/agent', '', [], '/repo');
 
@@ -68,9 +82,7 @@ describe('LfsAgentService', () => {
     });
 
     it('should derive agent name from executable filename', async () => {
-      (mockFs.existsSync as jest.Mock).mockReturnValue(true);
-
-      const { OrchestratorSystem } = require('../core/orchestrator-system');
+      (mockFs.existsSync as vi.Mock).mockReturnValue(true);
 
       await LfsAgentService.configure('/tools/my-custom-agent.exe', '', [], '/repo');
 
@@ -82,7 +94,7 @@ describe('LfsAgentService', () => {
 
   describe('configure with empty storagePaths', () => {
     it('should not set LFS_STORAGE_PATHS when storagePaths is empty', async () => {
-      (mockFs.existsSync as jest.Mock).mockReturnValue(true);
+      (mockFs.existsSync as vi.Mock).mockReturnValue(true);
 
       const originalValue = process.env.LFS_STORAGE_PATHS;
       delete process.env.LFS_STORAGE_PATHS;
@@ -99,24 +111,25 @@ describe('LfsAgentService', () => {
 
   describe('validate', () => {
     it('should return true when agent executable exists', async () => {
-      (mockFs.existsSync as jest.Mock).mockReturnValue(true);
+      (mockFs.existsSync as vi.Mock).mockReturnValue(true);
       const result = await LfsAgentService.validate('/usr/local/bin/elastic-git-storage');
       expect(result).toBe(true);
     });
 
     it('should return false when agent executable does not exist', async () => {
-      (mockFs.existsSync as jest.Mock).mockReturnValue(false);
+      (mockFs.existsSync as vi.Mock).mockReturnValue(false);
       const result = await LfsAgentService.validate('/nonexistent/agent');
       expect(result).toBe(false);
     });
 
     it('should log warning when agent does not exist', async () => {
-      (mockFs.existsSync as jest.Mock).mockReturnValue(false);
-      const OrchestratorLogger = require('../core/orchestrator-logger').default;
+      (mockFs.existsSync as vi.Mock).mockReturnValue(false);
 
       await LfsAgentService.validate('/nonexistent/agent');
 
-      expect(OrchestratorLogger.logWarning).toHaveBeenCalledWith(expect.stringContaining('Agent executable not found'));
+      expect(OrchestratorLogger.logWarning).toHaveBeenCalledWith(
+        expect.stringContaining('Agent executable not found'),
+      );
     });
   });
 });

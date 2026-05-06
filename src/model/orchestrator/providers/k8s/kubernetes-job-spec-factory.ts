@@ -37,7 +37,8 @@ class KubernetesJobSpecFactory {
 
     // Determine the local AWS emulator hostname to use for K8s pods
     // Priority: K8S_MINISTACK_HOST env var > K8S_LOCALSTACK_HOST (legacy) > localstack-main (container name on shared network)
-    const localstackHost = process.env['K8S_MINISTACK_HOST'] || process.env['K8S_LOCALSTACK_HOST'] || 'localstack-main';
+    const localstackHost =
+      process.env['K8S_MINISTACK_HOST'] || process.env['K8S_LOCALSTACK_HOST'] || 'localstack-main';
     OrchestratorLogger.log(`K8s pods will use local AWS emulator host: ${localstackHost}`);
 
     const adjustedEnvironment = environment.map((x) => {
@@ -91,7 +92,8 @@ class KubernetesJobSpecFactory {
               ttlSecondsAfterFinished: 9999,
               name: containerName,
               image,
-              imagePullPolicy: process.env['orchestratorTests'] === 'true' ? 'IfNotPresent' : 'Always',
+              imagePullPolicy:
+                process.env['orchestratorTests'] === 'true' ? 'IfNotPresent' : 'Always',
               command: ['/bin/sh'],
               args: [
                 '-c',
@@ -103,8 +105,15 @@ class KubernetesJobSpecFactory {
                 requests: (() => {
                   // Use smaller resource requests for lightweight hook containers
                   // Hook containers typically use utility images like aws-cli, rclone, etc.
-                  const lightweightImages = ['amazon/aws-cli', 'rclone/rclone', 'steamcmd/steamcmd', 'ubuntu'];
-                  const isLightweightContainer = lightweightImages.some((lightImage) => image.includes(lightImage));
+                  const lightweightImages = [
+                    'amazon/aws-cli',
+                    'rclone/rclone',
+                    'steamcmd/steamcmd',
+                    'ubuntu',
+                  ];
+                  const isLightweightContainer = lightweightImages.some((lightImage) =>
+                    image.includes(lightImage),
+                  );
 
                   if (isLightweightContainer && process.env['orchestratorTests'] === 'true') {
                     // For test environments, use minimal resources for hook containers
@@ -119,7 +128,8 @@ class KubernetesJobSpecFactory {
                   const cpuMB = Number.parseInt(buildParameters.containerCpu);
 
                   return {
-                    memory: !Number.isNaN(memoryMB) && memoryMB > 0 ? `${memoryMB / 1024}G` : '750M',
+                    memory:
+                      !Number.isNaN(memoryMB) && memoryMB > 0 ? `${memoryMB / 1024}G` : '750M',
                     cpu: !Number.isNaN(cpuMB) && cpuMB > 0 ? `${cpuMB / 1024}` : '1',
                   };
                 })(),
@@ -154,11 +164,7 @@ class KubernetesJobSpecFactory {
               lifecycle: {
                 preStop: {
                   exec: {
-                    command: [
-                      '/bin/sh',
-                      '-c',
-                      `sleep 60; ${getEngine().preStopCommand || 'true'}`,
-                    ],
+                    command: ['/bin/sh', '-c', `sleep 60; ${getEngine().preStopCommand || 'true'}`],
                   },
                 },
               },

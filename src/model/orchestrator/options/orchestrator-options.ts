@@ -67,11 +67,19 @@ class OrchestratorOptions {
   }
 
   static get githubOwner(): string {
-    return OrchestratorOptions.getInput('githubOwner') || OrchestratorOptions.githubRepo?.split(`/`)[0] || '';
+    return (
+      OrchestratorOptions.getInput('githubOwner') ||
+      OrchestratorOptions.githubRepo?.split(`/`)[0] ||
+      ''
+    );
   }
 
   static get githubRepoName(): string {
-    return OrchestratorOptions.getInput('githubRepoName') || OrchestratorOptions.githubRepo?.split(`/`)[1] || '';
+    return (
+      OrchestratorOptions.getInput('githubRepoName') ||
+      OrchestratorOptions.githubRepo?.split(`/`)[1] ||
+      ''
+    );
   }
 
   static get orchestratorRepoName(): string {
@@ -92,14 +100,18 @@ class OrchestratorOptions {
 
   static get githubRepo(): string | undefined {
     return (
-      OrchestratorOptions.getInput('GITHUB_REPOSITORY') || OrchestratorOptions.getInput('GITHUB_REPO') || undefined
+      OrchestratorOptions.getInput('GITHUB_REPOSITORY') ||
+      OrchestratorOptions.getInput('GITHUB_REPO') ||
+      undefined
     );
   }
   static get branch(): string {
     if (OrchestratorOptions.getInput(`GITHUB_REF`)) {
       return (
-        OrchestratorOptions.getInput(`GITHUB_REF`)?.replace('refs/', '').replace(`head/`, '').replace(`heads/`, '') ||
-        ``
+        OrchestratorOptions.getInput(`GITHUB_REF`)
+          ?.replace('refs/', '')
+          .replace(`head/`, '')
+          .replace(`heads/`, '') || ``
       );
     } else if (OrchestratorOptions.getInput('branch')) {
       return OrchestratorOptions.getInput('branch') || ``;
@@ -130,7 +142,8 @@ class OrchestratorOptions {
 
   static get providerStrategy(): string {
     const provider =
-      OrchestratorOptions.getInput('orchestratorCluster') || OrchestratorOptions.getInput('providerStrategy');
+      OrchestratorOptions.getInput('orchestratorCluster') ||
+      OrchestratorOptions.getInput('providerStrategy');
     if (Cli.isCliMode) {
       return provider || 'aws';
     }
@@ -253,7 +266,9 @@ class OrchestratorOptions {
   }
 
   static get awsCloudFormationEndpoint(): string | undefined {
-    return OrchestratorOptions.getInput('awsCloudFormationEndpoint') || OrchestratorOptions.awsEndpoint;
+    return (
+      OrchestratorOptions.getInput('awsCloudFormationEndpoint') || OrchestratorOptions.awsEndpoint
+    );
   }
 
   static get awsEcsEndpoint(): string | undefined {
@@ -265,7 +280,9 @@ class OrchestratorOptions {
   }
 
   static get awsCloudWatchLogsEndpoint(): string | undefined {
-    return OrchestratorOptions.getInput('awsCloudWatchLogsEndpoint') || OrchestratorOptions.awsEndpoint;
+    return (
+      OrchestratorOptions.getInput('awsCloudWatchLogsEndpoint') || OrchestratorOptions.awsEndpoint
+    );
   }
 
   static get awsS3Endpoint(): string | undefined {

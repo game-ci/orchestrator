@@ -203,7 +203,9 @@ export class TestSuiteParser {
     // Check that at least one test mode is specified per run
     for (const run of suite.runs) {
       if (!run.editMode && !run.playMode && !run.builtClient) {
-        errors.push(`Run '${run.name}' must specify at least one of: editMode, playMode, builtClient`);
+        errors.push(
+          `Run '${run.name}' must specify at least one of: editMode, playMode, builtClient`,
+        );
       }
     }
 

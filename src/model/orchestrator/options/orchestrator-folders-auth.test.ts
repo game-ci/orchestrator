@@ -1,6 +1,9 @@
+import { describe, it, expect, beforeEach, afterEach, beforeAll, afterAll, vi } from 'vitest';
 import { OrchestratorFolders } from './orchestrator-folders';
+import mockOrchestrator from '../orchestrator';
+import { OrchestratorSystem } from '../services/core/orchestrator-system';
 
-jest.mock('../orchestrator', () => ({
+vi.mock('../orchestrator', () => ({
   __esModule: true,
   default: {
     buildParameters: {
@@ -17,24 +20,22 @@ jest.mock('../orchestrator', () => ({
   },
 }));
 
-jest.mock('./orchestrator-options', () => ({
+vi.mock('./orchestrator-options', () => ({
   __esModule: true,
   default: {
     useSharedBuilder: false,
   },
 }));
 
-jest.mock('../services/core/orchestrator-system', () => ({
+vi.mock('../services/core/orchestrator-system', () => ({
   OrchestratorSystem: {
-    Run: jest.fn().mockResolvedValue(''),
+    Run: vi.fn().mockResolvedValue(''),
   },
 }));
 
-const mockOrchestrator = require('../orchestrator').default;
-
 describe('OrchestratorFolders git auth', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   describe('useHeaderAuth', () => {
@@ -105,7 +106,6 @@ describe('OrchestratorFolders git auth', () => {
     it('should run git config with http.extraHeader in header mode', async () => {
       mockOrchestrator.buildParameters.gitAuthMode = 'header';
       mockOrchestrator.buildParameters.gitPrivateToken = 'ghp_test123';
-      const { OrchestratorSystem } = require('../services/core/orchestrator-system');
 
       await OrchestratorFolders.configureGitAuth();
 
@@ -117,7 +117,6 @@ describe('OrchestratorFolders git auth', () => {
 
     it('should not run git config in url mode', async () => {
       mockOrchestrator.buildParameters.gitAuthMode = 'url';
-      const { OrchestratorSystem } = require('../services/core/orchestrator-system');
 
       await OrchestratorFolders.configureGitAuth();
 
@@ -129,7 +128,6 @@ describe('OrchestratorFolders git auth', () => {
       mockOrchestrator.buildParameters.gitPrivateToken = '';
       const originalEnv = process.env.GIT_PRIVATE_TOKEN;
       delete process.env.GIT_PRIVATE_TOKEN;
-      const { OrchestratorSystem } = require('../services/core/orchestrator-system');
 
       await OrchestratorFolders.configureGitAuth();
 

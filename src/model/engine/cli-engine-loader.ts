@@ -23,7 +23,9 @@ export function loadEngineFromCli(executablePath: string): EnginePlugin {
   });
 
   if (result.error) {
-    throw new Error(`Failed to spawn engine plugin executable '${executablePath}': ${result.error.message}`);
+    throw new Error(
+      `Failed to spawn engine plugin executable '${executablePath}': ${result.error.message}`,
+    );
   }
 
   if (result.status !== 0) {
@@ -51,7 +53,9 @@ export function loadEngineFromCli(executablePath: string): EnginePlugin {
   }
 
   if (!config) {
-    throw new Error(`Engine plugin executable '${executablePath}' did not return valid JSON config. Output: ${stdout}`);
+    throw new Error(
+      `Engine plugin executable '${executablePath}' did not return valid JSON config. Output: ${stdout}`,
+    );
   }
 
   if (!config.name || !Array.isArray(config.cacheFolders)) {

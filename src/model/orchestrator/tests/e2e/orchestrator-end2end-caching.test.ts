@@ -22,7 +22,10 @@ describe('Orchestrator Caching', () => {
   setups();
   if (OrchestratorOptions.orchestratorDebug) {
     it('Run one build it should not use cache, run subsequent build which should use cache', async () => {
-      const unityVersion = await UnityVersioning.determineUnityVersion('test-project', UnityVersioning.read('test-project'));
+      const unityVersion = await UnityVersioning.determineUnityVersion(
+        'test-project',
+        UnityVersioning.read('test-project'),
+      );
       const overrides: any = {
         versioning: 'None',
         image: 'node:20',
@@ -38,7 +41,11 @@ describe('Orchestrator Caching', () => {
       // For local AWS emulator tests, set provider strategy to 'aws' so the orchestrator's
       // built-in auto-fallback (orchestrator.ts) routes to local-docker for
       // container execution while S3 cache hooks still use the local emulator.
-      const awsEndpoint = process.env.AWS_S3_ENDPOINT || process.env.AWS_ENDPOINT || process.env.AWS_ENDPOINT_URL || '';
+      const awsEndpoint =
+        process.env.AWS_S3_ENDPOINT ||
+        process.env.AWS_ENDPOINT ||
+        process.env.AWS_ENDPOINT_URL ||
+        '';
       const isLocalStack = /localhost|127\.0\.0\.1|ministack|localstack/i.test(awsEndpoint);
       if (isLocalStack && OrchestratorOptions.providerStrategy !== 'k8s') {
         overrides.providerStrategy = 'aws';
@@ -100,7 +107,10 @@ describe('Orchestrator Caching', () => {
     }, 1_000_000_000);
     afterAll(async () => {
       // Clean up cache files to prevent disk space issues
-      if (OrchestratorOptions.providerStrategy === `local-docker` || OrchestratorOptions.providerStrategy === `aws`) {
+      if (
+        OrchestratorOptions.providerStrategy === `local-docker` ||
+        OrchestratorOptions.providerStrategy === `aws`
+      ) {
         const cachePath = `./orchestrator-cache`;
         if (fs.existsSync(cachePath)) {
           try {
@@ -124,7 +134,9 @@ describe('Orchestrator Caching', () => {
             );
 
             // Remove empty directories
-            await OrchestratorSystem.Run(`find ${cachePath} -type d -empty -delete 2>/dev/null || true`);
+            await OrchestratorSystem.Run(
+              `find ${cachePath} -type d -empty -delete 2>/dev/null || true`,
+            );
           } catch (error: any) {
             OrchestratorLogger.log(`Failed to cleanup cache: ${error.message}`);
 

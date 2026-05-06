@@ -1,8 +1,9 @@
+import { describe, it, expect, beforeEach, afterEach, beforeAll, afterAll, vi } from 'vitest';
 import { MiddlewareService } from './middleware-service';
 import { Middleware } from './middleware';
 
 // Mock dependencies
-jest.mock('../../orchestrator', () => ({
+vi.mock('../../orchestrator', () => ({
   __esModule: true,
   default: {
     buildParameters: {
@@ -12,7 +13,7 @@ jest.mock('../../orchestrator', () => ({
   },
 }));
 
-jest.mock('../../options/orchestrator-options', () => ({
+vi.mock('../../options/orchestrator-options', () => ({
   __esModule: true,
   default: {
     providerStrategy: 'aws',
@@ -20,11 +21,11 @@ jest.mock('../../options/orchestrator-options', () => ({
   },
 }));
 
-jest.mock('../core/orchestrator-logger', () => ({
+vi.mock('../core/orchestrator-logger', () => ({
   __esModule: true,
   default: {
-    log: jest.fn(),
-    logWarning: jest.fn(),
+    log: vi.fn(),
+    logWarning: vi.fn(),
   },
 }));
 

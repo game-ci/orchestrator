@@ -15,7 +15,10 @@ describe('Orchestrator Async Workflows', () => {
   setups();
   it('Responds', () => {});
 
-  if (OrchestratorOptions.orchestratorDebug && OrchestratorOptions.providerStrategy !== `local-docker`) {
+  if (
+    OrchestratorOptions.orchestratorDebug &&
+    OrchestratorOptions.providerStrategy !== `local-docker`
+  ) {
     it('Async Workflows', async () => {
       // Setup parameters
       const buildParameter = await CreateParameters({

@@ -11,10 +11,16 @@ import { getEngine } from '../../engine';
 
 export class BuildAutomationWorkflow implements WorkflowInterface {
   async run(orchestratorStepState: OrchestratorStepParameters) {
-    return await BuildAutomationWorkflow.standardBuildAutomation(orchestratorStepState.image, orchestratorStepState);
+    return await BuildAutomationWorkflow.standardBuildAutomation(
+      orchestratorStepState.image,
+      orchestratorStepState,
+    );
   }
 
-  private static async standardBuildAutomation(baseImage: string, orchestratorStepState: OrchestratorStepParameters) {
+  private static async standardBuildAutomation(
+    baseImage: string,
+    orchestratorStepState: OrchestratorStepParameters,
+  ) {
     // TODO accept post and pre build steps as yaml files in the repo
     OrchestratorLogger.log(`Orchestrator is running standard build automation`);
 
@@ -46,19 +52,21 @@ export class BuildAutomationWorkflow implements WorkflowInterface {
   }
 
   private static get BuildWorkflow() {
-    const setupHooks = CommandHookService.getHooks(Orchestrator.buildParameters.commandHooks).filter((x) =>
-      x.step?.includes(`setup`),
-    );
-    const buildHooks = CommandHookService.getHooks(Orchestrator.buildParameters.commandHooks).filter((x) =>
-      x.step?.includes(`build`),
-    );
+    const setupHooks = CommandHookService.getHooks(
+      Orchestrator.buildParameters.commandHooks,
+    ).filter((x) => x.step?.includes(`setup`));
+    const buildHooks = CommandHookService.getHooks(
+      Orchestrator.buildParameters.commandHooks,
+    ).filter((x) => x.step?.includes(`build`));
     const isContainerized =
       Orchestrator.buildParameters.providerStrategy === 'aws' ||
       Orchestrator.buildParameters.providerStrategy === 'k8s' ||
       Orchestrator.buildParameters.providerStrategy === 'local-docker';
 
     const builderPath = isContainerized
-      ? OrchestratorFolders.ToLinuxFolder(path.join(OrchestratorFolders.builderPathAbsolute, 'dist', `index.js`))
+      ? OrchestratorFolders.ToLinuxFolder(
+          path.join(OrchestratorFolders.builderPathAbsolute, 'dist', `index.js`),
+        )
       : OrchestratorFolders.ToLinuxFolder(path.join(process.cwd(), 'dist', `index.js`));
 
     // prettier-ignore
@@ -135,7 +143,12 @@ echo "CACHE_KEY=$CACHE_KEY"`;
 
   private static BuildCommands(builderPath: string, isContainerized: boolean) {
     const distFolder = path.join(OrchestratorFolders.builderPathAbsolute, 'dist');
-    const ubuntuPlatformsFolder = path.join(OrchestratorFolders.builderPathAbsolute, 'dist', 'platforms', 'ubuntu');
+    const ubuntuPlatformsFolder = path.join(
+      OrchestratorFolders.builderPathAbsolute,
+      'dist',
+      'platforms',
+      'ubuntu',
+    );
 
     if (isContainerized) {
       if (Orchestrator.buildParameters.providerStrategy === 'local-docker') {
@@ -251,20 +264,25 @@ echo "CACHE_KEY=$CACHE_KEY"`;
    * Real cache tars are created by remote-cli-post-build, not here.
    */
   private static engineCacheCommands(): string {
-    return getEngine().cacheFolders.map(folder => {
-      const prefix = folder.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase();
+    return getEngine()
+      .cacheFolders.map((folder) => {
+        const prefix = folder.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase();
 
-      return `mkdir -p "/data/cache/$CACHE_KEY/${folder}"`;
-    }).join('\n    ');
+        return `mkdir -p "/data/cache/$CACHE_KEY/${folder}"`;
+      })
+      .join('\n    ');
   }
 
   /**
    * Generate shell commands to mirror engine cache folders back into workspace for test assertions.
    */
   private static engineCacheMirrorCommands(): string {
-    return getEngine().cacheFolders.map(folder =>
-      `mkdir -p "$GITHUB_WORKSPACE/orchestrator-cache/cache/$CACHE_KEY/${folder}"
-    cp -a "/data/cache/$CACHE_KEY/${folder}/." "$GITHUB_WORKSPACE/orchestrator-cache/cache/$CACHE_KEY/${folder}/" || true`
-    ).join('\n    ');
+    return getEngine()
+      .cacheFolders.map(
+        (folder) =>
+          `mkdir -p "$GITHUB_WORKSPACE/orchestrator-cache/cache/$CACHE_KEY/${folder}"
+    cp -a "/data/cache/$CACHE_KEY/${folder}/." "$GITHUB_WORKSPACE/orchestrator-cache/cache/$CACHE_KEY/${folder}/" || true`,
+      )
+      .join('\n    ');
   }
 }

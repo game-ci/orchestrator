@@ -238,7 +238,9 @@ class BuildParameters {
     initEngine(p.engine, p.enginePlugin || undefined);
 
     p.orchestratorRepoName =
-      Input.getInput('orchestratorRepoName') || process.env.GITHUB_REPOSITORY || 'game-ci/unity-builder';
+      Input.getInput('orchestratorRepoName') ||
+      process.env.GITHUB_REPOSITORY ||
+      'game-ci/unity-builder';
     p.orchestratorBranch = Input.getInput('orchestratorBranch') || 'main';
     p.githubRepo = Input.getInput('githubRepo') || process.env.GITHUB_REPOSITORY || '';
     p.gitAuthMode = Input.getInput('gitAuthMode') || 'header';
@@ -263,9 +265,7 @@ class BuildParameters {
   }
 
   static shouldUseRetainedWorkspaceMode(buildParameters: BuildParameters): boolean {
-    return (
-      buildParameters.maxRetainedWorkspaces > 0 && buildParameters.lockedWorkspace !== ''
-    );
+    return buildParameters.maxRetainedWorkspaces > 0 && buildParameters.lockedWorkspace !== '';
   }
 
   static parseBuildFile(filename: string, _platform: string, _androidExportType: string): string {

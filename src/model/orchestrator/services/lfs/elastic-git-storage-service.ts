@@ -76,7 +76,8 @@ export class ElasticGitStorageService {
   static async findInstalled(): Promise<string> {
     // Check PATH
     try {
-      const whichCmd = os.platform() === 'win32' ? 'where elastic-git-storage' : 'which elastic-git-storage';
+      const whichCmd =
+        os.platform() === 'win32' ? 'where elastic-git-storage' : 'which elastic-git-storage';
       const result = await OrchestratorSystem.Run(whichCmd, false, true);
       const foundPath = result.trim().split('\n')[0].trim();
       if (foundPath && fs.existsSync(foundPath)) {
@@ -95,7 +96,11 @@ export class ElasticGitStorageService {
 
     if (os.platform() === 'win32') {
       candidates.push(
-        path.join(process.env.RUNNER_TOOL_CACHE || '', 'elastic-git-storage', 'elastic-git-storage.exe'),
+        path.join(
+          process.env.RUNNER_TOOL_CACHE || '',
+          'elastic-git-storage',
+          'elastic-git-storage.exe',
+        ),
         path.join(process.env.LOCALAPPDATA || '', 'elastic-git-storage', 'elastic-git-storage.exe'),
       );
     }
@@ -160,7 +165,9 @@ export class ElasticGitStorageService {
         throw new Error(`Binary not found after download at ${installPath}`);
       }
 
-      OrchestratorLogger.log(`[ElasticGitStorage] Successfully installed ${releaseTag} to ${installPath}`);
+      OrchestratorLogger.log(
+        `[ElasticGitStorage] Successfully installed ${releaseTag} to ${installPath}`,
+      );
 
       return installPath;
     } catch (error: any) {
@@ -187,7 +194,9 @@ export class ElasticGitStorageService {
     storagePaths: string[],
     repoPath: string,
   ): Promise<string> {
-    OrchestratorLogger.log(`[ElasticGitStorage] Setting up elastic-git-storage (version: ${version || 'latest'})`);
+    OrchestratorLogger.log(
+      `[ElasticGitStorage] Setting up elastic-git-storage (version: ${version || 'latest'})`,
+    );
 
     // Try to find existing installation
     let agentPath = await ElasticGitStorageService.findInstalled();

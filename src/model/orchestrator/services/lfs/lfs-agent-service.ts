@@ -31,9 +31,15 @@ export class LfsAgentService {
     OrchestratorLogger.log(`[LfsAgent]   Args: ${agentArgs}`);
 
     // Set git config entries for the custom transfer agent
-    await OrchestratorSystem.Run(`git -C "${repoPath}" config lfs.customtransfer.${agentName}.path "${agentPath}"`);
-    await OrchestratorSystem.Run(`git -C "${repoPath}" config lfs.customtransfer.${agentName}.args "${agentArgs}"`);
-    await OrchestratorSystem.Run(`git -C "${repoPath}" config lfs.standalonetransferagent ${agentName}`);
+    await OrchestratorSystem.Run(
+      `git -C "${repoPath}" config lfs.customtransfer.${agentName}.path "${agentPath}"`,
+    );
+    await OrchestratorSystem.Run(
+      `git -C "${repoPath}" config lfs.customtransfer.${agentName}.args "${agentArgs}"`,
+    );
+    await OrchestratorSystem.Run(
+      `git -C "${repoPath}" config lfs.standalonetransferagent ${agentName}`,
+    );
 
     // Set storage paths environment variable if provided
     if (storagePaths.length > 0) {

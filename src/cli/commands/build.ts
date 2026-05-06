@@ -79,7 +79,8 @@ const buildCommand: CommandModule<object, BuildArguments> = {
       .option('manual-exit', {
         alias: 'manualExit',
         type: 'boolean',
-        description: 'Suppresses -quit. Exit your build method using EditorApplication.Exit(0) instead.',
+        description:
+          'Suppresses -quit. Exit your build method using EditorApplication.Exit(0) instead.',
         default: false,
       })
       .option('enable-gpu', {
@@ -97,7 +98,8 @@ const buildCommand: CommandModule<object, BuildArguments> = {
       .option('android-export-type', {
         alias: 'androidExportType',
         type: 'string',
-        description: 'The android export type (androidPackage, androidAppBundle, androidStudioProject)',
+        description:
+          'The android export type (androidPackage, androidAppBundle, androidStudioProject)',
         default: 'androidPackage',
       })
       .option('android-keystore-name', {
@@ -205,7 +207,8 @@ const buildCommand: CommandModule<object, BuildArguments> = {
       .option('container-registry-repository', {
         alias: 'containerRegistryRepository',
         type: 'string',
-        description: 'Container registry and repository to pull image from. Only applicable if customImage is not set.',
+        description:
+          'Container registry and repository to pull image from. Only applicable if customImage is not set.',
         default: 'unityci/editor',
       })
       .option('container-registry-image-version', {
@@ -248,10 +251,14 @@ const buildCommand: CommandModule<object, BuildArguments> = {
       .option('unity-hub-version-on-mac', {
         alias: 'unityHubVersionOnMac',
         type: 'string',
-        description: 'The version of Unity Hub to install on MacOS (e.g. 3.4.0). Defaults to latest available on brew.',
+        description:
+          'The version of Unity Hub to install on MacOS (e.g. 3.4.0). Defaults to latest available on brew.',
         default: '',
       })
-      .example('game-ci build --target-platform StandaloneLinux64 --provider-strategy aws', 'Build on AWS via orchestrator')
+      .example(
+        'game-ci build --target-platform StandaloneLinux64 --provider-strategy aws',
+        'Build on AWS via orchestrator',
+      )
       .example(
         'game-ci build --target-platform Android --provider-strategy k8s --kube-config <base64>',
         'Build on Kubernetes via orchestrator',

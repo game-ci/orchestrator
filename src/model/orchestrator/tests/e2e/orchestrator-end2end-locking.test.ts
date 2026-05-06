@@ -21,7 +21,10 @@ describe('Orchestrator Locking', () => {
   it('Responds', () => {});
   if (OrchestratorOptions.orchestratorDebug) {
     it(`Simple Locking End2End Flow`, async () => {
-      const unityVersion = await UnityVersioning.determineUnityVersion('test-project', UnityVersioning.read('test-project'));
+      const unityVersion = await UnityVersioning.determineUnityVersion(
+        'test-project',
+        UnityVersioning.read('test-project'),
+      );
       const overrides: any = {
         versioning: 'None',
         projectPath: 'test-project',
@@ -37,17 +40,31 @@ describe('Orchestrator Locking', () => {
       Orchestrator.buildParameters = buildParameters;
       await SharedWorkspaceLocking.CreateWorkspace(newWorkspaceName, buildParameters);
       expect(await SharedWorkspaceLocking.DoesCacheKeyTopLevelExist(buildParameters)).toBeTruthy();
-      expect(await SharedWorkspaceLocking.DoesWorkspaceExist(newWorkspaceName, buildParameters)).toBeTruthy();
+      expect(
+        await SharedWorkspaceLocking.DoesWorkspaceExist(newWorkspaceName, buildParameters),
+      ).toBeTruthy();
       const isExpectedUnlockedBeforeLocking =
-        (await SharedWorkspaceLocking.IsWorkspaceLocked(newWorkspaceName, buildParameters)) === false;
+        (await SharedWorkspaceLocking.IsWorkspaceLocked(newWorkspaceName, buildParameters)) ===
+        false;
       expect(isExpectedUnlockedBeforeLocking).toBeTruthy();
-      const result = await SharedWorkspaceLocking.LockWorkspace(newWorkspaceName, runId, buildParameters);
+      const result = await SharedWorkspaceLocking.LockWorkspace(
+        newWorkspaceName,
+        runId,
+        buildParameters,
+      );
       expect(result).toBeTruthy();
-      const lines = await SharedWorkspaceLocking.ReadLines(`aws s3 ls ${SharedWorkspaceLocking.workspaceRoot}`);
+      const lines = await SharedWorkspaceLocking.ReadLines(
+        `aws s3 ls ${SharedWorkspaceLocking.workspaceRoot}`,
+      );
       expect(lines.map((x) => x.replace(`/`, ``)).includes(buildParameters.cacheKey));
       expect(await SharedWorkspaceLocking.DoesCacheKeyTopLevelExist(buildParameters)).toBeTruthy();
-      expect(await SharedWorkspaceLocking.DoesWorkspaceExist(newWorkspaceName, buildParameters)).toBeTruthy();
-      const allLocks = await SharedWorkspaceLocking.GetAllLocksForWorkspace(newWorkspaceName, buildParameters);
+      expect(
+        await SharedWorkspaceLocking.DoesWorkspaceExist(newWorkspaceName, buildParameters),
+      ).toBeTruthy();
+      const allLocks = await SharedWorkspaceLocking.GetAllLocksForWorkspace(
+        newWorkspaceName,
+        buildParameters,
+      );
       expect(
         (
           await SharedWorkspaceLocking.ReadLines(
@@ -62,9 +79,12 @@ describe('Orchestrator Locking', () => {
           )
         ).filter((x) => x.endsWith(`${newWorkspaceName}_workspace`)),
       ).toHaveLength(1);
-      expect(allLocks.filter((x) => x.endsWith(`${newWorkspaceName}_workspace_lock`)).length).toBeGreaterThan(0);
+      expect(
+        allLocks.filter((x) => x.endsWith(`${newWorkspaceName}_workspace_lock`)).length,
+      ).toBeGreaterThan(0);
       const isExpectedLockedAfterLocking =
-        (await SharedWorkspaceLocking.IsWorkspaceLocked(newWorkspaceName, buildParameters)) === true;
+        (await SharedWorkspaceLocking.IsWorkspaceLocked(newWorkspaceName, buildParameters)) ===
+        true;
       expect(isExpectedLockedAfterLocking).toBeTruthy();
       const locksBeforeRelease = await SharedWorkspaceLocking.GetAllLocksForWorkspace(
         newWorkspaceName,
@@ -73,21 +93,35 @@ describe('Orchestrator Locking', () => {
       OrchestratorLogger.log(JSON.stringify(locksBeforeRelease, undefined, 4));
       expect(locksBeforeRelease.length).toBe(1);
       await SharedWorkspaceLocking.ReleaseWorkspace(newWorkspaceName, runId, buildParameters);
-      const locks = await SharedWorkspaceLocking.GetAllLocksForWorkspace(newWorkspaceName, buildParameters);
+      const locks = await SharedWorkspaceLocking.GetAllLocksForWorkspace(
+        newWorkspaceName,
+        buildParameters,
+      );
       expect(locks.length).toBe(0);
       const isExpectedNotLockedAfterReleasing =
-        (await SharedWorkspaceLocking.IsWorkspaceLocked(newWorkspaceName, buildParameters)) === false;
+        (await SharedWorkspaceLocking.IsWorkspaceLocked(newWorkspaceName, buildParameters)) ===
+        false;
       expect(isExpectedNotLockedAfterReleasing).toBeTruthy();
-      const lockingResult2 = await SharedWorkspaceLocking.LockWorkspace(newWorkspaceName, runId, buildParameters);
+      const lockingResult2 = await SharedWorkspaceLocking.LockWorkspace(
+        newWorkspaceName,
+        runId,
+        buildParameters,
+      );
       expect(lockingResult2).toBeTruthy();
-      expect((await SharedWorkspaceLocking.IsWorkspaceLocked(newWorkspaceName, buildParameters)) === true).toBeTruthy();
+      expect(
+        (await SharedWorkspaceLocking.IsWorkspaceLocked(newWorkspaceName, buildParameters)) ===
+          true,
+      ).toBeTruthy();
       await SharedWorkspaceLocking.ReleaseWorkspace(newWorkspaceName, runId, buildParameters);
       expect(
-        (await SharedWorkspaceLocking.IsWorkspaceLocked(newWorkspaceName, buildParameters)) === false,
+        (await SharedWorkspaceLocking.IsWorkspaceLocked(newWorkspaceName, buildParameters)) ===
+          false,
       ).toBeTruthy();
       await SharedWorkspaceLocking.CleanupWorkspace(newWorkspaceName, buildParameters);
       OrchestratorLogger.log(`Starting get or create`);
-      expect(await SharedWorkspaceLocking.GetLockedWorkspace(newWorkspaceName, runId, buildParameters)).toBeTruthy();
+      expect(
+        await SharedWorkspaceLocking.GetLockedWorkspace(newWorkspaceName, runId, buildParameters),
+      ).toBeTruthy();
     }, 350000);
   }
 });

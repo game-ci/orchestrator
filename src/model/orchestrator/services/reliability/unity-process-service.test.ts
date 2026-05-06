@@ -1,27 +1,36 @@
-import { execFileSync } from "node:child_process";
-import { UnityProcessService } from "./unity-process-service";
+import {
+  describe,
+  it,
+  expect,
+  beforeEach,
+  afterEach,
+  beforeAll,
+  afterAll,
+  vi,
+  type MockedFunction,
+} from 'vitest';
+import { execFileSync } from 'node:child_process';
+import { UnityProcessService } from './unity-process-service';
 
-jest.mock("node:child_process");
-jest.mock("../core/orchestrator-logger", () => ({
+vi.mock('node:child_process');
+vi.mock('../core/orchestrator-logger', () => ({
   __esModule: true,
   default: {
-    log: jest.fn(),
-    logWarning: jest.fn(),
+    log: vi.fn(),
+    logWarning: vi.fn(),
   },
 }));
 
-const mockExecFileSync = execFileSync as jest.MockedFunction<
-  typeof execFileSync
->;
+const mockExecFileSync = execFileSync as MockedFunction<typeof execFileSync>;
 
-describe("UnityProcessService", () => {
+describe('UnityProcessService', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
-  it("parses cleanup output from the PowerShell helper", () => {
+  it('parses cleanup output from the PowerShell helper', () => {
     const result = UnityProcessService.parseCleanupOutput(
-      "KILLED=12,34\r\nHUB=True\r\nLICENSING=False\r\n"
+      'KILLED=12,34\r\nHUB=True\r\nLICENSING=False\r\n',
     );
 
     expect(result).toEqual({
@@ -32,24 +41,20 @@ describe("UnityProcessService", () => {
     });
   });
 
-  it("returns killed process ids when cleanup runs on Windows", () => {
+  it('returns killed process ids when cleanup runs on Windows', () => {
     const originalPlatform = process.platform;
-    Object.defineProperty(process, "platform", { value: "win32" });
-    mockExecFileSync.mockReturnValue(
-      "KILLED=42\nHUB=True\nLICENSING=True\n" as any
-    );
+    Object.defineProperty(process, 'platform', { value: 'win32' });
+    mockExecFileSync.mockReturnValue('KILLED=42\nHUB=True\nLICENSING=True\n' as any);
 
-    const result = UnityProcessService.cleanupWorkspaceProcesses(
-      "C:/workspace/project"
-    );
+    const result = UnityProcessService.cleanupWorkspaceProcesses('C:/workspace/project');
 
     expect(result.killedProcessIds).toEqual([42]);
     expect(mockExecFileSync).toHaveBeenCalledWith(
-      "powershell.exe",
+      'powershell.exe',
       expect.any(Array),
-      expect.any(Object)
+      expect.any(Object),
     );
 
-    Object.defineProperty(process, "platform", { value: originalPlatform });
+    Object.defineProperty(process, 'platform', { value: originalPlatform });
   });
 });

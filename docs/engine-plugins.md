@@ -19,11 +19,11 @@ interface EnginePlugin {
 }
 ```
 
-| Field | Purpose | Example |
-| --- | --- | --- |
-| `name` | Identifies the engine throughout the orchestrator | `'godot'` |
-| `cacheFolders` | Folders preserved between builds to speed up iteration | `['.godot/imported', '.godot/shader_cache']` |
-| `preStopCommand` | Runs during container shutdown (e.g. Kubernetes preStop hook, 90s grace period) | `'cleanup-license.sh'` |
+| Field            | Purpose                                                                         | Example                                      |
+| ---------------- | ------------------------------------------------------------------------------- | -------------------------------------------- |
+| `name`           | Identifies the engine throughout the orchestrator                               | `'godot'`                                    |
+| `cacheFolders`   | Folders preserved between builds to speed up iteration                          | `['.godot/imported', '.godot/shader_cache']` |
+| `preStopCommand` | Runs during container shutdown (e.g. Kubernetes preStop hook, 90s grace period) | `'cleanup-license.sh'`                       |
 
 ## How Plugins Integrate
 
@@ -102,11 +102,11 @@ flowchart LR
   L --> EP["Active EnginePlugin"]
 ```
 
-| Source | Format | Example |
-| --- | --- | --- |
-| NPM module | Package name or local path | `@game-ci/godot-engine`, `./my-plugin.js` |
-| CLI executable | `cli:<path>` | `cli:/usr/local/bin/my-engine-plugin` |
-| Docker image | `docker:<image>` | `docker:gameci/godot-engine-plugin` |
+| Source         | Format                     | Example                                   |
+| -------------- | -------------------------- | ----------------------------------------- |
+| NPM module     | Package name or local path | `@game-ci/godot-engine`, `./my-plugin.js` |
+| CLI executable | `cli:<path>`               | `cli:/usr/local/bin/my-engine-plugin`     |
+| Docker image   | `docker:<image>`           | `docker:gameci/godot-engine-plugin`       |
 
 ## Writing a Plugin
 

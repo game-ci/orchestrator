@@ -1,3 +1,14 @@
+import {
+  describe,
+  it,
+  expect,
+  beforeEach,
+  afterEach,
+  beforeAll,
+  afterAll,
+  vi,
+  type Mocked,
+} from 'vitest';
 import fs from 'node:fs';
 import { HotRunnerRegistry } from './hot-runner-registry';
 import { HotRunnerHealthMonitor } from './hot-runner-health-monitor';
@@ -12,10 +23,10 @@ import {
 } from './hot-runner-types';
 
 // Mock dependencies
-jest.mock('node:fs');
-jest.mock('../core/orchestrator-logger');
+vi.mock('node:fs');
+vi.mock('../core/orchestrator-logger');
 
-const mockFs = fs as jest.Mocked<typeof fs>;
+const mockFs = fs as Mocked<typeof fs>;
 
 function createMockConfig(overrides?: Partial<HotRunnerConfig>): HotRunnerConfig {
   return {
@@ -35,10 +46,10 @@ function createMockConfig(overrides?: Partial<HotRunnerConfig>): HotRunnerConfig
 function createMockTransport(overrides?: Partial<HotRunnerTransport>): HotRunnerTransport {
   return {
     // eslint-disable-next-line unicorn/no-useless-undefined
-    connect: jest.fn().mockResolvedValue(undefined),
+    connect: vi.fn().mockResolvedValue(undefined),
     // eslint-disable-next-line unicorn/no-useless-undefined
-    disconnect: jest.fn().mockResolvedValue(undefined),
-    sendJob: jest.fn().mockResolvedValue({
+    disconnect: vi.fn().mockResolvedValue(undefined),
+    sendJob: vi.fn().mockResolvedValue({
       jobId: 'test-job',
       success: true,
       exitCode: 0,
@@ -46,7 +57,7 @@ function createMockTransport(overrides?: Partial<HotRunnerTransport>): HotRunner
       output: 'Build succeeded',
       artifacts: ['build/output.exe'],
     } as HotRunnerJobResult),
-    getStatus: jest.fn().mockResolvedValue({
+    getStatus: vi.fn().mockResolvedValue({
       id: 'mock-runner',
       state: 'idle',
       unityVersion: '2022.3.0f1',
@@ -56,7 +67,7 @@ function createMockTransport(overrides?: Partial<HotRunnerTransport>): HotRunner
       lastHealthCheck: new Date().toISOString(),
       memoryUsageMB: 1024,
     } as HotRunnerStatus),
-    healthCheck: jest.fn().mockResolvedValue(true),
+    healthCheck: vi.fn().mockResolvedValue(true),
     ...overrides,
   };
 }
@@ -76,7 +87,7 @@ describe('HotRunnerRegistry', () => {
   let registry: HotRunnerRegistry;
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     registry = new HotRunnerRegistry();
   });
 
@@ -218,7 +229,7 @@ describe('HotRunnerRegistry', () => {
 
     // Verify writeFileSync was called for persistence
     expect(mockFs.writeFileSync).toHaveBeenCalled();
-    const writtenData = JSON.parse((mockFs.writeFileSync as jest.Mock).mock.calls[0][1] as string);
+    const writtenData = JSON.parse((mockFs.writeFileSync as vi.Mock).mock.calls[0][1] as string);
     expect(writtenData.runners).toBeDefined();
     expect(writtenData.runners[id]).toBeDefined();
   });
@@ -385,8 +396,8 @@ describe('HotRunnerHealthMonitor', () => {
   let transports: Map<string, HotRunnerTransport>;
 
   beforeEach(() => {
-    jest.clearAllMocks();
-    jest.useFakeTimers();
+    vi.clearAllMocks();
+    vi.useFakeTimers();
     monitor = new HotRunnerHealthMonitor();
     registry = new HotRunnerRegistry();
     transports = new Map();
@@ -394,7 +405,7 @@ describe('HotRunnerHealthMonitor', () => {
 
   afterEach(() => {
     monitor.stopMonitoring();
-    jest.useRealTimers();
+    vi.useRealTimers();
   });
 
   it('should start and stop monitoring', () => {
@@ -423,7 +434,7 @@ describe('HotRunnerHealthMonitor', () => {
     registry.updateRunner(id, { state: 'idle' });
 
     const transport = createMockTransport({
-      healthCheck: jest.fn().mockResolvedValue(false),
+      healthCheck: vi.fn().mockResolvedValue(false),
     });
     transports.set(id, transport);
     monitor.startMonitoring(registry, 30, transports);
@@ -440,7 +451,7 @@ describe('HotRunnerHealthMonitor', () => {
     registry.updateRunner(id, { state: 'idle' });
 
     const transport = createMockTransport({
-      healthCheck: jest.fn().mockRejectedValue(new Error('Connection refused')),
+      healthCheck: vi.fn().mockRejectedValue(new Error('Connection refused')),
     });
     transports.set(id, transport);
     monitor.startMonitoring(registry, 30, transports);
@@ -514,7 +525,7 @@ describe('HotRunnerDispatcher', () => {
   let dispatcher: HotRunnerDispatcher;
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     registry = new HotRunnerRegistry();
     transports = new Map();
     dispatcher = new HotRunnerDispatcher(transports);
@@ -541,7 +552,7 @@ describe('HotRunnerDispatcher', () => {
 
     const statesDuringJob: string[] = [];
     const transport = createMockTransport({
-      sendJob: jest.fn().mockImplementation(async () => {
+      sendJob: vi.fn().mockImplementation(async () => {
         const runner = registry.getRunner(id);
         if (runner) statesDuringJob.push(runner.state);
 
@@ -582,7 +593,9 @@ describe('HotRunnerDispatcher', () => {
     // No runners registered at all
     const request = createMockJobRequest({ timeout: 100 });
 
-    await expect(dispatcher.dispatchJob(request, registry, '2022.3.0f1')).rejects.toThrow(/Timed out waiting/);
+    await expect(dispatcher.dispatchJob(request, registry, '2022.3.0f1')).rejects.toThrow(
+      /Timed out waiting/,
+    );
   });
 
   it('should throw when runner has no transport', async () => {
@@ -593,7 +606,9 @@ describe('HotRunnerDispatcher', () => {
 
     const request = createMockJobRequest();
 
-    await expect(dispatcher.dispatchJob(request, registry, '2022.3.0f1')).rejects.toThrow(/No transport available/);
+    await expect(dispatcher.dispatchJob(request, registry, '2022.3.0f1')).rejects.toThrow(
+      /No transport available/,
+    );
   });
 
   it('should handle job failure and return runner to idle', async () => {
@@ -601,13 +616,13 @@ describe('HotRunnerDispatcher', () => {
     registry.updateRunner(id, { state: 'idle' });
 
     const transport = createMockTransport({
-      sendJob: jest.fn().mockRejectedValue(new Error('Unity crashed')),
+      sendJob: vi.fn().mockRejectedValue(new Error('Unity crashed')),
     });
     transports.set(id, transport);
 
-    await expect(dispatcher.dispatchJob(createMockJobRequest(), registry, '2022.3.0f1')).rejects.toThrow(
-      'Unity crashed',
-    );
+    await expect(
+      dispatcher.dispatchJob(createMockJobRequest(), registry, '2022.3.0f1'),
+    ).rejects.toThrow('Unity crashed');
 
     // Runner should be back to idle despite failure
     const runner = registry.getRunner(id);
@@ -619,7 +634,7 @@ describe('HotRunnerDispatcher', () => {
     registry.updateRunner(id, { state: 'idle' });
 
     const transport = createMockTransport({
-      sendJob: jest.fn().mockImplementation(
+      sendJob: vi.fn().mockImplementation(
         () => new Promise((resolve) => setTimeout(resolve, 60000)), // never resolves within timeout
       ),
     });
@@ -627,7 +642,9 @@ describe('HotRunnerDispatcher', () => {
 
     const request = createMockJobRequest({ timeout: 50 });
 
-    await expect(dispatcher.dispatchJob(request, registry, '2022.3.0f1')).rejects.toThrow(/timed out/);
+    await expect(dispatcher.dispatchJob(request, registry, '2022.3.0f1')).rejects.toThrow(
+      /timed out/,
+    );
   });
 
   it('should disconnect transport on job timeout', async () => {
@@ -635,7 +652,7 @@ describe('HotRunnerDispatcher', () => {
     registry.updateRunner(id, { state: 'idle' });
 
     const transport = createMockTransport({
-      sendJob: jest.fn().mockImplementation(
+      sendJob: vi.fn().mockImplementation(
         () => new Promise((resolve) => setTimeout(resolve, 60000)), // never resolves within timeout
       ),
     });
@@ -643,7 +660,9 @@ describe('HotRunnerDispatcher', () => {
 
     const request = createMockJobRequest({ timeout: 50 });
 
-    await expect(dispatcher.dispatchJob(request, registry, '2022.3.0f1')).rejects.toThrow(/timed out/);
+    await expect(dispatcher.dispatchJob(request, registry, '2022.3.0f1')).rejects.toThrow(
+      /timed out/,
+    );
 
     // Transport should have been disconnected to clean up orphaned connection
     expect(transport.disconnect).toHaveBeenCalled();
@@ -656,7 +675,7 @@ describe('HotRunnerDispatcher', () => {
     const transport = createMockTransport();
     transports.set(id, transport);
 
-    const outputCallback = jest.fn();
+    const outputCallback = vi.fn();
     await dispatcher.dispatchJob(createMockJobRequest(), registry, '2022.3.0f1', outputCallback);
 
     expect(outputCallback).toHaveBeenCalledWith('Build succeeded');
@@ -688,7 +707,7 @@ describe('HotRunnerService', () => {
   let service: HotRunnerService;
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     mockFs.existsSync.mockReturnValue(false);
     service = new HotRunnerService();
   });

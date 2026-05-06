@@ -17,7 +17,10 @@ class OrchestratorQueryOverride {
   static queryOverrides: { [key: string]: string } | undefined;
 
   public static query(key: string, alternativeKey: string) {
-    if (OrchestratorQueryOverride.queryOverrides && OrchestratorQueryOverride.queryOverrides[key] !== undefined) {
+    if (
+      OrchestratorQueryOverride.queryOverrides &&
+      OrchestratorQueryOverride.queryOverrides[key] !== undefined
+    ) {
       return OrchestratorQueryOverride.queryOverrides[key];
     }
     if (
@@ -38,7 +41,7 @@ class OrchestratorQueryOverride {
           OrchestratorOptions.pullInputList.includes(query) ||
           OrchestratorOptions.pullInputList.includes(Input.ToEnvVarFormat(query));
 
-        return doesInclude ? true : false;
+        return doesInclude;
       } else {
         return true;
       }
@@ -89,9 +92,14 @@ class OrchestratorQueryOverride {
       if (secretSource.endsWith('.yml') || secretSource.endsWith('.yaml')) {
         const definitions = SecretSourceService.loadFromYaml(secretSource);
         if (definitions.length > 0) {
-          OrchestratorLogger.log(`Loaded ${definitions.length} secret source(s) from ${secretSource}`);
+          OrchestratorLogger.log(
+            `Loaded ${definitions.length} secret source(s) from ${secretSource}`,
+          );
           for (const key of queries) {
-            OrchestratorQueryOverride.queryOverrides[key] = await SecretSourceService.fetchSecret(definitions[0], key);
+            OrchestratorQueryOverride.queryOverrides[key] = await SecretSourceService.fetchSecret(
+              definitions[0],
+              key,
+            );
           }
         }
 
@@ -108,7 +116,8 @@ class OrchestratorQueryOverride {
     // Legacy: use inputPullCommand if set
     for (const element of queries) {
       if (OrchestratorQueryOverride.shouldUseOverride(element)) {
-        OrchestratorQueryOverride.queryOverrides[element] = await OrchestratorQueryOverride.queryOverride(element);
+        OrchestratorQueryOverride.queryOverrides[element] =
+          await OrchestratorQueryOverride.queryOverride(element);
       }
     }
   }

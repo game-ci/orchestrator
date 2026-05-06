@@ -18,17 +18,17 @@ flowchart TD
 
 ## Service Reference
 
-| Service | Description |
-| --- | --- |
-| **Cache** | Engine-aware asset caching with local cache layer and retained workspaces |
-| **Hooks** | Container hooks (pre/post-build), command hooks, and trigger-aware middleware pipeline |
-| **Sync** | Incremental file sync — transfer only changed files to build containers |
-| **Hot Runner** | Keep build environments warm between builds for sub-minute iteration |
-| **Reliability** | Automatic retries, health checks, git integrity verification, provider fallback |
-| **Output** | Artifact collection with pluggable upload handlers |
-| **Test Workflow** | Structured test execution with result parsing and reporting |
-| **LFS** | Git LFS tracking, hashing, and storage path mapping |
-| **Core** | Logging, resource tracking, workspace locking, log streaming |
+| Service           | Description                                                                            |
+| ----------------- | -------------------------------------------------------------------------------------- |
+| **Cache**         | Engine-aware asset caching with local cache layer and retained workspaces              |
+| **Hooks**         | Container hooks (pre/post-build), command hooks, and trigger-aware middleware pipeline |
+| **Sync**          | Incremental file sync — transfer only changed files to build containers                |
+| **Hot Runner**    | Keep build environments warm between builds for sub-minute iteration                   |
+| **Reliability**   | Automatic retries, health checks, git integrity verification, provider fallback        |
+| **Output**        | Artifact collection with pluggable upload handlers                                     |
+| **Test Workflow** | Structured test execution with result parsing and reporting                            |
+| **LFS**           | Git LFS tracking, hashing, and storage path mapping                                    |
+| **Core**          | Logging, resource tracking, workspace locking, log streaming                           |
 
 ## Source Layout
 

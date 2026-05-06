@@ -281,7 +281,10 @@ export function createPlugin(): OrchestratorPlugin {
       // ── Test workflow ──────────────────────────────────────────
       if (config.testSuitePath) {
         core.info('[TestWorkflow] Test suite path detected, using test workflow engine');
-        const results = await TestWorkflowService.executeTestSuite(config.testSuitePath, coreParams as any);
+        const results = await TestWorkflowService.executeTestSuite(
+          config.testSuitePath,
+          coreParams as any,
+        );
 
         let totalFailed = 0;
         for (const result of results || []) {
@@ -381,10 +384,14 @@ export function createPlugin(): OrchestratorPlugin {
 
       // ── Child workspace restore ────────────────────────────────
       if (config.childWorkspacesEnabled && config.childWorkspaceName) {
-        const { ChildWorkspaceService } = await import('./model/orchestrator/services/cache/child-workspace-service');
+        const { ChildWorkspaceService } =
+          await import('./model/orchestrator/services/cache/child-workspace-service');
         const cacheRoot =
           config.childWorkspaceCacheRoot ||
-          path.join(coreParams.runnerTempPath || process.env.RUNNER_TEMP || '', 'game-ci-workspaces');
+          path.join(
+            coreParams.runnerTempPath || process.env.RUNNER_TEMP || '',
+            'game-ci-workspaces',
+          );
 
         childWorkspaceConfig = ChildWorkspaceService.buildConfig({
           childWorkspacesEnabled: config.childWorkspacesEnabled,
@@ -395,7 +402,10 @@ export function createPlugin(): OrchestratorPlugin {
         });
 
         const projectFullPath = path.join(ws, coreParams.projectPath);
-        const restored = ChildWorkspaceService.initializeWorkspace(projectFullPath, childWorkspaceConfig);
+        const restored = ChildWorkspaceService.initializeWorkspace(
+          projectFullPath,
+          childWorkspaceConfig,
+        );
         core.info(
           `Child workspace "${config.childWorkspaceName}": ${restored ? 'restored from cache' : 'starting fresh'}`,
         );
@@ -407,9 +417,8 @@ export function createPlugin(): OrchestratorPlugin {
       // ── Submodule profiles ─────────────────────────────────────
       if (config.submoduleProfilePath) {
         core.info('Initializing submodules from profile...');
-        const { SubmoduleProfileService } = await import(
-          './model/orchestrator/services/submodule/submodule-profile-service'
-        );
+        const { SubmoduleProfileService } =
+          await import('./model/orchestrator/services/submodule/submodule-profile-service');
         const plan = await SubmoduleProfileService.createInitPlan(
           config.submoduleProfilePath,
           config.submoduleVariantPath,
@@ -417,14 +426,19 @@ export function createPlugin(): OrchestratorPlugin {
         );
 
         if (plan) {
-          await SubmoduleProfileService.execute(plan, ws, config.submoduleToken || coreParams.gitPrivateToken);
+          await SubmoduleProfileService.execute(
+            plan,
+            ws,
+            config.submoduleToken || coreParams.gitPrivateToken,
+          );
         }
       }
 
       // ── Custom LFS transfer agent ─────────────────────────────
       if (config.lfsTransferAgent) {
         core.info('Configuring custom LFS transfer agent...');
-        const { LfsAgentService } = await import('./model/orchestrator/services/lfs/lfs-agent-service');
+        const { LfsAgentService } =
+          await import('./model/orchestrator/services/lfs/lfs-agent-service');
         await LfsAgentService.configure(
           config.lfsTransferAgent,
           config.lfsTransferAgentArgs,
@@ -435,7 +449,8 @@ export function createPlugin(): OrchestratorPlugin {
 
       // ── Local cache restore ────────────────────────────────────
       if (config.localCacheEnabled) {
-        const { LocalCacheService } = await import('./model/orchestrator/services/cache/local-cache-service');
+        const { LocalCacheService } =
+          await import('./model/orchestrator/services/cache/local-cache-service');
         const cacheRoot = LocalCacheService.resolveCacheRoot(coreParams as any) || '';
         const cacheKey =
           LocalCacheService.generateCacheKey(
@@ -472,7 +487,8 @@ export function createPlugin(): OrchestratorPlugin {
 
       // ── Git hooks ──────────────────────────────────────────────
       if (config.gitHooksEnabled) {
-        const { GitHooksService } = await import('./model/orchestrator/services/hooks/git-hooks-service');
+        const { GitHooksService } =
+          await import('./model/orchestrator/services/hooks/git-hooks-service');
         await GitHooksService.installHooks(ws);
         if (config.gitHooksSkipList) {
           const environment = GitHooksService.configureSkipList(config.gitHooksSkipList.split(','));
@@ -493,7 +509,8 @@ export function createPlugin(): OrchestratorPlugin {
     async afterLocalBuild(ws: string, exitCode: number): Promise<void> {
       // ── Local cache save ───────────────────────────────────────
       if (config.localCacheEnabled && localCacheState) {
-        const { LocalCacheService } = await import('./model/orchestrator/services/cache/local-cache-service');
+        const { LocalCacheService } =
+          await import('./model/orchestrator/services/cache/local-cache-service');
         const { cacheRoot, cacheKey } = localCacheState;
 
         if (config.localCacheLibrary) {
@@ -509,7 +526,8 @@ export function createPlugin(): OrchestratorPlugin {
 
       // ── Child workspace save ───────────────────────────────────
       if (childWorkspaceConfig?.enabled) {
-        const { ChildWorkspaceService } = await import('./model/orchestrator/services/cache/child-workspace-service');
+        const { ChildWorkspaceService } =
+          await import('./model/orchestrator/services/cache/child-workspace-service');
         const projectFullPath = path.join(ws, coreParams.projectPath);
 
         const preSaveSize = ChildWorkspaceService.getWorkspaceSize(projectFullPath);
@@ -535,7 +553,10 @@ export function createPlugin(): OrchestratorPlugin {
       if (config.buildArchiveEnabled && exitCode === 0) {
         core.info('Archiving build output...');
         BuildReliabilityService.archiveBuildOutput(coreParams.buildPath, config.buildArchivePath);
-        BuildReliabilityService.enforceRetention(config.buildArchivePath, config.buildArchiveRetention);
+        BuildReliabilityService.enforceRetention(
+          config.buildArchivePath,
+          config.buildArchiveRetention,
+        );
       }
 
       // ── Artifact collection and upload ─────────────────────────
@@ -603,7 +624,11 @@ export function createPlugin(): OrchestratorPlugin {
     // Internal helper — not part of the public interface
     async applySyncStrategy(ws: string): Promise<void> {
       const strategy = config.syncStrategy;
-      const resolvedStrategy = IncrementalSyncService.resolveStrategy(strategy as SyncStrategy, ws, config.syncStatePath);
+      const resolvedStrategy = IncrementalSyncService.resolveStrategy(
+        strategy as SyncStrategy,
+        ws,
+        config.syncStatePath,
+      );
 
       if (resolvedStrategy === 'full') {
         core.info('[Sync] Resolved to full sync (no incremental state available)');
@@ -614,7 +639,11 @@ export function createPlugin(): OrchestratorPlugin {
       switch (resolvedStrategy) {
         case 'git-delta': {
           const targetReference = coreParams.gitSha || coreParams.branch;
-          const changedFiles = await IncrementalSyncService.syncGitDelta(ws, targetReference, config.syncStatePath);
+          const changedFiles = await IncrementalSyncService.syncGitDelta(
+            ws,
+            targetReference,
+            config.syncStatePath,
+          );
           core.info(`[Sync] Git delta sync applied: ${changedFiles} file(s) changed`);
           break;
         }
@@ -635,11 +664,15 @@ export function createPlugin(): OrchestratorPlugin {
           if (!config.syncInputRef) {
             throw new Error('[Sync] storage-pull strategy requires syncInputRef to be set');
           }
-          const pulledFiles = await IncrementalSyncService.syncStoragePull(ws, config.syncInputRef, {
-            rcloneRemote: config.syncStorageRemote || undefined,
-            syncRevertAfter: config.syncRevertAfter,
-            statePath: config.syncStatePath,
-          });
+          const pulledFiles = await IncrementalSyncService.syncStoragePull(
+            ws,
+            config.syncInputRef,
+            {
+              rcloneRemote: config.syncStorageRemote || undefined,
+              syncRevertAfter: config.syncRevertAfter,
+              statePath: config.syncStatePath,
+            },
+          );
           core.info(`[Sync] Storage pull complete: ${pulledFiles.length} file(s)`);
           break;
         }

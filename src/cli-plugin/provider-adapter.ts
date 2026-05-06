@@ -1,5 +1,5 @@
-import { ProviderInterface } from '../model/orchestrator/providers/provider-interface'
-import { createBuildParametersFromCliOptions } from './build-parameters-adapter'
+import { ProviderInterface } from '../model/orchestrator/providers/provider-interface';
+import { createBuildParametersFromCliOptions } from './build-parameters-adapter';
 
 /**
  * Wraps an orchestrator ProviderInterface constructor so it can be consumed
@@ -15,19 +15,29 @@ export function createProviderAdapter(
   // eslint-disable-next-line no-unused-vars
 ): new (options: any) => any {
   return class ProviderAdapter {
-    private provider: ProviderInterface
+    private provider: ProviderInterface;
 
     constructor(options: Record<string, any>) {
-      const buildParameters = createBuildParametersFromCliOptions(options)
-      this.provider = new ProviderClass(buildParameters)
+      const buildParameters = createBuildParametersFromCliOptions(options);
+      this.provider = new ProviderClass(buildParameters);
     }
 
     async cleanupWorkflow(buildParameters: any, branchName: string, defaultSecretsArray: any[]) {
-      return this.provider.cleanupWorkflow(buildParameters, branchName, defaultSecretsArray)
+      return this.provider.cleanupWorkflow(buildParameters, branchName, defaultSecretsArray);
     }
 
-    async setupWorkflow(buildGuid: string, buildParameters: any, branchName: string, defaultSecretsArray: any[]) {
-      return this.provider.setupWorkflow(buildGuid, buildParameters, branchName, defaultSecretsArray)
+    async setupWorkflow(
+      buildGuid: string,
+      buildParameters: any,
+      branchName: string,
+      defaultSecretsArray: any[],
+    ) {
+      return this.provider.setupWorkflow(
+        buildGuid,
+        buildParameters,
+        branchName,
+        defaultSecretsArray,
+      );
     }
 
     async runTaskInWorkflow(
@@ -39,7 +49,15 @@ export function createProviderAdapter(
       environment: any[],
       secrets: any[],
     ): Promise<string> {
-      return this.provider.runTaskInWorkflow(buildGuid, image, commands, mountdir, workingdir, environment, secrets)
+      return this.provider.runTaskInWorkflow(
+        buildGuid,
+        image,
+        commands,
+        mountdir,
+        workingdir,
+        environment,
+        secrets,
+      );
     }
 
     async garbageCollect(
@@ -49,21 +67,27 @@ export function createProviderAdapter(
       fullCache: boolean,
       baseDependencies: boolean,
     ): Promise<string> {
-      return this.provider.garbageCollect(filter, previewOnly, olderThan, fullCache, baseDependencies)
+      return this.provider.garbageCollect(
+        filter,
+        previewOnly,
+        olderThan,
+        fullCache,
+        baseDependencies,
+      );
     }
 
     async listResources(): Promise<any[]> {
-      return this.provider.listResources()
+      return this.provider.listResources();
     }
 
     async listWorkflow(): Promise<any[]> {
-      return this.provider.listWorkflow()
+      return this.provider.listWorkflow();
     }
 
     async watchWorkflow(): Promise<string> {
-      return this.provider.watchWorkflow()
+      return this.provider.watchWorkflow();
     }
-  }
+  };
 }
 
 /**
@@ -76,20 +100,30 @@ export function createCliProviderAdapter(
   // eslint-disable-next-line no-unused-vars
 ): new (options: any) => any {
   return class CliProviderAdapter {
-    private provider: ProviderInterface
+    private provider: ProviderInterface;
 
     constructor(options: Record<string, any>) {
-      const buildParameters = createBuildParametersFromCliOptions(options)
-      const executablePath = options.providerExecutable || options.cliExecutable || 'game-ci'
-      this.provider = new ProviderClass(executablePath, buildParameters)
+      const buildParameters = createBuildParametersFromCliOptions(options);
+      const executablePath = options.providerExecutable || options.cliExecutable || 'game-ci';
+      this.provider = new ProviderClass(executablePath, buildParameters);
     }
 
     async cleanupWorkflow(buildParameters: any, branchName: string, defaultSecretsArray: any[]) {
-      return this.provider.cleanupWorkflow(buildParameters, branchName, defaultSecretsArray)
+      return this.provider.cleanupWorkflow(buildParameters, branchName, defaultSecretsArray);
     }
 
-    async setupWorkflow(buildGuid: string, buildParameters: any, branchName: string, defaultSecretsArray: any[]) {
-      return this.provider.setupWorkflow(buildGuid, buildParameters, branchName, defaultSecretsArray)
+    async setupWorkflow(
+      buildGuid: string,
+      buildParameters: any,
+      branchName: string,
+      defaultSecretsArray: any[],
+    ) {
+      return this.provider.setupWorkflow(
+        buildGuid,
+        buildParameters,
+        branchName,
+        defaultSecretsArray,
+      );
     }
 
     async runTaskInWorkflow(
@@ -101,7 +135,15 @@ export function createCliProviderAdapter(
       environment: any[],
       secrets: any[],
     ): Promise<string> {
-      return this.provider.runTaskInWorkflow(buildGuid, image, commands, mountdir, workingdir, environment, secrets)
+      return this.provider.runTaskInWorkflow(
+        buildGuid,
+        image,
+        commands,
+        mountdir,
+        workingdir,
+        environment,
+        secrets,
+      );
     }
 
     async garbageCollect(
@@ -111,19 +153,25 @@ export function createCliProviderAdapter(
       fullCache: boolean,
       baseDependencies: boolean,
     ): Promise<string> {
-      return this.provider.garbageCollect(filter, previewOnly, olderThan, fullCache, baseDependencies)
+      return this.provider.garbageCollect(
+        filter,
+        previewOnly,
+        olderThan,
+        fullCache,
+        baseDependencies,
+      );
     }
 
     async listResources(): Promise<any[]> {
-      return this.provider.listResources()
+      return this.provider.listResources();
     }
 
     async listWorkflow(): Promise<any[]> {
-      return this.provider.listWorkflow()
+      return this.provider.listWorkflow();
     }
 
     async watchWorkflow(): Promise<string> {
-      return this.provider.watchWorkflow()
+      return this.provider.watchWorkflow();
     }
-  }
+  };
 }

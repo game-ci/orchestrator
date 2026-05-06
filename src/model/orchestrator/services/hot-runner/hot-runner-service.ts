@@ -61,17 +61,24 @@ export class HotRunnerService {
    * Submit a build job to an available hot runner.
    * Converts BuildParameters to a HotRunnerJobRequest and dispatches.
    */
-  async submitBuild(params: BuildParameters, onOutput?: OutputCallback): Promise<HotRunnerJobResult> {
+  async submitBuild(
+    params: BuildParameters,
+    onOutput?: OutputCallback,
+  ): Promise<HotRunnerJobResult> {
     const request: HotRunnerJobRequest = {
       jobId: params.buildGuid || `build-${Date.now()}`,
       buildMethod: params.buildMethod || undefined,
       buildTarget: params.targetPlatform,
       buildPath: params.buildPath,
-      customParameters: params.customParameters ? this.parseCustomParameters(params.customParameters) : undefined,
+      customParameters: params.customParameters
+        ? this.parseCustomParameters(params.customParameters)
+        : undefined,
       timeout: 30 * 60 * 1000, // 30 minutes default
     };
 
-    OrchestratorLogger.log(`[HotRunner] Submitting build: ${request.jobId} (target: ${request.buildTarget})`);
+    OrchestratorLogger.log(
+      `[HotRunner] Submitting build: ${request.jobId} (target: ${request.buildTarget})`,
+    );
 
     return this.dispatcher.dispatchJob(request, this.registry, params.editorVersion, onOutput);
   }
@@ -88,13 +95,17 @@ export class HotRunnerService {
     const request: HotRunnerJobRequest = {
       jobId: params.buildGuid || `test-${Date.now()}`,
       buildTarget: params.targetPlatform,
-      customParameters: params.customParameters ? this.parseCustomParameters(params.customParameters) : undefined,
+      customParameters: params.customParameters
+        ? this.parseCustomParameters(params.customParameters)
+        : undefined,
       timeout: 30 * 60 * 1000, // 30 minutes default
       testMode: suiteConfig?.testMode ?? 'editmode',
       testSuitePath: suiteConfig?.testSuitePath,
     };
 
-    OrchestratorLogger.log(`[HotRunner] Submitting test: ${request.jobId} (mode: ${request.testMode})`);
+    OrchestratorLogger.log(
+      `[HotRunner] Submitting test: ${request.jobId} (mode: ${request.testMode})`,
+    );
 
     return this.dispatcher.dispatchJob(request, this.registry, params.editorVersion, onOutput);
   }
@@ -112,7 +123,9 @@ export class HotRunnerService {
     for (const [id, transport] of this.transports.entries()) {
       disconnectPromises.push(
         transport.disconnect().catch((error: any) => {
-          OrchestratorLogger.logWarning(`[HotRunner] Error disconnecting runner ${id}: ${error.message}`);
+          OrchestratorLogger.logWarning(
+            `[HotRunner] Error disconnecting runner ${id}: ${error.message}`,
+          );
         }),
       );
     }

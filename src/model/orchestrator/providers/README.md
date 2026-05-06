@@ -46,20 +46,20 @@ const absoluteProvider = await ProviderLoader.loadProvider('/path/to/provider', 
 ```typescript
 // Load from GitHub URL
 const githubProvider = await ProviderLoader.loadProvider(
-  'https://github.com/user/my-provider', 
-  buildParameters
+  'https://github.com/user/my-provider',
+  buildParameters,
 );
 
 // Load from specific branch
 const branchProvider = await ProviderLoader.loadProvider(
-  'https://github.com/user/my-provider/tree/develop', 
-  buildParameters
+  'https://github.com/user/my-provider/tree/develop',
+  buildParameters,
 );
 
 // Load from specific path in repository
 const pathProvider = await ProviderLoader.loadProvider(
-  'https://github.com/user/my-provider/tree/main/src/providers', 
-  buildParameters
+  'https://github.com/user/my-provider/tree/main/src/providers',
+  buildParameters,
 );
 
 // Shorthand notation
@@ -84,8 +84,20 @@ All providers must implement the `ProviderInterface`:
 ```typescript
 interface ProviderInterface {
   cleanupWorkflow(): Promise<void>;
-  setupWorkflow(buildGuid: string, buildParameters: BuildParameters, branchName: string, defaultSecretsArray: any[]): Promise<void>;
-  runTaskInWorkflow(buildGuid: string, task: string, workingDirectory: string, buildVolumeFolder: string, environmentVariables: any[], secrets: any[]): Promise<string>;
+  setupWorkflow(
+    buildGuid: string,
+    buildParameters: BuildParameters,
+    branchName: string,
+    defaultSecretsArray: any[],
+  ): Promise<void>;
+  runTaskInWorkflow(
+    buildGuid: string,
+    task: string,
+    workingDirectory: string,
+    buildVolumeFolder: string,
+    environmentVariables: any[],
+    secrets: any[],
+  ): Promise<string>;
   garbageCollect(): Promise<void>;
   listResources(): Promise<ProviderResource[]>;
   listWorkflow(): Promise<ProviderWorkflow[]>;
@@ -107,11 +119,23 @@ export default class MyProvider implements ProviderInterface {
     // Cleanup logic
   }
 
-  async setupWorkflow(buildGuid: string, buildParameters: BuildParameters, branchName: string, defaultSecretsArray: any[]): Promise<void> {
+  async setupWorkflow(
+    buildGuid: string,
+    buildParameters: BuildParameters,
+    branchName: string,
+    defaultSecretsArray: any[],
+  ): Promise<void> {
     // Setup logic
   }
 
-  async runTaskInWorkflow(buildGuid: string, task: string, workingDirectory: string, buildVolumeFolder: string, environmentVariables: any[], secrets: any[]): Promise<string> {
+  async runTaskInWorkflow(
+    buildGuid: string,
+    task: string,
+    workingDirectory: string,
+    buildVolumeFolder: string,
+    environmentVariables: any[],
+    secrets: any[],
+  ): Promise<string> {
     // Task execution logic
     return 'Task completed';
   }
@@ -167,6 +191,7 @@ console.log(providers); // ['aws', 'k8s', 'test', 'local-docker', 'local-system'
 ## Supported URL Formats
 
 ### GitHub URLs
+
 - `https://github.com/user/repo`
 - `https://github.com/user/repo.git`
 - `https://github.com/user/repo/tree/branch`
@@ -174,17 +199,20 @@ console.log(providers); // ['aws', 'k8s', 'test', 'local-docker', 'local-system'
 - `git@github.com:user/repo.git`
 
 ### Shorthand GitHub References
+
 - `user/repo`
 - `user/repo@branch`
 - `user/repo@branch/path/to/provider`
 
 ### Local Paths
+
 - `./relative/path`
 - `../relative/path`
 - `/absolute/path`
 - `C:\\path\\to\\provider` (Windows)
 
 ### NPM Packages
+
 - `package-name`
 - `@scope/package-name`
 

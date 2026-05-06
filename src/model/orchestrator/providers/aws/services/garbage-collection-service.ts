@@ -14,7 +14,7 @@ export class GarbageCollectionService {
     return ageMs > maxAgeMs;
   }
 
-  public static async cleanup(deleteResources = false, maxAgeHours: Number = 24): Promise<string> {
+  public static async cleanup(deleteResources = false, maxAgeHours: number = 24): Promise<string> {
     process.env.AWS_REGION = Input.region;
     const CF = AwsClientFactory.getCloudFormation();
     const ecs = AwsClientFactory.getECS();
@@ -28,7 +28,11 @@ export class GarbageCollectionService {
       const { taskElement, element } = task;
       taskDefinitionsInUse.push(taskElement.taskDefinitionArn);
       const taskName = taskElement.containers?.[0].name || taskElement.taskArn || 'unknown';
-      if (age > 0 && taskElement.createdAt && !GarbageCollectionService.isOlderThan(taskElement.createdAt, age)) {
+      if (
+        age > 0 &&
+        taskElement.createdAt &&
+        !GarbageCollectionService.isOlderThan(taskElement.createdAt, age)
+      ) {
         continue;
       }
       if (deleteResources) {
@@ -49,15 +53,23 @@ export class GarbageCollectionService {
       }
 
       if (
-        (await CF.send(new DescribeStackResourcesCommand({ StackName: element.StackName }))).StackResources?.some(
-          (x) => x.ResourceType === 'AWS::ECS::TaskDefinition' && taskDefinitionsInUse.includes(x.PhysicalResourceId),
+        (
+          await CF.send(new DescribeStackResourcesCommand({ StackName: element.StackName }))
+        ).StackResources?.some(
+          (x) =>
+            x.ResourceType === 'AWS::ECS::TaskDefinition' &&
+            taskDefinitionsInUse.includes(x.PhysicalResourceId),
         )
       ) {
         OrchestratorLogger.log(`Skipping ${element.StackName} - active task running`);
         continue;
       }
 
-      if (age > 0 && element.CreationTime && !GarbageCollectionService.isOlderThan(element.CreationTime, age)) {
+      if (
+        age > 0 &&
+        element.CreationTime &&
+        !GarbageCollectionService.isOlderThan(element.CreationTime, age)
+      ) {
         continue;
       }
 
@@ -73,7 +85,11 @@ export class GarbageCollectionService {
 
     const logGroups = await TaskService.getLogGroups();
     for (const element of logGroups) {
-      if (age > 0 && element.creationTime && !GarbageCollectionService.isOlderThan(new Date(element.creationTime), age)) {
+      if (
+        age > 0 &&
+        element.creationTime &&
+        !GarbageCollectionService.isOlderThan(new Date(element.creationTime), age)
+      ) {
         continue;
       }
 

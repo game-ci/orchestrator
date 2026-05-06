@@ -13,7 +13,10 @@ export class GitHooksService {
    */
   static detectHookFramework(repoPath: string): 'lefthook' | 'husky' | 'none' {
     // Check for lefthook config files
-    if (fs.existsSync(path.join(repoPath, 'lefthook.yml')) || fs.existsSync(path.join(repoPath, '.lefthook.yml'))) {
+    if (
+      fs.existsSync(path.join(repoPath, 'lefthook.yml')) ||
+      fs.existsSync(path.join(repoPath, '.lefthook.yml'))
+    ) {
       return 'lefthook';
     }
 
@@ -56,7 +59,9 @@ export class GitHooksService {
 
     try {
       const entries = fs.readdirSync(packageCacheDir);
-      const match = entries.find((entry) => entry.startsWith(GitHooksService.UNITY_GIT_HOOKS_PACKAGE));
+      const match = entries.find((entry) =>
+        entry.startsWith(GitHooksService.UNITY_GIT_HOOKS_PACKAGE),
+      );
       if (match) {
         return path.join(packageCacheDir, match);
       }
@@ -75,14 +80,18 @@ export class GitHooksService {
   static async initUnityGitHooks(repoPath: string): Promise<void> {
     const packagePath = GitHooksService.findUnityGitHooksPackagePath(repoPath);
     if (!packagePath) {
-      OrchestratorLogger.log(`[GitHooks] Unity Git Hooks package not found in Library/PackageCache, skipping init`);
+      OrchestratorLogger.log(
+        `[GitHooks] Unity Git Hooks package not found in Library/PackageCache, skipping init`,
+      );
 
       return;
     }
 
     const initScript = path.join(packagePath, '~js', 'init-unity-lefthook.js');
     if (!fs.existsSync(initScript)) {
-      OrchestratorLogger.logWarning(`[GitHooks] Unity Git Hooks init script not found at ${initScript}`);
+      OrchestratorLogger.logWarning(
+        `[GitHooks] Unity Git Hooks init script not found at ${initScript}`,
+      );
 
       return;
     }
@@ -160,7 +169,10 @@ export class GitHooksService {
    * @param hookGroups - Lefthook group names to run (e.g., ['pre-commit', 'pre-push'])
    * @returns Map of group name to success/failure
    */
-  static async runHookGroups(repoPath: string, hookGroups: string[]): Promise<Record<string, boolean>> {
+  static async runHookGroups(
+    repoPath: string,
+    hookGroups: string[],
+  ): Promise<Record<string, boolean>> {
     const results: Record<string, boolean> = {};
 
     if (hookGroups.length === 0) {
@@ -169,12 +181,16 @@ export class GitHooksService {
 
     const framework = GitHooksService.detectHookFramework(repoPath);
     if (framework !== 'lefthook') {
-      OrchestratorLogger.logWarning(`[GitHooks] runHookGroups requires lefthook, but detected: ${framework}`);
+      OrchestratorLogger.logWarning(
+        `[GitHooks] runHookGroups requires lefthook, but detected: ${framework}`,
+      );
 
       return results;
     }
 
-    OrchestratorLogger.log(`[GitHooks] Running ${hookGroups.length} hook group(s): ${hookGroups.join(', ')}`);
+    OrchestratorLogger.log(
+      `[GitHooks] Running ${hookGroups.length} hook group(s): ${hookGroups.join(', ')}`,
+    );
 
     for (const group of hookGroups) {
       try {
@@ -225,7 +241,10 @@ export class GitHooksService {
       const emptyDir = path.join(os.tmpdir(), 'game-ci-empty-hooks');
       fs.mkdirSync(emptyDir, { recursive: true });
 
-      await OrchestratorSystem.Run(`git -C "${repoPath}" config core.hooksPath "${emptyDir}"`, true);
+      await OrchestratorSystem.Run(
+        `git -C "${repoPath}" config core.hooksPath "${emptyDir}"`,
+        true,
+      );
 
       OrchestratorLogger.log(`[GitHooks] Hooks disabled via core.hooksPath -> ${emptyDir}`);
     } catch (error: any) {

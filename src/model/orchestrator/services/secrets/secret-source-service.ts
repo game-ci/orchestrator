@@ -68,18 +68,21 @@ export class SecretSourceService {
   private static readonly premadeSources: Record<string, SecretSourceDefinition> = {
     'aws-secrets-manager': {
       name: 'aws-secrets-manager',
-      command: 'aws secretsmanager get-secret-value --secret-id {0} --query SecretString --output text',
+      command:
+        'aws secretsmanager get-secret-value --secret-id {0} --query SecretString --output text',
       parseOutput: 'raw',
     },
     'aws-secret-manager': {
       // Alias for backward compatibility (original name in inputPullCommand)
       name: 'aws-secret-manager',
-      command: 'aws secretsmanager get-secret-value --secret-id {0} --query SecretString --output text',
+      command:
+        'aws secretsmanager get-secret-value --secret-id {0} --query SecretString --output text',
       parseOutput: 'raw',
     },
     'aws-parameter-store': {
       name: 'aws-parameter-store',
-      command: 'aws ssm get-parameter --name {0} --with-decryption --query Parameter.Value --output text',
+      command:
+        'aws ssm get-parameter --name {0} --with-decryption --query Parameter.Value --output text',
       parseOutput: 'raw',
     },
     'gcp-secret-manager': {
@@ -89,7 +92,8 @@ export class SecretSourceService {
     },
     'azure-key-vault': {
       name: 'azure-key-vault',
-      command: 'az keyvault secret show --vault-name "$AZURE_VAULT_NAME" --name {0} --query value --output tsv',
+      command:
+        'az keyvault secret show --vault-name "$AZURE_VAULT_NAME" --name {0} --query value --output tsv',
       parseOutput: 'raw',
     },
     'hashicorp-vault': {
@@ -212,7 +216,9 @@ export class SecretSourceService {
           const parsed = JSON.parse(output);
           value = parsed[source.jsonField] || '';
         } catch {
-          OrchestratorLogger.logWarning(`Failed to parse JSON output from ${source.name} for key ${key}`);
+          OrchestratorLogger.logWarning(
+            `Failed to parse JSON output from ${source.name} for key ${key}`,
+          );
           value = output.trim();
         }
       } else {
@@ -224,7 +230,9 @@ export class SecretSourceService {
 
       return value;
     } catch (error: any) {
-      OrchestratorLogger.logWarning(`Failed to fetch secret '${key}' from ${source.name}: ${error.message}`);
+      OrchestratorLogger.logWarning(
+        `Failed to fetch secret '${key}' from ${source.name}: ${error.message}`,
+      );
 
       return '';
     }

@@ -8,7 +8,13 @@ const generateId = customAlphabet('abcdefghijklmnopqrstuvwxyz0123456789', 12);
 
 const PERSISTENCE_FILENAME = 'hot-runners.json';
 
-const VALID_RUNNER_STATES: ReadonlySet<string> = new Set(['idle', 'busy', 'starting', 'stopping', 'unhealthy']);
+const VALID_RUNNER_STATES: ReadonlySet<string> = new Set([
+  'idle',
+  'busy',
+  'starting',
+  'stopping',
+  'unhealthy',
+]);
 
 export interface HotRunnerFilter {
   platform?: string;
@@ -70,7 +76,9 @@ export class HotRunnerRegistry {
   private persistencePath: string;
 
   constructor(persistenceDirectory?: string) {
-    this.persistencePath = persistenceDirectory ? path.join(persistenceDirectory, PERSISTENCE_FILENAME) : '';
+    this.persistencePath = persistenceDirectory
+      ? path.join(persistenceDirectory, PERSISTENCE_FILENAME)
+      : '';
   }
 
   /**
@@ -92,7 +100,9 @@ export class HotRunnerRegistry {
 
     this.runners.set(id, status);
     this.configs.set(id, config);
-    OrchestratorLogger.log(`[HotRunner] Registered runner ${id} (${status.unityVersion}/${status.platform})`);
+    OrchestratorLogger.log(
+      `[HotRunner] Registered runner ${id} (${status.unityVersion}/${status.platform})`,
+    );
 
     this.persist();
 
@@ -150,7 +160,10 @@ export class HotRunnerRegistry {
   /**
    * Find an idle runner matching the given Unity version and platform requirements.
    */
-  findAvailableRunner(requirements: { unityVersion: string; platform: string }): HotRunnerStatus | undefined {
+  findAvailableRunner(requirements: {
+    unityVersion: string;
+    platform: string;
+  }): HotRunnerStatus | undefined {
     return this.listRunners({
       state: 'idle',
       unityVersion: requirements.unityVersion,
@@ -192,7 +205,9 @@ export class HotRunnerRegistry {
       const entry = status as unknown as Record<string, unknown>;
 
       if (!isValidRunnerStatus(entry)) {
-        OrchestratorLogger.logWarning(`[HotRunner] Runner ${id} has invalid state, marking as unhealthy`);
+        OrchestratorLogger.logWarning(
+          `[HotRunner] Runner ${id} has invalid state, marking as unhealthy`,
+        );
         this.runners.set(id, {
           id,
           state: 'unhealthy',
@@ -200,7 +215,10 @@ export class HotRunnerRegistry {
           platform: typeof entry.platform === 'string' ? entry.platform : 'unknown',
           uptime: typeof entry.uptime === 'number' ? entry.uptime : 0,
           jobsCompleted: typeof entry.jobsCompleted === 'number' ? entry.jobsCompleted : 0,
-          lastHealthCheck: typeof entry.lastHealthCheck === 'string' ? entry.lastHealthCheck : new Date().toISOString(),
+          lastHealthCheck:
+            typeof entry.lastHealthCheck === 'string'
+              ? entry.lastHealthCheck
+              : new Date().toISOString(),
           memoryUsageMB: typeof entry.memoryUsageMB === 'number' ? entry.memoryUsageMB : 0,
         });
         repaired++;
@@ -227,7 +245,9 @@ export class HotRunnerRegistry {
       // Validate data before persisting
       for (const [id, status] of this.runners) {
         if (!isValidRunnerStatus(status)) {
-          OrchestratorLogger.logWarning(`[HotRunner] Skipping persistence -- runner ${id} has invalid state`);
+          OrchestratorLogger.logWarning(
+            `[HotRunner] Skipping persistence -- runner ${id} has invalid state`,
+          );
 
           return;
         }
@@ -273,7 +293,9 @@ export class HotRunnerRegistry {
     }
 
     if (typeof data !== 'object' || data === null) {
-      OrchestratorLogger.logWarning('[HotRunner] Persistence file has invalid structure, starting with empty registry');
+      OrchestratorLogger.logWarning(
+        '[HotRunner] Persistence file has invalid structure, starting with empty registry',
+      );
 
       return 0;
     }
@@ -285,7 +307,9 @@ export class HotRunnerRegistry {
         if (isValidRunnerStatus(status)) {
           this.runners.set(id, status);
         } else {
-          OrchestratorLogger.logWarning(`[HotRunner] Discarding invalid runner entry '${id}' from persistence file`);
+          OrchestratorLogger.logWarning(
+            `[HotRunner] Discarding invalid runner entry '${id}' from persistence file`,
+          );
           discarded++;
         }
       }
@@ -298,14 +322,18 @@ export class HotRunnerRegistry {
           if (isValidRunnerConfig(config)) {
             this.configs.set(id, config);
           } else {
-            OrchestratorLogger.logWarning(`[HotRunner] Discarding invalid config entry '${id}' from persistence file`);
+            OrchestratorLogger.logWarning(
+              `[HotRunner] Discarding invalid config entry '${id}' from persistence file`,
+            );
           }
         }
       }
     }
 
     if (discarded > 0) {
-      OrchestratorLogger.logWarning(`[HotRunner] Discarded ${discarded} invalid runner(s) from persistence file`);
+      OrchestratorLogger.logWarning(
+        `[HotRunner] Discarded ${discarded} invalid runner(s) from persistence file`,
+      );
     }
 
     OrchestratorLogger.log(`[HotRunner] Restored ${this.runners.size} runner(s) from disk`);

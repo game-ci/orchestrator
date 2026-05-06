@@ -8,6 +8,7 @@ import setups from './orchestrator-suite.test';
 import { OrchestratorSystem } from '../services/core/orchestrator-system';
 import { OptionValues } from 'commander';
 import OrchestratorOptions from '../options/orchestrator-options';
+import { execSync } from 'child_process';
 
 async function CreateParameters(overrides: OptionValues | undefined) {
   if (overrides) {
@@ -29,7 +30,6 @@ describe('Orchestrator pre-built S3 steps', () => {
     let awsAvailable = false;
     if (!isCI) {
       try {
-        const { execSync } = require('child_process');
         execSync('aws --version', { stdio: 'ignore' });
         awsAvailable = true;
       } catch {
@@ -50,7 +50,10 @@ describe('Orchestrator pre-built S3 steps', () => {
         const overrides = {
           versioning: 'None',
           projectPath: 'test-project',
-          unityVersion: UnityVersioning.determineUnityVersion('test-project', UnityVersioning.read('test-project')),
+          unityVersion: UnityVersioning.determineUnityVersion(
+            'test-project',
+            UnityVersioning.read('test-project'),
+          ),
           targetPlatform: 'StandaloneLinux64',
           cacheKey,
           buildGuid,
@@ -138,7 +141,9 @@ describe('Orchestrator pre-built S3 steps', () => {
           let s3Endpoint = OrchestratorOptions.awsS3Endpoint || process.env.AWS_S3_ENDPOINT;
           if (s3Endpoint && s3Endpoint.includes('host.docker.internal')) {
             s3Endpoint = s3Endpoint.replace('host.docker.internal', 'localhost');
-            OrchestratorLogger.log(`Converted endpoint from host.docker.internal to localhost: ${s3Endpoint}`);
+            OrchestratorLogger.log(
+              `Converted endpoint from host.docker.internal to localhost: ${s3Endpoint}`,
+            );
           }
           const endpointArguments = s3Endpoint ? `--endpoint-url ${s3Endpoint}` : '';
 
@@ -171,7 +176,9 @@ describe('Orchestrator pre-built S3 steps', () => {
               await OrchestratorSystem.Run(
                 `aws configure set aws_secret_access_key "${defaultSecretKey}" --profile default || true`,
               );
-              await OrchestratorSystem.Run(`aws configure set region "us-east-1" --profile default || true`);
+              await OrchestratorSystem.Run(
+                `aws configure set region "us-east-1" --profile default || true`,
+              );
               OrchestratorLogger.log('Using default test credentials for local AWS emulator');
             } catch (configError) {
               OrchestratorLogger.log(`Failed to configure default AWS credentials: ${configError}`);
@@ -192,8 +199,13 @@ describe('Orchestrator pre-built S3 steps', () => {
 
             // Check if the error is due to missing credentials or connection issues
             const errorMessage = (s3Error?.message || s3Error?.toString() || '').toLowerCase();
-            if (errorMessage.includes('invalidaccesskeyid') || errorMessage.includes('could not connect')) {
-              OrchestratorLogger.log('S3 verification skipped due to credential or connection issues');
+            if (
+              errorMessage.includes('invalidaccesskeyid') ||
+              errorMessage.includes('could not connect')
+            ) {
+              OrchestratorLogger.log(
+                'S3 verification skipped due to credential or connection issues',
+              );
             }
           }
         }

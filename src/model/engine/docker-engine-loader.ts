@@ -48,7 +48,9 @@ export function loadEngineFromDocker(image: string): EnginePlugin {
   }
 
   if (!config) {
-    throw new Error(`Engine plugin Docker image '${image}' did not return valid JSON config. Output: ${stdout}`);
+    throw new Error(
+      `Engine plugin Docker image '${image}' did not return valid JSON config. Output: ${stdout}`,
+    );
   }
 
   if (!config.name || !Array.isArray(config.cacheFolders)) {

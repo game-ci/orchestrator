@@ -4,18 +4,18 @@ on:
   workflow_dispatch:
     inputs:
       checksObject:
-        description: ""
+        description: ''
         required: false
-        default: ""
+        default: ''
 
 permissions:
   checks: write
 
 env:
-  GKE_ZONE: "us-central1"
-  GKE_REGION: "us-central1"
-  GKE_PROJECT: "unitykubernetesbuilder"
-  GKE_CLUSTER: "game-ci-github-pipelines"
+  GKE_ZONE: 'us-central1'
+  GKE_REGION: 'us-central1'
+  GKE_PROJECT: 'unitykubernetesbuilder'
+  GKE_CLUSTER: 'game-ci-github-pipelines'
   GCP_LOGGING: true
   GCP_PROJECT: unitykubernetesbuilder
   GCP_LOG_FILE: ${{ github.workspace }}/orchestrator-logs.txt

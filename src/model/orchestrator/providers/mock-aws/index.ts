@@ -40,7 +40,11 @@ class MockAWSBuildEnvironment implements ProviderInterface {
     buildGuid: string,
     buildParameters: BuildParameters,
     branchName: string,
-    defaultSecretsArray: { ParameterKey: string; EnvironmentVariable: string; ParameterValue: string }[],
+    defaultSecretsArray: {
+      ParameterKey: string;
+      EnvironmentVariable: string;
+      ParameterValue: string;
+    }[],
   ): Promise<void> {
     OrchestratorLogger.log(`[mock-aws] setupWorkflow: ${buildGuid}`);
 
@@ -77,18 +81,30 @@ class MockAWSBuildEnvironment implements ProviderInterface {
     });
 
     const postSetupMs = Date.now();
-    OrchestratorLogger.log(`[mock-aws] Setup job time: ${Math.floor((postSetupMs - startTimeMs) / 1000)}s`);
+    OrchestratorLogger.log(
+      `[mock-aws] Setup job time: ${Math.floor((postSetupMs - startTimeMs) / 1000)}s`,
+    );
 
     // Get resources from stacks
-    const baseResources = MockCloudFormation.describeStackResources({ StackName: this.baseStackName }).StackResources;
-    const jobResources = MockCloudFormation.describeStackResources({ StackName: jobStackName }).StackResources;
+    const baseResources = MockCloudFormation.describeStackResources({
+      StackName: this.baseStackName,
+    }).StackResources;
+    const jobResources = MockCloudFormation.describeStackResources({
+      StackName: jobStackName,
+    }).StackResources;
 
-    const cluster = baseResources.find(r => r.LogicalResourceId === 'ECSCluster')?.PhysicalResourceId || '';
-    const taskDefinition = jobResources.find(r => r.LogicalResourceId === 'TaskDefinition')?.PhysicalResourceId || '';
-    const streamName = jobResources.find(r => r.LogicalResourceId === 'KinesisStream')?.PhysicalResourceId || '';
+    const cluster =
+      baseResources.find((r) => r.LogicalResourceId === 'ECSCluster')?.PhysicalResourceId || '';
+    const taskDefinition =
+      jobResources.find((r) => r.LogicalResourceId === 'TaskDefinition')?.PhysicalResourceId || '';
+    const streamName =
+      jobResources.find((r) => r.LogicalResourceId === 'KinesisStream')?.PhysicalResourceId || '';
 
     // Merge secrets into environment
-    const secretsAsEnv = secrets.map(s => ({ name: s.EnvironmentVariable, value: s.ParameterValue }));
+    const secretsAsEnv = secrets.map((s) => ({
+      name: s.EnvironmentVariable,
+      value: s.ParameterValue,
+    }));
     const mergedEnv = [...environment, ...secretsAsEnv];
 
     // Run the ECS task
@@ -96,11 +112,13 @@ class MockAWSBuildEnvironment implements ProviderInterface {
       cluster,
       taskDefinition,
       overrides: {
-        containerOverrides: [{
-          name: jobStackName,
-          command: ['-c', commands],
-          environment: mergedEnv,
-        }],
+        containerOverrides: [
+          {
+            name: jobStackName,
+            command: ['-c', commands],
+            environment: mergedEnv,
+          },
+        ],
       },
     });
 
@@ -130,7 +148,9 @@ class MockAWSBuildEnvironment implements ProviderInterface {
         for (const record of records.Records) {
           try {
             const { gunzipSync } = await import('node:zlib');
-            const json = JSON.parse(gunzipSync(Buffer.from(record.Data, 'base64')).toString('utf8'));
+            const json = JSON.parse(
+              gunzipSync(Buffer.from(record.Data, 'base64')).toString('utf8'),
+            );
             if (json.messageType === 'DATA_MESSAGE') {
               for (const logEvent of json.logEvents) {
                 output += logEvent.message + '\n';
@@ -146,7 +166,9 @@ class MockAWSBuildEnvironment implements ProviderInterface {
       if (task.lastStatus === 'STOPPED') {
         const exitCode = task.containers[0]?.exitCode;
         const postRunMs = Date.now();
-        OrchestratorLogger.log(`[mock-aws] Run job time: ${Math.floor((postRunMs - postSetupMs) / 1000)}s`);
+        OrchestratorLogger.log(
+          `[mock-aws] Run job time: ${Math.floor((postRunMs - postSetupMs) / 1000)}s`,
+        );
 
         // Cleanup job stack
         MockCloudFormation.deleteStack({ StackName: jobStackName });
@@ -159,7 +181,7 @@ class MockAWSBuildEnvironment implements ProviderInterface {
         return output;
       }
 
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 100));
     }
 
     // Cleanup on timeout
@@ -170,7 +192,11 @@ class MockAWSBuildEnvironment implements ProviderInterface {
   async cleanupWorkflow(
     buildParameters: BuildParameters,
     branchName: string,
-    defaultSecretsArray: { ParameterKey: string; EnvironmentVariable: string; ParameterValue: string }[],
+    defaultSecretsArray: {
+      ParameterKey: string;
+      EnvironmentVariable: string;
+      ParameterValue: string;
+    }[],
   ): Promise<void> {
     OrchestratorLogger.log(`[mock-aws] cleanupWorkflow`);
   }
@@ -178,14 +204,15 @@ class MockAWSBuildEnvironment implements ProviderInterface {
   async garbageCollect(
     filter: string,
     previewOnly: boolean,
-    olderThan: Number,
+    olderThan: number,
     fullCache: boolean,
     baseDependencies: boolean,
   ): Promise<string> {
     OrchestratorLogger.log(`[mock-aws] garbageCollect (preview=${previewOnly})`);
 
-    const stacks = MockCloudFormation.listStacks().StackSummaries
-      .filter(s => s.StackStatus !== 'DELETE_COMPLETE');
+    const stacks = MockCloudFormation.listStacks().StackSummaries.filter(
+      (s) => s.StackStatus !== 'DELETE_COMPLETE',
+    );
 
     const logGroups = MockCloudWatchLogs.describeLogGroups().logGroups;
     const clusters = MockEcs.listClusters().clusterArns;
@@ -217,7 +244,9 @@ class MockAWSBuildEnvironment implements ProviderInterface {
     const logGroups = MockCloudWatchLogs.describeLogGroups().logGroups;
     const clusters = MockEcs.listClusters().clusterArns;
 
-    OrchestratorLogger.log(`[mock-aws] Resources: ${stacks.length} stacks, ${logGroups.length} log groups, ${clusters.length} clusters`);
+    OrchestratorLogger.log(
+      `[mock-aws] Resources: ${stacks.length} stacks, ${logGroups.length} log groups, ${clusters.length} clusters`,
+    );
 
     const resources: ProviderResource[] = [];
     for (const stack of stacks) {

@@ -82,7 +82,11 @@ export class TestResultReporter {
       // Extract stack trace from CDATA or text content
       const cdataMatch = block.match(/<failure[^>]*>[\s\S]*?<!\[CDATA\[([\s\S]*?)\]\]>/);
       const textMatch = !cdataMatch ? block.match(/<failure[^>]*>([^<]*)<\/failure>/) : null;
-      const stackTrace = cdataMatch ? cdataMatch[1].trim() : textMatch ? textMatch[1].trim() : undefined;
+      const stackTrace = cdataMatch
+        ? cdataMatch[1].trim()
+        : textMatch
+          ? textMatch[1].trim()
+          : undefined;
 
       failures.push({ testName, className, message, stackTrace: stackTrace || undefined });
     }
@@ -230,7 +234,11 @@ export class TestResultReporter {
   /**
    * Write test results to the output path in the specified format(s).
    */
-  static writeResults(results: TestResult[], outputPath: string, format: 'junit' | 'json' | 'both'): void {
+  static writeResults(
+    results: TestResult[],
+    outputPath: string,
+    format: 'junit' | 'json' | 'both',
+  ): void {
     if (!fs.existsSync(outputPath)) {
       fs.mkdirSync(outputPath, { recursive: true });
     }

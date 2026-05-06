@@ -110,7 +110,9 @@ export class RemoteClient {
           }
           if (libraryEntries.length > 0) {
             await Caching.PushToCache(
-              OrchestratorFolders.ToLinuxFolder(`${OrchestratorFolders.cacheFolderForCacheKeyFull}/Library`),
+              OrchestratorFolders.ToLinuxFolder(
+                `${OrchestratorFolders.cacheFolderForCacheKeyFull}/Library`,
+              ),
               OrchestratorFolders.ToLinuxFolder(OrchestratorFolders.libraryFolderAbsolute),
               `lib-${Orchestrator.buildParameters.buildGuid}`,
             );
@@ -136,7 +138,9 @@ export class RemoteClient {
           }
           if (buildEntries.length > 0) {
             await Caching.PushToCache(
-              OrchestratorFolders.ToLinuxFolder(`${OrchestratorFolders.cacheFolderForCacheKeyFull}/build`),
+              OrchestratorFolders.ToLinuxFolder(
+                `${OrchestratorFolders.cacheFolderForCacheKeyFull}/build`,
+              ),
               OrchestratorFolders.ToLinuxFolder(OrchestratorFolders.projectBuildFolderAbsolute),
               `build-${Orchestrator.buildParameters.buildGuid}`,
             );
@@ -237,14 +241,20 @@ export class RemoteClient {
   }
   static async runCustomHookFiles(hookLifecycle: string) {
     RemoteClientLogger.log(`RunCustomHookFiles: ${hookLifecycle}`);
-    const gameCiCustomHooksPath = path.join(OrchestratorFolders.repoPathAbsolute, `game-ci`, `hooks`);
+    const gameCiCustomHooksPath = path.join(
+      OrchestratorFolders.repoPathAbsolute,
+      `game-ci`,
+      `hooks`,
+    );
     try {
       const files = fs.readdirSync(gameCiCustomHooksPath);
       for (const file of files) {
         const fileContents = fs.readFileSync(path.join(gameCiCustomHooksPath, file), `utf8`);
         const fileContentsObject = YAML.parse(fileContents.toString());
         if (fileContentsObject.hook === hookLifecycle) {
-          RemoteClientLogger.log(`Active Hook File ${file} \n \n file contents: \n ${fileContents}`);
+          RemoteClientLogger.log(
+            `Active Hook File ${file} \n \n file contents: \n ${fileContents}`,
+          );
           await OrchestratorSystem.Run(fileContentsObject.commands);
         }
       }
@@ -270,7 +280,11 @@ export class RemoteClient {
     const statePath = buildParameters.syncStatePath;
 
     // Resolve strategy — may fall back to 'full' if no state exists
-    const resolvedStrategy = IncrementalSyncService.resolveStrategy(strategy, workspacePath, statePath);
+    const resolvedStrategy = IncrementalSyncService.resolveStrategy(
+      strategy,
+      workspacePath,
+      statePath,
+    );
 
     if (resolvedStrategy === 'full') {
       OrchestratorLogger.log('[Sync] Falling back to full bootstrap');
@@ -285,7 +299,11 @@ export class RemoteClient {
       case 'git-delta': {
         const targetReference = buildParameters.gitSha || buildParameters.branch;
         OrchestratorLogger.log(`[Sync] Git delta sync to ${targetReference}`);
-        const changedFiles = await IncrementalSyncService.syncGitDelta(workspacePath, targetReference, statePath);
+        const changedFiles = await IncrementalSyncService.syncGitDelta(
+          workspacePath,
+          targetReference,
+          statePath,
+        );
         OrchestratorLogger.log(`[Sync] Git delta complete: ${changedFiles} file(s) updated`);
         break;
       }
@@ -317,7 +335,9 @@ export class RemoteClient {
         break;
       }
       default:
-        OrchestratorLogger.logWarning(`[Sync] Unknown strategy: ${resolvedStrategy}, falling back to full`);
+        OrchestratorLogger.logWarning(
+          `[Sync] Unknown strategy: ${resolvedStrategy}, falling back to full`,
+        );
         if (!(await RemoteClient.handleRetainedWorkspace())) {
           await RemoteClient.bootstrapRepository();
         }
@@ -335,7 +355,8 @@ export class RemoteClient {
 
     // Initialize submodules from profile if configured
     if (Orchestrator.buildParameters.submoduleProfilePath) {
-      const { SubmoduleProfileService } = await import('../services/submodule/submodule-profile-service');
+      const { SubmoduleProfileService } =
+        await import('../services/submodule/submodule-profile-service');
       RemoteClientLogger.log('Initializing submodules from profile...');
       const plan = await SubmoduleProfileService.createInitPlan(
         Orchestrator.buildParameters.submoduleProfilePath,
@@ -355,14 +376,19 @@ export class RemoteClient {
     );
     const lfsHashes = await LfsHashing.createLFSHashFiles();
     if (fs.existsSync(OrchestratorFolders.libraryFolderAbsolute)) {
-      RemoteClientLogger.logWarning(`!Warning!: The Unity library was included in the git repository`);
+      RemoteClientLogger.logWarning(
+        `!Warning!: The Unity library was included in the git repository`,
+      );
     }
     await Caching.PullFromCache(
       OrchestratorFolders.ToLinuxFolder(OrchestratorFolders.lfsCacheFolderFull),
       OrchestratorFolders.ToLinuxFolder(OrchestratorFolders.lfsFolderAbsolute),
       `${lfsHashes.lfsGuidSum}`,
     );
-    await RemoteClient.sizeOfFolder('repo after lfs cache pull', OrchestratorFolders.repoPathAbsolute);
+    await RemoteClient.sizeOfFolder(
+      'repo after lfs cache pull',
+      OrchestratorFolders.repoPathAbsolute,
+    );
 
     // Configure custom LFS transfer agent if specified
     if (Orchestrator.buildParameters.lfsTransferAgent) {
@@ -371,13 +397,18 @@ export class RemoteClient {
       await LfsAgentService.configure(
         Orchestrator.buildParameters.lfsTransferAgent,
         Orchestrator.buildParameters.lfsTransferAgentArgs,
-        Orchestrator.buildParameters.lfsStoragePaths ? Orchestrator.buildParameters.lfsStoragePaths.split(';') : [],
+        Orchestrator.buildParameters.lfsStoragePaths
+          ? Orchestrator.buildParameters.lfsStoragePaths.split(';')
+          : [],
         OrchestratorFolders.repoPathAbsolute,
       );
     }
 
     await RemoteClient.pullLatestLFS();
-    await RemoteClient.sizeOfFolder('repo before lfs git pull', OrchestratorFolders.repoPathAbsolute);
+    await RemoteClient.sizeOfFolder(
+      'repo before lfs git pull',
+      OrchestratorFolders.repoPathAbsolute,
+    );
     await Caching.PushToCache(
       OrchestratorFolders.ToLinuxFolder(OrchestratorFolders.lfsCacheFolderFull),
       OrchestratorFolders.ToLinuxFolder(OrchestratorFolders.lfsFolderAbsolute),
@@ -387,7 +418,10 @@ export class RemoteClient {
       OrchestratorFolders.ToLinuxFolder(OrchestratorFolders.libraryCacheFolderFull),
       OrchestratorFolders.ToLinuxFolder(OrchestratorFolders.libraryFolderAbsolute),
     );
-    await RemoteClient.sizeOfFolder('repo after library cache pull', OrchestratorFolders.repoPathAbsolute);
+    await RemoteClient.sizeOfFolder(
+      'repo after library cache pull',
+      OrchestratorFolders.repoPathAbsolute,
+    );
     await Caching.handleCachePurging();
   }
 
@@ -405,7 +439,9 @@ export class RemoteClient {
       !fs.existsSync(path.join(OrchestratorFolders.repoPathAbsolute, `.git`))
     ) {
       await OrchestratorSystem.Run(`rm -r ${OrchestratorFolders.repoPathAbsolute}`);
-      OrchestratorLogger.log(`${OrchestratorFolders.repoPathAbsolute} repo exists, but no git folder, cleaning up`);
+      OrchestratorLogger.log(
+        `${OrchestratorFolders.repoPathAbsolute} repo exists, but no git folder, cleaning up`,
+      );
     }
 
     if (
@@ -420,7 +456,9 @@ export class RemoteClient {
           Orchestrator.buildParameters,
         )}`,
       );
-      await OrchestratorSystem.Run(`git fetch && git reset --hard ${Orchestrator.buildParameters.gitSha}`);
+      await OrchestratorSystem.Run(
+        `git fetch && git reset --hard ${Orchestrator.buildParameters.gitSha}`,
+      );
 
       return;
     }
@@ -429,10 +467,15 @@ export class RemoteClient {
     await OrchestratorSystem.Run(`git config --global advice.detachedHead false`);
     await OrchestratorFolders.configureGitAuth();
     RemoteClientLogger.log(`Cloning the repository being built:`);
-    await OrchestratorSystem.Run(`git config --global filter.lfs.smudge "git-lfs smudge --skip -- %f"`);
-    await OrchestratorSystem.Run(`git config --global filter.lfs.process "git-lfs filter-process --skip"`);
+    await OrchestratorSystem.Run(
+      `git config --global filter.lfs.smudge "git-lfs smudge --skip -- %f"`,
+    );
+    await OrchestratorSystem.Run(
+      `git config --global filter.lfs.process "git-lfs filter-process --skip"`,
+    );
     try {
-      const depthArgument = OrchestratorOptions.cloneDepth !== '0' ? `--depth ${OrchestratorOptions.cloneDepth}` : '';
+      const depthArgument =
+        OrchestratorOptions.cloneDepth !== '0' ? `--depth ${OrchestratorOptions.cloneDepth}` : '';
       await OrchestratorSystem.Run(
         `git clone ${depthArgument} ${OrchestratorFolders.targetBuildRepoUrl} ${path.basename(
           OrchestratorFolders.repoPathAbsolute,
@@ -468,7 +511,9 @@ export class RemoteClient {
           await OrchestratorSystem.Run(`git fetch origin ${targetSha} || true`);
           await OrchestratorSystem.Run(`git checkout ${targetSha}`);
         } catch (error) {
-          RemoteClientLogger.logWarning(`Falling back to branch checkout; SHA not found: ${targetSha}`);
+          RemoteClientLogger.logWarning(
+            `Falling back to branch checkout; SHA not found: ${targetSha}`,
+          );
           try {
             await OrchestratorSystem.Run(`git checkout ${targetBranch}`);
           } catch {
@@ -499,7 +544,10 @@ export class RemoteClient {
 
   static async replaceLargePackageReferencesWithSharedReferences() {
     OrchestratorLogger.log(`Use Shared Pkgs ${Orchestrator.buildParameters.useLargePackages}`);
-    GitHub.updateGitHubCheck(`Use Shared Pkgs ${Orchestrator.buildParameters.useLargePackages}`, ``);
+    GitHub.updateGitHubCheck(
+      `Use Shared Pkgs ${Orchestrator.buildParameters.useLargePackages}`,
+      ``,
+    );
     if (Orchestrator.buildParameters.useLargePackages) {
       const filePath = path.join(OrchestratorFolders.projectPathAbsolute, `Packages/manifest.json`);
       let manifest = fs.readFileSync(filePath, 'utf8');
@@ -576,8 +624,12 @@ export class RemoteClient {
     OrchestratorLogger.log(`Cache Key: ${Orchestrator.buildParameters.cacheKey}`);
     if (
       BuildParameters.shouldUseRetainedWorkspaceMode(Orchestrator.buildParameters) &&
-      fs.existsSync(OrchestratorFolders.ToLinuxFolder(OrchestratorFolders.uniqueOrchestratorJobFolderAbsolute)) &&
-      fs.existsSync(OrchestratorFolders.ToLinuxFolder(path.join(OrchestratorFolders.repoPathAbsolute, `.git`)))
+      fs.existsSync(
+        OrchestratorFolders.ToLinuxFolder(OrchestratorFolders.uniqueOrchestratorJobFolderAbsolute),
+      ) &&
+      fs.existsSync(
+        OrchestratorFolders.ToLinuxFolder(path.join(OrchestratorFolders.repoPathAbsolute, `.git`)),
+      )
     ) {
       OrchestratorLogger.log(`Retained Workspace Already Exists!`);
       process.chdir(OrchestratorFolders.ToLinuxFolder(OrchestratorFolders.repoPathAbsolute));
@@ -600,7 +652,9 @@ export class RemoteClient {
         await OrchestratorSystem.Run(`git reset --hard "${sha}"`);
         await OrchestratorSystem.Run(`git checkout ${sha}`);
       } catch {
-        RemoteClientLogger.logWarning(`Retained workspace: SHA not found, falling back to branch ${branch}`);
+        RemoteClientLogger.logWarning(
+          `Retained workspace: SHA not found, falling back to branch ${branch}`,
+        );
         try {
           await OrchestratorSystem.Run(`git checkout ${branch}`);
         } catch (error) {
@@ -630,9 +684,15 @@ export class RemoteClient {
         `git config --global http.https://github.com/.extraHeader "Authorization: Basic ${encoded}"`,
       );
     } else {
-      await OrchestratorSystem.Run(`git config --global --unset-all url."https://github.com/".insteadOf || true`);
-      await OrchestratorSystem.Run(`git config --global --unset-all url."ssh://git@github.com/".insteadOf || true`);
-      await OrchestratorSystem.Run(`git config --global --unset-all url."git@github.com".insteadOf || true`);
+      await OrchestratorSystem.Run(
+        `git config --global --unset-all url."https://github.com/".insteadOf || true`,
+      );
+      await OrchestratorSystem.Run(
+        `git config --global --unset-all url."ssh://git@github.com/".insteadOf || true`,
+      );
+      await OrchestratorSystem.Run(
+        `git config --global --unset-all url."git@github.com".insteadOf || true`,
+      );
       await OrchestratorSystem.Run(
         `git config --global url."https://${token}@github.com/".insteadOf "https://github.com/"`,
       );

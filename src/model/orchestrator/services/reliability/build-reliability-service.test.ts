@@ -1,23 +1,36 @@
+import {
+  describe,
+  it,
+  expect,
+  beforeEach,
+  afterEach,
+  beforeAll,
+  afterAll,
+  vi,
+  type Mocked,
+  type MockedFunction,
+} from 'vitest';
 import { execSync, execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { BuildReliabilityService } from './build-reliability-service';
+import * as core from '@actions/core';
 
 // Mock dependencies
-jest.mock('node:child_process');
-jest.mock('node:fs');
-jest.mock('@actions/core', () => ({
-  info: jest.fn(),
-  warning: jest.fn(),
-}));
+vi.mock('node:child_process');
+vi.mock('node:fs');
+vi.mock('@actions/core', () => {
+  const stub = { info: vi.fn(), warning: vi.fn(), error: vi.fn() };
+  return { ...stub, default: stub };
+});
 
-const mockExecSync = execSync as jest.MockedFunction<typeof execSync>;
-const mockExecFileSync = execFileSync as jest.MockedFunction<typeof execFileSync>;
-const mockFs = fs as jest.Mocked<typeof fs>;
+const mockExecSync = execSync as MockedFunction<typeof execSync>;
+const mockExecFileSync = execFileSync as MockedFunction<typeof execFileSync>;
+const mockFs = fs as Mocked<typeof fs>;
 
 describe('BuildReliabilityService', () => {
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   // =========================================================================
@@ -471,7 +484,10 @@ describe('BuildReliabilityService', () => {
       BuildReliabilityService.archiveBuildOutput('/builds/output', '/archives');
 
       expect(mockFs.mkdirSync).toHaveBeenCalledWith('/archives', { recursive: true });
-      expect(mockExecSync).toHaveBeenCalledWith(expect.stringContaining('tar -czf'), expect.anything());
+      expect(mockExecSync).toHaveBeenCalledWith(
+        expect.stringContaining('tar -czf'),
+        expect.anything(),
+      );
     });
 
     it('should skip archival when insufficient disk space', () => {
@@ -498,7 +514,10 @@ describe('BuildReliabilityService', () => {
       BuildReliabilityService.archiveBuildOutput('/builds/output', '/archives');
 
       // Should NOT have attempted the tar command
-      expect(mockExecSync).not.toHaveBeenCalledWith(expect.stringContaining('tar'), expect.anything());
+      expect(mockExecSync).not.toHaveBeenCalledWith(
+        expect.stringContaining('tar'),
+        expect.anything(),
+      );
 
       Object.defineProperty(process, 'platform', { value: originalPlatform });
     });
@@ -547,7 +566,10 @@ describe('BuildReliabilityService', () => {
       BuildReliabilityService.archiveBuildOutput('/builds/output', '/archives');
 
       // Should still proceed with tar
-      expect(mockExecSync).toHaveBeenCalledWith(expect.stringContaining('tar -czf'), expect.anything());
+      expect(mockExecSync).toHaveBeenCalledWith(
+        expect.stringContaining('tar -czf'),
+        expect.anything(),
+      );
     });
   });
 
@@ -615,17 +637,22 @@ describe('BuildReliabilityService', () => {
     it('should configure http.postBuffer via git config', () => {
       mockExecSync.mockReturnValue('');
       BuildReliabilityService.configureGitEnvironment();
-      expect(mockExecSync).toHaveBeenCalledWith('git config --global http.postBuffer 524288000', expect.anything());
+      expect(mockExecSync).toHaveBeenCalledWith(
+        'git config --global http.postBuffer 524288000',
+        expect.anything(),
+      );
     });
 
     it('should configure core.longpaths via git config', () => {
       mockExecSync.mockReturnValue('');
       BuildReliabilityService.configureGitEnvironment();
-      expect(mockExecSync).toHaveBeenCalledWith('git config --global core.longpaths true', expect.anything());
+      expect(mockExecSync).toHaveBeenCalledWith(
+        'git config --global core.longpaths true',
+        expect.anything(),
+      );
     });
 
     it('should warn but not throw when git config commands fail', () => {
-      const core = require('@actions/core');
       mockExecSync.mockImplementation(() => {
         throw new Error('git config failed');
       });

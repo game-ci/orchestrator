@@ -124,7 +124,9 @@ export class ArtifactUploadHandler {
       return result;
     }
 
-    OrchestratorLogger.log(`[ArtifactUpload] Uploading ${manifest.outputs.length} output(s) to ${config.target}`);
+    OrchestratorLogger.log(
+      `[ArtifactUpload] Uploading ${manifest.outputs.length} output(s) to ${config.target}`,
+    );
 
     for (const entry of manifest.outputs) {
       const entryResult = await ArtifactUploadHandler.uploadEntry(entry, config, projectPath);
@@ -192,7 +194,9 @@ export class ArtifactUploadHandler {
       );
     } catch (error: any) {
       entryResult.error = error.message || String(error);
-      OrchestratorLogger.logWarning(`[ArtifactUpload] Failed to upload '${entry.type}': ${entryResult.error}`);
+      OrchestratorLogger.logWarning(
+        `[ArtifactUpload] Failed to upload '${entry.type}': ${entryResult.error}`,
+      );
     }
 
     return entryResult;
@@ -215,19 +219,23 @@ export class ArtifactUploadHandler {
       // eslint-disable-next-line @typescript-eslint/no-require-imports
       artifact = require(artifactModule);
     } catch {
-      throw new Error('@actions/artifact package is not available. Install it to use github-artifacts upload target.');
+      throw new Error(
+        '@actions/artifact package is not available. Install it to use github-artifacts upload target.',
+      );
     }
 
     const artifactClient = artifact.DefaultArtifactClient
       ? new artifact.DefaultArtifactClient()
       : artifact.default
-      ? new artifact.default()
-      : artifact;
+        ? new artifact.default()
+        : artifact;
 
     const files = ArtifactUploadHandler.collectFiles(resolvedPath);
 
     if (files.length === 0) {
-      OrchestratorLogger.logWarning(`[ArtifactUpload] No files found at ${resolvedPath} for '${entry.type}'`);
+      OrchestratorLogger.logWarning(
+        `[ArtifactUpload] No files found at ${resolvedPath} for '${entry.type}'`,
+      );
 
       return;
     }
@@ -239,9 +247,17 @@ export class ArtifactUploadHandler {
       OrchestratorLogger.log(
         `[ArtifactUpload] Output '${entry.type}' exceeds GitHub Artifacts size limit (${totalSize} > ${GITHUB_ARTIFACT_SIZE_LIMIT}), splitting into chunks`,
       );
-      await ArtifactUploadHandler.uploadChunked(artifactClient, artifactName, files, resolvedPath, config);
+      await ArtifactUploadHandler.uploadChunked(
+        artifactClient,
+        artifactName,
+        files,
+        resolvedPath,
+        config,
+      );
     } else {
-      const rootDirectory = fs.statSync(resolvedPath).isDirectory() ? resolvedPath : path.dirname(resolvedPath);
+      const rootDirectory = fs.statSync(resolvedPath).isDirectory()
+        ? resolvedPath
+        : path.dirname(resolvedPath);
 
       if (typeof artifactClient.uploadArtifact === 'function') {
         await artifactClient.uploadArtifact(artifactName, files, rootDirectory, {
@@ -309,7 +325,9 @@ export class ArtifactUploadHandler {
     rootDirectory: string,
     config: ArtifactUploadConfig,
   ): Promise<void> {
-    OrchestratorLogger.log(`[ArtifactUpload] Uploading chunk '${name}' with ${files.length} file(s)`);
+    OrchestratorLogger.log(
+      `[ArtifactUpload] Uploading chunk '${name}' with ${files.length} file(s)`,
+    );
 
     if (typeof artifactClient.uploadArtifact === 'function') {
       await artifactClient.uploadArtifact(name, files, rootDirectory, {
@@ -395,7 +413,9 @@ export class ArtifactUploadHandler {
     const destination = path.join(config.destination, entry.type);
     fs.mkdirSync(destination, { recursive: true });
 
-    OrchestratorLogger.log(`[ArtifactUpload] Copying '${entry.type}' to local path: ${destination}`);
+    OrchestratorLogger.log(
+      `[ArtifactUpload] Copying '${entry.type}' to local path: ${destination}`,
+    );
 
     ArtifactUploadHandler.copyRecursive(resolvedPath, destination);
   }
@@ -410,7 +430,10 @@ export class ArtifactUploadHandler {
       fs.mkdirSync(destination, { recursive: true });
       const entries = fs.readdirSync(source);
       for (const entry of entries) {
-        ArtifactUploadHandler.copyRecursive(path.join(source, entry), path.join(destination, entry));
+        ArtifactUploadHandler.copyRecursive(
+          path.join(source, entry),
+          path.join(destination, entry),
+        );
       }
     } else {
       fs.copyFileSync(source, destination);
@@ -462,7 +485,8 @@ export class ArtifactUploadHandler {
       : 'gzip';
 
     const parsedRetention = Number.parseInt(retentionDays, 10);
-    const resolvedRetention = Number.isNaN(parsedRetention) || parsedRetention <= 0 ? 30 : parsedRetention;
+    const resolvedRetention =
+      Number.isNaN(parsedRetention) || parsedRetention <= 0 ? 30 : parsedRetention;
 
     return {
       target: resolvedTarget,

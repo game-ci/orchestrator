@@ -8,4 +8,8 @@ export type {
 export { UnityProcessService } from './unity-process-service';
 export type { UnityProcessCleanupResult } from './unity-process-service';
 export { UnityRecoveryService } from './unity-recovery-service';
-export type { UnityRecoveryBudget, UnityRecoveryBudgets, UnityRecoveryDecision } from './unity-recovery-service';
+export type {
+  UnityRecoveryBudget,
+  UnityRecoveryBudgets,
+  UnityRecoveryDecision,
+} from './unity-recovery-service';

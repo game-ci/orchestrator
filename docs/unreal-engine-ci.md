@@ -6,12 +6,12 @@ Real Unreal Engine Docker images are too large for GitHub-hosted runners. This d
 
 ## Container image sizes
 
-| Image | Size | Can build? | Notes |
-|-------|------|-----------|-------|
-| `ghcr.io/epicgames/unreal-engine:dev-slim-5.4` | ~35GB | Yes | Requires Epic GitHub org access |
-| Community UE5 images ([ue5-docker](https://github.com/evoverses/ue5-docker), etc.) | ~40GB (from 120GB) | Yes | Self-built from your UE license |
-| Aggressively stripped custom image | ~40GB floor | Yes | Requires manual optimization |
-| Full UE dev image | 50-120GB | Yes | Way too large |
+| Image                                                                              | Size               | Can build? | Notes                           |
+| ---------------------------------------------------------------------------------- | ------------------ | ---------- | ------------------------------- |
+| `ghcr.io/epicgames/unreal-engine:dev-slim-5.4`                                     | ~35GB              | Yes        | Requires Epic GitHub org access |
+| Community UE5 images ([ue5-docker](https://github.com/evoverses/ue5-docker), etc.) | ~40GB (from 120GB) | Yes        | Self-built from your UE license |
+| Aggressively stripped custom image                                                 | ~40GB floor        | Yes        | Requires manual optimization    |
+| Full UE dev image                                                                  | 50-120GB           | Yes        | Way too large                   |
 
 ## GitHub runner disk constraints
 
@@ -36,6 +36,7 @@ Instead of requiring a real UE image, we maintain a **mock Unreal Engine runtime
 - **`UnrealBuildTool`** — Compiler driver mock
 
 - **Directory structure** matching real UE layout:
+
   ```
   /home/ue4/UnrealEngine/
   ├── Engine/

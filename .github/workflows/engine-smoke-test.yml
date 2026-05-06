@@ -2,19 +2,19 @@ name: Engine Smoke Tests
 
 on:
   push:
-    branches: [main, "release/**", "feat/**"]
+    branches: [main, 'release/**', 'feat/**']
   pull_request:
-    branches: [main, "release/**"]
+    branches: [main, 'release/**']
   workflow_dispatch:
     inputs:
       godot-version:
-        description: "Godot version tag for barichello/godot-ci image"
+        description: 'Godot version tag for barichello/godot-ci image'
         required: false
-        default: "4.3"
+        default: '4.3'
       unreal-image:
-        description: "Real UE Docker image for full build test (leave empty to use CI stub)"
+        description: 'Real UE Docker image for full build test (leave empty to use CI stub)'
         required: false
-        default: ""
+        default: ''
 
 jobs:
   # ─── Godot — actual project export using third-party image ─────
@@ -71,7 +71,7 @@ jobs:
           corepack install
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: '20'
       - name: Resolve yarn cache folder
         id: yarn-config
         run: echo "cacheFolder=$(yarn config get cacheFolder)" >> "$GITHUB_OUTPUT"
@@ -165,7 +165,7 @@ jobs:
           corepack install
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: '20'
       - name: Resolve yarn cache folder
         id: yarn-config
         run: echo "cacheFolder=$(yarn config get cacheFolder)" >> "$GITHUB_OUTPUT"
@@ -239,7 +239,7 @@ jobs:
           corepack install
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: '20'
       - name: Resolve yarn cache folder
         id: yarn-config
         run: echo "cacheFolder=$(yarn config get cacheFolder)" >> "$GITHUB_OUTPUT"

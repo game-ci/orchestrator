@@ -14,7 +14,9 @@ class KubernetesStorage {
     namespace: string,
   ) {
     if (buildParameters.kubeVolume !== ``) {
-      OrchestratorLogger.log(`Kube Volume was input was set ${buildParameters.kubeVolume} overriding ${pvcName}`);
+      OrchestratorLogger.log(
+        `Kube Volume was input was set ${buildParameters.kubeVolume} overriding ${pvcName}`,
+      );
       pvcName = buildParameters.kubeVolume;
 
       return;
@@ -32,13 +34,19 @@ class KubernetesStorage {
       return;
     }
     OrchestratorLogger.log(`Creating PVC ${pvcName} (does not exist)`);
-    const result = await KubernetesStorage.createPVC(pvcName, buildParameters, kubeClient, namespace);
+    const result = await KubernetesStorage.createPVC(
+      pvcName,
+      buildParameters,
+      kubeClient,
+      namespace,
+    );
     await KubernetesStorage.handleResult(result, kubeClient, namespace, pvcName);
   }
 
   public static async getPVCPhase(kubeClient: k8s.CoreV1Api, name: string, namespace: string) {
     try {
-      return (await kubeClient.readNamespacedPersistentVolumeClaim(name, namespace)).body.status?.phase;
+      return (await kubeClient.readNamespacedPersistentVolumeClaim(name, namespace)).body.status
+        ?.phase;
     } catch (error) {
       core.error('Failed to get PVC phase');
       core.error(OrchestratorLogger.stringifyError(error));
@@ -46,7 +54,11 @@ class KubernetesStorage {
     }
   }
 
-  public static async watchUntilPVCNotPending(kubeClient: k8s.CoreV1Api, name: string, namespace: string) {
+  public static async watchUntilPVCNotPending(
+    kubeClient: k8s.CoreV1Api,
+    name: string,
+    namespace: string,
+  ) {
     let checkCount = 0;
     try {
       OrchestratorLogger.log(`watch Until PVC Not Pending ${name} ${namespace}`);
@@ -55,7 +67,8 @@ class KubernetesStorage {
       // If so, skip waiting - PVC will bind when pod is created
       let shouldSkipWait = false;
       try {
-        const pvcBody = (await kubeClient.readNamespacedPersistentVolumeClaim(name, namespace)).body;
+        const pvcBody = (await kubeClient.readNamespacedPersistentVolumeClaim(name, namespace))
+          .body;
         const storageClassName = pvcBody.spec?.storageClassName;
 
         if (storageClassName) {
@@ -110,7 +123,11 @@ class KubernetesStorage {
             try {
               const events = await kubeClient.listNamespacedEvent(namespace);
               const pvcEvents = events.body.items
-                .filter((x) => x.involvedObject?.kind === 'PersistentVolumeClaim' && x.involvedObject?.name === name)
+                .filter(
+                  (x) =>
+                    x.involvedObject?.kind === 'PersistentVolumeClaim' &&
+                    x.involvedObject?.name === name,
+                )
                 .map((x) => ({
                   message: x.message || '',
                   reason: x.reason || '',
@@ -125,7 +142,8 @@ class KubernetesStorage {
                 // Check if event indicates WaitForFirstConsumer
                 const waitForConsumerEvent = pvcEvents.find(
                   (event) =>
-                    event.reason === 'WaitForFirstConsumer' || event.message?.includes('waiting for first consumer'),
+                    event.reason === 'WaitForFirstConsumer' ||
+                    event.message?.includes('waiting for first consumer'),
                 );
                 if (waitForConsumerEvent) {
                   OrchestratorLogger.log(
@@ -158,14 +176,19 @@ class KubernetesStorage {
       core.error('Failed to watch PVC');
       core.error(error.toString());
       try {
-        const pvcBody = (await kubeClient.readNamespacedPersistentVolumeClaim(name, namespace)).body;
+        const pvcBody = (await kubeClient.readNamespacedPersistentVolumeClaim(name, namespace))
+          .body;
 
         // Fetch PVC events for detailed diagnostics
         let pvcEvents: any[] = [];
         try {
           const events = await kubeClient.listNamespacedEvent(namespace);
           pvcEvents = events.body.items
-            .filter((x) => x.involvedObject?.kind === 'PersistentVolumeClaim' && x.involvedObject?.name === name)
+            .filter(
+              (x) =>
+                x.involvedObject?.kind === 'PersistentVolumeClaim' &&
+                x.involvedObject?.name === name,
+            )
             .map((x) => ({
               message: x.message || '',
               reason: x.reason || '',
@@ -224,7 +247,9 @@ class KubernetesStorage {
         if (pvcEvents.length > 0) {
           core.error(`PVC Events: ${JSON.stringify(pvcEvents, undefined, 2)}`);
         } else {
-          core.error('No PVC events found - this may indicate the storage provisioner is not responding');
+          core.error(
+            'No PVC events found - this may indicate the storage provisioner is not responding',
+          );
         }
       } catch {
         // Ignore PVC read errors
@@ -247,7 +272,8 @@ class KubernetesStorage {
     };
     pvc.spec = {
       accessModes: ['ReadWriteOnce'],
-      storageClassName: buildParameters.kubeStorageClass === '' ? 'standard' : buildParameters.kubeStorageClass,
+      storageClassName:
+        buildParameters.kubeStorageClass === '' ? 'standard' : buildParameters.kubeStorageClass,
       resources: {
         requests: {
           storage: buildParameters.kubeVolumeSize,

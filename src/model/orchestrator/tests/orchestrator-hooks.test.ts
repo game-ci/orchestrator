@@ -28,7 +28,10 @@ commands: echo "test"`;
     const overrides = {
       versioning: 'None',
       projectPath: 'test-project',
-      unityVersion: UnityVersioning.determineUnityVersion('test-project', UnityVersioning.read('test-project')),
+      unityVersion: UnityVersioning.determineUnityVersion(
+        'test-project',
+        UnityVersioning.read('test-project'),
+      ),
       targetPlatform: 'StandaloneLinux64',
       image: 'ubuntu',
       cacheKey: `test-case-${uuidv4()}`,
@@ -54,7 +57,10 @@ commands: echo "test"`;
         versioning: 'None',
         image: 'ubuntu',
         projectPath: 'test-project',
-        unityVersion: UnityVersioning.determineUnityVersion('test-project', UnityVersioning.read('test-project')),
+        unityVersion: UnityVersioning.determineUnityVersion(
+          'test-project',
+          UnityVersioning.read('test-project'),
+        ),
         targetPlatform: 'StandaloneLinux64',
         cacheKey: `test-case-${uuidv4()}`,
         containerHookFiles: `my-test-step-pre-build,my-test-step-post-build`,
@@ -71,7 +77,10 @@ commands: echo "test"`;
       const overrides = {
         versioning: 'None',
         projectPath: 'test-project',
-        unityVersion: UnityVersioning.determineUnityVersion('test-project', UnityVersioning.read('test-project')),
+        unityVersion: UnityVersioning.determineUnityVersion(
+          'test-project',
+          UnityVersioning.read('test-project'),
+        ),
         targetPlatform: 'StandaloneLinux64',
         cacheKey: `test-case-${uuidv4()}`,
         image: 'ubuntu',
@@ -90,7 +99,9 @@ commands: echo "test"`;
       // so hook command output is never captured in build results.
       const awsEndpoint = process.env.AWS_ENDPOINT || process.env.AWS_ENDPOINT_URL || '';
       if (awsEndpoint.includes('localhost') || awsEndpoint.includes('127.0.0.1')) {
-        console.log('Skipping hooks execution test on local AWS emulator (ECS containers do not execute)');
+        console.log(
+          'Skipping hooks execution test on local AWS emulator (ECS containers do not execute)',
+        );
 
         return;
       }
@@ -98,7 +109,10 @@ commands: echo "test"`;
       const overrides = {
         versioning: 'None',
         projectPath: 'test-project',
-        unityVersion: UnityVersioning.determineUnityVersion('test-project', UnityVersioning.read('test-project')),
+        unityVersion: UnityVersioning.determineUnityVersion(
+          'test-project',
+          UnityVersioning.read('test-project'),
+        ),
         targetPlatform: 'StandaloneLinux64',
         cacheKey: `test-case-${uuidv4()}`,
         containerHookFiles: `my-test-step-pre-build,my-test-step-post-build`,

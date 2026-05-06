@@ -29,7 +29,7 @@ class LocalDockerOrchestrator implements ProviderInterface {
   async garbageCollect(
     filter: string,
     previewOnly: boolean,
-    olderThan: Number,
+    olderThan: number,
     fullCache: boolean,
     // eslint-disable-next-line no-unused-vars
     baseDependencies: boolean,
@@ -92,12 +92,20 @@ class LocalDockerOrchestrator implements ProviderInterface {
       } else {
         // Just prune dangling images
         if (previewOnly) {
-          const pruneOutput = await OrchestratorSystem.Run(`docker image prune --force --filter "until=${maxAgeHours}h" --dry-run 2>/dev/null || docker images -f "dangling=true" -q`, false, true);
+          const pruneOutput = await OrchestratorSystem.Run(
+            `docker image prune --force --filter "until=${maxAgeHours}h" --dry-run 2>/dev/null || docker images -f "dangling=true" -q`,
+            false,
+            true,
+          );
           if (pruneOutput.trim()) {
             output.push(`[dry-run] Would prune dangling images`);
           }
         } else {
-          const pruneOutput = await OrchestratorSystem.Run(`docker image prune --force --filter "until=${maxAgeHours}h"`, false, true);
+          const pruneOutput = await OrchestratorSystem.Run(
+            `docker image prune --force --filter "until=${maxAgeHours}h"`,
+            false,
+            true,
+          );
           if (pruneOutput.trim()) {
             output.push(`Pruned dangling images`);
           }
@@ -140,7 +148,11 @@ class LocalDockerOrchestrator implements ProviderInterface {
     // eslint-disable-next-line no-unused-vars
     branchName: string,
     // eslint-disable-next-line no-unused-vars
-    defaultSecretsArray: { ParameterKey: string; EnvironmentVariable: string; ParameterValue: string }[],
+    defaultSecretsArray: {
+      ParameterKey: string;
+      EnvironmentVariable: string;
+      ParameterValue: string;
+    }[],
   ) {
     const { workspace } = Action;
     if (
@@ -164,7 +176,11 @@ class LocalDockerOrchestrator implements ProviderInterface {
     // eslint-disable-next-line no-unused-vars
     branchName: string,
     // eslint-disable-next-line no-unused-vars
-    defaultSecretsArray: { ParameterKey: string; EnvironmentVariable: string; ParameterValue: string }[],
+    defaultSecretsArray: {
+      ParameterKey: string;
+      EnvironmentVariable: string;
+      ParameterValue: string;
+    }[],
   ) {
     this.buildParameters = buildParameters;
   }
@@ -210,7 +226,9 @@ class LocalDockerOrchestrator implements ProviderInterface {
         value = value
           .replace('http://localhost', 'http://host.docker.internal')
           .replace('http://127.0.0.1', 'http://host.docker.internal');
-        OrchestratorLogger.log(`Replaced localhost with host.docker.internal for ${x.name}: ${value}`);
+        OrchestratorLogger.log(
+          `Replaced localhost with host.docker.internal for ${x.name}: ${value}`,
+        );
       }
       content.push({ name: x.name, value });
     }
@@ -258,7 +276,9 @@ find ${sharedFolder} -maxdepth 1 -type f -name "test-*" -exec cp -a {} /github/w
     }
 
     if (fs.existsSync(`${workspace}/orchestrator-cache`)) {
-      await OrchestratorSystem.Run(`ls ${workspace}/orchestrator-cache && du -sh ${workspace}/orchestrator-cache`);
+      await OrchestratorSystem.Run(
+        `ls ${workspace}/orchestrator-cache && du -sh ${workspace}/orchestrator-cache`,
+      );
     }
     const exitCode = await Docker.run(
       image,

@@ -62,7 +62,8 @@ export class SharedWorkspaceLocking {
     try {
       await SharedWorkspaceLocking.s3.send(new HeadBucketCommand({ Bucket: bucket }));
     } catch {
-      const region = Input.region || process.env.AWS_REGION || process.env.AWS_DEFAULT_REGION || 'us-east-1';
+      const region =
+        Input.region || process.env.AWS_REGION || process.env.AWS_DEFAULT_REGION || 'us-east-1';
       const createParameters: any = { Bucket: bucket };
       if (region && region !== 'us-east-1') {
         createParameters.CreateBucketConfiguration = { LocationConstraint: region };
@@ -70,7 +71,10 @@ export class SharedWorkspaceLocking {
       await SharedWorkspaceLocking.s3.send(new CreateBucketCommand(createParameters));
     }
   }
-  private static async listObjects(prefix: string, bucket = SharedWorkspaceLocking.bucket): Promise<string[]> {
+  private static async listObjects(
+    prefix: string,
+    bucket = SharedWorkspaceLocking.bucket,
+  ): Promise<string[]> {
     await SharedWorkspaceLocking.ensureBucketExists();
     if (prefix !== '' && !prefix.endsWith('/')) {
       prefix += '/';
@@ -119,7 +123,9 @@ export class SharedWorkspaceLocking {
       const lockFolderExists = rootLines.map((x) => x.replace(`/`, ``)).includes(`locks`);
 
       if (lockFolderExists) {
-        const lines = await SharedWorkspaceLocking.listObjects(SharedWorkspaceLocking.workspacePrefix);
+        const lines = await SharedWorkspaceLocking.listObjects(
+          SharedWorkspaceLocking.workspacePrefix,
+        );
 
         return lines.map((x) => x.replace(`/`, ``)).includes(buildParametersContext.cacheKey);
       } else {
@@ -149,16 +155,26 @@ export class SharedWorkspaceLocking {
       .map((x) => x.replace(`/`, ``))
       .filter((x) => x.includes(workspace) && x.endsWith(`_lock`));
   }
-  public static async GetLockedWorkspace(workspace: string, runId: string, buildParametersContext: BuildParameters) {
+  public static async GetLockedWorkspace(
+    workspace: string,
+    runId: string,
+    buildParametersContext: BuildParameters,
+  ) {
     if (buildParametersContext.maxRetainedWorkspaces === 0) {
       return false;
     }
 
     if (await SharedWorkspaceLocking.DoesCacheKeyTopLevelExist(buildParametersContext)) {
       const workspaces = await SharedWorkspaceLocking.GetFreeWorkspaces(buildParametersContext);
-      OrchestratorLogger.log(`run agent ${runId} is trying to access a workspace, free: ${JSON.stringify(workspaces)}`);
+      OrchestratorLogger.log(
+        `run agent ${runId} is trying to access a workspace, free: ${JSON.stringify(workspaces)}`,
+      );
       for (const element of workspaces) {
-        const lockResult = await SharedWorkspaceLocking.LockWorkspace(element, runId, buildParametersContext);
+        const lockResult = await SharedWorkspaceLocking.LockWorkspace(
+          element,
+          runId,
+          buildParametersContext,
+        );
         OrchestratorLogger.log(
           `run agent: ${runId} try lock workspace: ${element} locking attempt result: ${lockResult}`,
         );
@@ -174,8 +190,15 @@ export class SharedWorkspaceLocking {
       Orchestrator.lockedWorkspace = workspace;
     }
 
-    const createResult = await SharedWorkspaceLocking.CreateWorkspace(workspace, buildParametersContext);
-    const lockResult = await SharedWorkspaceLocking.LockWorkspace(workspace, runId, buildParametersContext);
+    const createResult = await SharedWorkspaceLocking.CreateWorkspace(
+      workspace,
+      buildParametersContext,
+    );
+    const lockResult = await SharedWorkspaceLocking.LockWorkspace(
+      workspace,
+      runId,
+      buildParametersContext,
+    );
     OrchestratorLogger.log(
       `run agent ${runId} didn't find a free workspace so created: ${workspace} createWorkspaceSuccess: ${createResult} Lock:${lockResult}`,
     );
@@ -183,10 +206,14 @@ export class SharedWorkspaceLocking {
     return createResult && lockResult;
   }
 
-  public static async DoesWorkspaceExist(workspace: string, buildParametersContext: BuildParameters) {
+  public static async DoesWorkspaceExist(
+    workspace: string,
+    buildParametersContext: BuildParameters,
+  ) {
     return (
-      (await SharedWorkspaceLocking.GetAllWorkspaces(buildParametersContext)).filter((x) => x.includes(workspace))
-        .length > 0
+      (await SharedWorkspaceLocking.GetAllWorkspaces(buildParametersContext)).filter((x) =>
+        x.includes(workspace),
+      ).length > 0
     );
   }
   public static async HasWorkspaceLock(
@@ -194,7 +221,9 @@ export class SharedWorkspaceLocking {
     runId: string,
     buildParametersContext: BuildParameters,
   ): Promise<boolean> {
-    const locks = (await SharedWorkspaceLocking.GetAllLocksForWorkspace(workspace, buildParametersContext))
+    const locks = (
+      await SharedWorkspaceLocking.GetAllLocksForWorkspace(workspace, buildParametersContext)
+    )
       .map((x) => {
         return {
           name: x,
@@ -213,12 +242,20 @@ export class SharedWorkspaceLocking {
     return includesRunLock;
   }
 
-  public static async GetFreeWorkspaces(buildParametersContext: BuildParameters): Promise<string[]> {
+  public static async GetFreeWorkspaces(
+    buildParametersContext: BuildParameters,
+  ): Promise<string[]> {
     const result: string[] = [];
     const workspaces = await SharedWorkspaceLocking.GetAllWorkspaces(buildParametersContext);
     for (const element of workspaces) {
-      const isLocked = await SharedWorkspaceLocking.IsWorkspaceLocked(element, buildParametersContext);
-      const isBelowMax = await SharedWorkspaceLocking.IsWorkspaceBelowMax(element, buildParametersContext);
+      const isLocked = await SharedWorkspaceLocking.IsWorkspaceLocked(
+        element,
+        buildParametersContext,
+      );
+      const isBelowMax = await SharedWorkspaceLocking.IsWorkspaceBelowMax(
+        element,
+        buildParametersContext,
+      );
       OrchestratorLogger.log(`workspace ${element} locked:${isLocked} below max:${isBelowMax}`);
       if (!isLocked && isBelowMax) {
         result.push(element);
@@ -259,7 +296,7 @@ export class SharedWorkspaceLocking {
   public static async GetWorkspaceTimestamp(
     workspace: string,
     buildParametersContext: BuildParameters,
-  ): Promise<Number> {
+  ): Promise<number> {
     if (workspace.split(`_`).length > 0) {
       return Number(workspace.split(`_`)[1]);
     }
@@ -278,7 +315,10 @@ export class SharedWorkspaceLocking {
       .map((x) => Number(x))[0];
   }
 
-  public static async IsWorkspaceLocked(workspace: string, buildParametersContext: BuildParameters): Promise<boolean> {
+  public static async IsWorkspaceLocked(
+    workspace: string,
+    buildParametersContext: BuildParameters,
+  ): Promise<boolean> {
     if (!(await SharedWorkspaceLocking.DoesWorkspaceExist(workspace, buildParametersContext))) {
       throw new Error(`workspace doesn't exist ${workspace}`);
     }
@@ -294,7 +334,10 @@ export class SharedWorkspaceLocking {
     return lockFilesExist;
   }
 
-  public static async CreateWorkspace(workspace: string, buildParametersContext: BuildParameters): Promise<boolean> {
+  public static async CreateWorkspace(
+    workspace: string,
+    buildParametersContext: BuildParameters,
+  ): Promise<boolean> {
     if (await SharedWorkspaceLocking.DoesWorkspaceExist(workspace, buildParametersContext)) {
       throw new Error(`${workspace} already exists`);
     }
@@ -304,14 +347,20 @@ export class SharedWorkspaceLocking {
     await (SharedWorkspaceLocking.useRclone
       ? SharedWorkspaceLocking.rclone(`touch ${SharedWorkspaceLocking.bucket}/${key}`)
       : SharedWorkspaceLocking.s3.send(
-          new PutObjectCommand({ Bucket: SharedWorkspaceLocking.bucket, Key: key, Body: new Uint8Array(0) }),
+          new PutObjectCommand({
+            Bucket: SharedWorkspaceLocking.bucket,
+            Key: key,
+            Body: new Uint8Array(0),
+          }),
         ));
 
     const workspaces = await SharedWorkspaceLocking.GetAllWorkspaces(buildParametersContext);
 
     OrchestratorLogger.log(`All workspaces ${workspaces}`);
     if (!(await SharedWorkspaceLocking.IsWorkspaceBelowMax(workspace, buildParametersContext))) {
-      OrchestratorLogger.log(`Workspace is above max ${workspaces} ${buildParametersContext.maxRetainedWorkspaces}`);
+      OrchestratorLogger.log(
+        `Workspace is above max ${workspaces} ${buildParametersContext.maxRetainedWorkspaces}`,
+      );
       await SharedWorkspaceLocking.CleanupWorkspace(workspace, buildParametersContext);
 
       return false;
@@ -334,17 +383,27 @@ export class SharedWorkspaceLocking {
     await (SharedWorkspaceLocking.useRclone
       ? SharedWorkspaceLocking.rclone(`touch ${SharedWorkspaceLocking.bucket}/${key}`)
       : SharedWorkspaceLocking.s3.send(
-          new PutObjectCommand({ Bucket: SharedWorkspaceLocking.bucket, Key: key, Body: new Uint8Array(0) }),
+          new PutObjectCommand({
+            Bucket: SharedWorkspaceLocking.bucket,
+            Key: key,
+            Body: new Uint8Array(0),
+          }),
         ));
 
-    const hasLock = await SharedWorkspaceLocking.HasWorkspaceLock(workspace, runId, buildParametersContext);
+    const hasLock = await SharedWorkspaceLocking.HasWorkspaceLock(
+      workspace,
+      runId,
+      buildParametersContext,
+    );
 
     if (hasLock) {
       Orchestrator.lockedWorkspace = workspace;
     } else {
       await (SharedWorkspaceLocking.useRclone
         ? SharedWorkspaceLocking.rclone(`delete ${SharedWorkspaceLocking.bucket}/${key}`)
-        : SharedWorkspaceLocking.s3.send(new DeleteObjectCommand({ Bucket: SharedWorkspaceLocking.bucket, Key: key })));
+        : SharedWorkspaceLocking.s3.send(
+            new DeleteObjectCommand({ Bucket: SharedWorkspaceLocking.bucket, Key: key }),
+          ));
     }
 
     return hasLock;
@@ -356,11 +415,18 @@ export class SharedWorkspaceLocking {
     buildParametersContext: BuildParameters,
   ): Promise<boolean> {
     await SharedWorkspaceLocking.ensureBucketExists();
-    const files = await SharedWorkspaceLocking.GetAllLocksForWorkspace(workspace, buildParametersContext);
-    const file = files.find((x) => x.includes(workspace) && x.endsWith(`_lock`) && x.includes(runId));
+    const files = await SharedWorkspaceLocking.GetAllLocksForWorkspace(
+      workspace,
+      buildParametersContext,
+    );
+    const file = files.find(
+      (x) => x.includes(workspace) && x.endsWith(`_lock`) && x.includes(runId),
+    );
     OrchestratorLogger.log(`All Locks ${files} ${workspace} ${runId}`);
     OrchestratorLogger.log(`Deleting lock ${workspace}/${file}`);
-    OrchestratorLogger.log(`rm ${SharedWorkspaceLocking.workspaceRoot}${buildParametersContext.cacheKey}/${file}`);
+    OrchestratorLogger.log(
+      `rm ${SharedWorkspaceLocking.workspaceRoot}${buildParametersContext.cacheKey}/${file}`,
+    );
     if (file) {
       await (SharedWorkspaceLocking.useRclone
         ? SharedWorkspaceLocking.rclone(
@@ -374,7 +440,11 @@ export class SharedWorkspaceLocking {
           ));
     }
 
-    return !(await SharedWorkspaceLocking.HasWorkspaceLock(workspace, runId, buildParametersContext));
+    return !(await SharedWorkspaceLocking.HasWorkspaceLock(
+      workspace,
+      runId,
+      buildParametersContext,
+    ));
   }
 
   public static async CleanupWorkspace(workspace: string, buildParametersContext: BuildParameters) {
@@ -384,7 +454,10 @@ export class SharedWorkspaceLocking {
       await (SharedWorkspaceLocking.useRclone
         ? SharedWorkspaceLocking.rclone(`delete ${SharedWorkspaceLocking.bucket}/${prefix}${file}`)
         : SharedWorkspaceLocking.s3.send(
-            new DeleteObjectCommand({ Bucket: SharedWorkspaceLocking.bucket, Key: `${prefix}${file}` }),
+            new DeleteObjectCommand({
+              Bucket: SharedWorkspaceLocking.bucket,
+              Key: `${prefix}${file}`,
+            }),
           ));
     }
   }

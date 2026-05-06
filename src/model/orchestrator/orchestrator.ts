@@ -81,10 +81,15 @@ class Orchestrator {
   }
 
   private static async setupSelectedBuildPlatform() {
-    OrchestratorLogger.log(`Orchestrator platform selected ${Orchestrator.buildParameters.providerStrategy}`);
+    OrchestratorLogger.log(
+      `Orchestrator platform selected ${Orchestrator.buildParameters.providerStrategy}`,
+    );
 
     // Check runner availability and apply fallback if needed
-    if (Orchestrator.buildParameters.runnerCheckEnabled && Orchestrator.buildParameters.fallbackProviderStrategy) {
+    if (
+      Orchestrator.buildParameters.runnerCheckEnabled &&
+      Orchestrator.buildParameters.fallbackProviderStrategy
+    ) {
       const owner = OrchestratorOptions.githubOwner;
       const repo = OrchestratorOptions.githubRepoName;
       const token = Orchestrator.buildParameters.gitPrivateToken || process.env.GITHUB_TOKEN || '';
@@ -110,7 +115,9 @@ class Orchestrator {
       if (result.shouldFallback) {
         const original = Orchestrator.buildParameters.providerStrategy;
         const fallback = Orchestrator.buildParameters.fallbackProviderStrategy;
-        OrchestratorLogger.log(`Falling back from '${original}' to '${fallback}' — ${result.reason}`);
+        OrchestratorLogger.log(
+          `Falling back from '${original}' to '${fallback}' — ${result.reason}`,
+        );
         Orchestrator.buildParameters.providerStrategy = fallback;
         core.setOutput('providerFallbackUsed', 'true');
         core.setOutput('providerFallbackReason', result.reason);
@@ -151,7 +158,9 @@ class Orchestrator {
       if (useAwsLocalMode) {
         // aws-local mode: Validate AWS templates but execute via local-docker
         // This provides confidence in AWS CloudFormation without requiring a full AWS emulator
-        OrchestratorLogger.log('AWS_FORCE_PROVIDER=aws-local: Validating AWS templates, executing via local-docker');
+        OrchestratorLogger.log(
+          'AWS_FORCE_PROVIDER=aws-local: Validating AWS templates, executing via local-docker',
+        );
         validateAwsTemplates = true;
         provider = 'local-docker';
       } else if (forceAwsProvider) {
@@ -161,7 +170,9 @@ class Orchestrator {
         );
       } else {
         // Auto-fallback to local-docker
-        OrchestratorLogger.log('Local emulator endpoints detected; routing provider to local-docker for this run');
+        OrchestratorLogger.log(
+          'Local emulator endpoints detected; routing provider to local-docker for this run',
+        );
         OrchestratorLogger.log(
           'Note: Set AWS_FORCE_PROVIDER=aws-local to validate AWS templates with local-docker execution',
         );
@@ -179,7 +190,9 @@ class Orchestrator {
         Orchestrator.buildParameters.providerExecutable,
         Orchestrator.buildParameters,
       );
-      OrchestratorLogger.log(`Using CLI provider executable: ${Orchestrator.buildParameters.providerExecutable}`);
+      OrchestratorLogger.log(
+        `Using CLI provider executable: ${Orchestrator.buildParameters.providerExecutable}`,
+      );
       return;
     }
 
@@ -192,7 +205,9 @@ class Orchestrator {
 
         // Validate that AWS provider is actually being used when expected
         if (isLocalStack && forceAwsProvider) {
-          OrchestratorLogger.log('✓ AWS provider initialized with local emulator - AWS functionality will be validated');
+          OrchestratorLogger.log(
+            '✓ AWS provider initialized with local emulator - AWS functionality will be validated',
+          );
         } else if (isLocalStack && !forceAwsProvider) {
           OrchestratorLogger.log(
             '⚠ WARNING: AWS provider was requested but local emulator detected without AWS_FORCE_PROVIDER',
@@ -236,7 +251,9 @@ class Orchestrator {
         try {
           Orchestrator.Provider = await loadProvider(provider, Orchestrator.buildParameters);
         } catch (error: any) {
-          OrchestratorLogger.log(`Failed to load provider '${provider}' using dynamic loader: ${error.message}`);
+          OrchestratorLogger.log(
+            `Failed to load provider '${provider}' using dynamic loader: ${error.message}`,
+          );
           OrchestratorLogger.log('Falling back to local provider...');
           Orchestrator.Provider = new LocalOrchestrator();
         }
@@ -245,9 +262,14 @@ class Orchestrator {
 
     // Final validation: Ensure provider matches expectations
     const finalProviderName = Orchestrator.Provider.constructor.name;
-    if (Orchestrator.buildParameters.providerStrategy === 'aws' && finalProviderName !== 'AWSBuildEnvironment') {
+    if (
+      Orchestrator.buildParameters.providerStrategy === 'aws' &&
+      finalProviderName !== 'AWSBuildEnvironment'
+    ) {
       OrchestratorLogger.log(`⚠ WARNING: Expected AWS provider but got ${finalProviderName}`);
-      OrchestratorLogger.log('⚠ AWS functionality tests may not be validating AWS services correctly');
+      OrchestratorLogger.log(
+        '⚠ AWS functionality tests may not be validating AWS services correctly',
+      );
     }
   }
 
@@ -269,7 +291,10 @@ class Orchestrator {
         OrchestratorLogger.log(`Retrying build on fallback provider '${fallback}'...`);
         buildParameters.providerStrategy = fallback;
         core.setOutput('providerFallbackUsed', 'true');
-        core.setOutput('providerFallbackReason', `Primary provider failed: ${primaryError.message}`);
+        core.setOutput(
+          'providerFallbackReason',
+          `Primary provider failed: ${primaryError.message}`,
+        );
 
         return await Orchestrator.runWithProvider(buildParameters, baseImage);
       }
@@ -307,7 +332,9 @@ class Orchestrator {
             { name: `LOCKED_WORKSPACE`, value: Orchestrator.lockedWorkspace },
           ];
         } else {
-          OrchestratorLogger.log(`Max retained workspaces reached ${buildParameters.maxRetainedWorkspaces}`);
+          OrchestratorLogger.log(
+            `Max retained workspaces reached ${buildParameters.maxRetainedWorkspaces}`,
+          );
           buildParameters.maxRetainedWorkspaces = 0;
           Orchestrator.lockedWorkspace = ``;
         }
@@ -326,8 +353,17 @@ class Orchestrator {
         Orchestrator.defaultSecrets,
       );
       if (!Orchestrator.buildParameters.isCliMode) core.endGroup();
-      if (buildParameters.asyncWorkflow && this.isOrchestratorEnvironment && this.isOrchestratorAsyncEnvironment) {
-        await GitHub.updateGitHubCheck(Orchestrator.buildParameters.buildGuid, `success`, `success`, `completed`);
+      if (
+        buildParameters.asyncWorkflow &&
+        this.isOrchestratorEnvironment &&
+        this.isOrchestratorAsyncEnvironment
+      ) {
+        await GitHub.updateGitHubCheck(
+          Orchestrator.buildParameters.buildGuid,
+          `success`,
+          `success`,
+          `completed`,
+        );
       }
 
       if (BuildParameters.shouldUseRetainedWorkspaceMode(buildParameters)) {
@@ -337,7 +373,10 @@ class Orchestrator {
           Orchestrator.buildParameters.buildGuid,
           Orchestrator.buildParameters,
         );
-        const isLocked = await SharedWorkspaceLocking.IsWorkspaceLocked(workspace, Orchestrator.buildParameters);
+        const isLocked = await SharedWorkspaceLocking.IsWorkspaceLocked(
+          workspace,
+          Orchestrator.buildParameters,
+        );
         if (isLocked) {
           throw new Error(
             `still locked after releasing ${await SharedWorkspaceLocking.GetAllLocksForWorkspace(
@@ -365,7 +404,11 @@ class Orchestrator {
         `completed`,
       );
       if (!Orchestrator.buildParameters.isCliMode) core.endGroup();
-      await OrchestratorError.handleException(error, Orchestrator.buildParameters, Orchestrator.defaultSecrets);
+      await OrchestratorError.handleException(
+        error,
+        Orchestrator.buildParameters,
+        Orchestrator.defaultSecrets,
+      );
       throw error;
     }
   }
@@ -423,15 +466,22 @@ class Orchestrator {
 
     try {
       // Import AWS template formations
-      const { BaseStackFormation } = await import('./providers/aws/cloud-formations/base-stack-formation');
-      const { TaskDefinitionFormation } = await import('./providers/aws/cloud-formations/task-definition-formation');
+      const { BaseStackFormation } =
+        await import('./providers/aws/cloud-formations/base-stack-formation');
+      const { TaskDefinitionFormation } =
+        await import('./providers/aws/cloud-formations/task-definition-formation');
 
       // Validate base stack template
       const baseTemplate = BaseStackFormation.formation;
       OrchestratorLogger.log(`✓ Base stack template generated (${baseTemplate.length} chars)`);
 
       // Check for required resources in base stack
-      const requiredBaseResources = ['AWS::EC2::VPC', 'AWS::ECS::Cluster', 'AWS::S3::Bucket', 'AWS::IAM::Role'];
+      const requiredBaseResources = [
+        'AWS::EC2::VPC',
+        'AWS::ECS::Cluster',
+        'AWS::S3::Bucket',
+        'AWS::IAM::Role',
+      ];
       for (const resource of requiredBaseResources) {
         if (baseTemplate.includes(resource)) {
           OrchestratorLogger.log(`  ✓ Contains ${resource}`);

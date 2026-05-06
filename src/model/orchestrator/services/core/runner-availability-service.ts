@@ -120,7 +120,11 @@ export class RunnerAvailabilityService {
    * - Total timeout (PAGINATION_TIMEOUT_MS) to prevent indefinite API calls
    * - Rate-limit detection (HTTP 403/429 with X-RateLimit-Remaining header)
    */
-  private static async fetchRunners(octokit: Octokit, owner: string, repo: string): Promise<GitHubRunner[]> {
+  private static async fetchRunners(
+    octokit: Octokit,
+    owner: string,
+    repo: string,
+  ): Promise<GitHubRunner[]> {
     const allRunners: GitHubRunner[] = [];
     let page = 1;
     const perPage = 100;
@@ -149,7 +153,8 @@ export class RunnerAvailabilityService {
         const status = requestError.status ?? requestError.response?.status;
         if (status === 403 || status === 429) {
           const resetTime =
-            requestError.response?.headers?.['x-ratelimit-reset'] ?? requestError.headers?.['x-ratelimit-reset'];
+            requestError.response?.headers?.['x-ratelimit-reset'] ??
+            requestError.headers?.['x-ratelimit-reset'];
           const resetMessage = resetTime
             ? ` Resets at ${new Date(Number.parseInt(String(resetTime), 10) * 1000).toISOString()}`
             : '';

@@ -11,10 +11,16 @@ export class LfsHashing {
     await OrchestratorSystem.Run(`md5sum .lfs-assets-guid > .lfs-assets-guid-sum`);
     const lfsHashes = {
       lfsGuid: fs
-        .readFileSync(`${path.join(OrchestratorFolders.repoPathAbsolute, `.lfs-assets-guid`)}`, 'utf8')
+        .readFileSync(
+          `${path.join(OrchestratorFolders.repoPathAbsolute, `.lfs-assets-guid`)}`,
+          'utf8',
+        )
         .replace(/\n/g, ``),
       lfsGuidSum: fs
-        .readFileSync(`${path.join(OrchestratorFolders.repoPathAbsolute, `.lfs-assets-guid-sum`)}`, 'utf8')
+        .readFileSync(
+          `${path.join(OrchestratorFolders.repoPathAbsolute, `.lfs-assets-guid-sum`)}`,
+          'utf8',
+        )
         .replace('  .lfs-assets-guid', '')
         .replace(/\n/g, ``),
     };
@@ -24,7 +30,9 @@ export class LfsHashing {
   public static async hashAllFiles(folder: string) {
     const startPath = process.cwd();
     process.chdir(folder);
-    const result = await (await OrchestratorSystem.Run(`find -type f -exec md5sum "{}" + | sort | md5sum`))
+    const result = await (
+      await OrchestratorSystem.Run(`find -type f -exec md5sum "{}" + | sort | md5sum`)
+    )
       .replace(/\n/g, '')
       .split(` `)[0];
     process.chdir(startPath);

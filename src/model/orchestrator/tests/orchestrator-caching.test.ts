@@ -46,9 +46,9 @@ describe('Orchestrator (Remote Client) Caching', () => {
       await OrchestratorSystem.Run(`du -h ${__dirname}`);
 
       // Compare validity to original hash
-      expect(fs.readFileSync(path.resolve(testFolder, 'test.txt'), { encoding: 'utf8' }).toString()).toContain(
-        Cli.options.cacheKey,
-      );
+      expect(
+        fs.readFileSync(path.resolve(testFolder, 'test.txt'), { encoding: 'utf8' }).toString(),
+      ).toContain(Cli.options.cacheKey);
       fs.rmdirSync(testFolder, { recursive: true });
       fs.rmdirSync(cacheFolder, { recursive: true });
 

@@ -1,9 +1,12 @@
+import { describe, it, expect, beforeEach, afterEach, beforeAll, afterAll, vi } from 'vitest';
 import { execFile } from 'node:child_process';
 import path from 'node:path';
 
 const CLI_ENTRY = path.resolve(__dirname, '..', '..', 'cli.ts');
 
-function runCli(cliArguments: string[]): Promise<{ code: number | null; stdout: string; stderr: string }> {
+function runCli(
+  cliArguments: string[],
+): Promise<{ code: number | null; stdout: string; stderr: string }> {
   return new Promise((resolve) => {
     execFile(
       process.execPath,
@@ -11,7 +14,7 @@ function runCli(cliArguments: string[]): Promise<{ code: number | null; stdout: 
       { timeout: 60_000, cwd: path.resolve(__dirname, '..', '..', '..') },
       (error, stdout, stderr) => {
         resolve({
-          code: error ? error.code ?? 1 : 0,
+          code: error ? (error.code ?? 1) : 0,
           stdout: stdout.toString(),
           stderr: stderr.toString(),
         });
@@ -20,7 +23,7 @@ function runCli(cliArguments: string[]): Promise<{ code: number | null; stdout: 
   });
 }
 
-jest.setTimeout(60_000);
+// Per-test timeout configured via vitest options at the file/describe level.
 
 describe('CLI integration', () => {
   it('exits 0 and shows all commands for --help', async () => {

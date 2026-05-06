@@ -1,5 +1,9 @@
 import { DescribeTasksCommand, RunTaskCommand, waitUntilTasksRunning } from '@aws-sdk/client-ecs';
-import { DescribeStreamCommand, GetRecordsCommand, GetShardIteratorCommand } from '@aws-sdk/client-kinesis';
+import {
+  DescribeStreamCommand,
+  GetRecordsCommand,
+  GetShardIteratorCommand,
+} from '@aws-sdk/client-kinesis';
 import OrchestratorEnvironmentVariable from '../../options/orchestrator-environment-variable';
 import OrchestratorSecret from '../../options/orchestrator-secret';
 import * as core from '@actions/core';
@@ -58,7 +62,9 @@ class AWSTaskRunner {
         value = value
           .replace('http://localhost', 'http://host.docker.internal')
           .replace('http://127.0.0.1', 'http://host.docker.internal');
-        OrchestratorLogger.log(`AWS TaskRunner: Replaced localhost with host.docker.internal for ${x.name}: ${value}`);
+        OrchestratorLogger.log(
+          `AWS TaskRunner: Replaced localhost with host.docker.internal for ${x.name}: ${value}`,
+        );
       }
 
       return { name: x.name, value };
@@ -71,17 +77,24 @@ class AWSTaskRunner {
     secrets: OrchestratorSecret[],
     commands: string,
   ): Promise<{ output: string; shouldCleanup: boolean }> {
-    const cluster = taskDef.baseResources?.find((x) => x.LogicalResourceId === 'ECSCluster')?.PhysicalResourceId || '';
+    const cluster =
+      taskDef.baseResources?.find((x) => x.LogicalResourceId === 'ECSCluster')
+        ?.PhysicalResourceId || '';
     const taskDefinition =
-      taskDef.taskDefResources?.find((x) => x.LogicalResourceId === 'TaskDefinition')?.PhysicalResourceId || '';
+      taskDef.taskDefResources?.find((x) => x.LogicalResourceId === 'TaskDefinition')
+        ?.PhysicalResourceId || '';
     const SubnetOne =
-      taskDef.baseResources?.find((x) => x.LogicalResourceId === 'PublicSubnetOne')?.PhysicalResourceId || '';
+      taskDef.baseResources?.find((x) => x.LogicalResourceId === 'PublicSubnetOne')
+        ?.PhysicalResourceId || '';
     const SubnetTwo =
-      taskDef.baseResources?.find((x) => x.LogicalResourceId === 'PublicSubnetTwo')?.PhysicalResourceId || '';
+      taskDef.baseResources?.find((x) => x.LogicalResourceId === 'PublicSubnetTwo')
+        ?.PhysicalResourceId || '';
     const ContainerSecurityGroup =
-      taskDef.baseResources?.find((x) => x.LogicalResourceId === 'ContainerSecurityGroup')?.PhysicalResourceId || '';
+      taskDef.baseResources?.find((x) => x.LogicalResourceId === 'ContainerSecurityGroup')
+        ?.PhysicalResourceId || '';
     const streamName =
-      taskDef.taskDefResources?.find((x) => x.LogicalResourceId === 'KinesisStream')?.PhysicalResourceId || '';
+      taskDef.taskDefResources?.find((x) => x.LogicalResourceId === 'KinesisStream')
+        ?.PhysicalResourceId || '';
 
     // Transform localhost endpoints for container environment
     const transformedEnvironment = AWSTaskRunner.transformEndpointsForContainer(environment);
@@ -89,7 +102,10 @@ class AWSTaskRunner {
     // Merge secrets into environment as plain env vars, matching docker and k8s provider behavior.
     // This ensures UNITY_EMAIL, UNITY_PASSWORD, UNITY_SERIAL reach the container reliably
     // without depending on CloudFormation Secrets Manager resolution.
-    const secretsAsEnvironment = secrets.map((s) => ({ name: s.EnvironmentVariable, value: s.ParameterValue }));
+    const secretsAsEnvironment = secrets.map((s) => ({
+      name: s.EnvironmentVariable,
+      value: s.ParameterValue,
+    }));
     const mergedEnvironment = [...transformedEnvironment, ...secretsAsEnvironment];
 
     const useSpot = Orchestrator.buildParameters.awsUseSpot;
@@ -110,7 +126,10 @@ class AWSTaskRunner {
           {
             name: taskDef.taskDefStackName,
             environment: [...mergedEnvironment, ...storageEnvironment],
-            command: ['-c', CommandHookService.ApplyHooksToCommands(commands, Orchestrator.buildParameters)],
+            command: [
+              '-c',
+              CommandHookService.ApplyHooksToCommands(commands, Orchestrator.buildParameters),
+            ],
           },
         ],
       },
@@ -133,7 +152,9 @@ class AWSTaskRunner {
     }
 
     if (JSON.stringify(runParameters.overrides.containerOverrides).length > 8192) {
-      OrchestratorLogger.log(JSON.stringify(runParameters.overrides.containerOverrides, undefined, 4));
+      OrchestratorLogger.log(
+        JSON.stringify(runParameters.overrides.containerOverrides, undefined, 4),
+      );
       throw new Error(`Container Overrides length must be at most 8192`);
     }
 
@@ -155,7 +176,11 @@ class AWSTaskRunner {
     }
 
     OrchestratorLogger.log(`Streaming...`);
-    const { output, shouldCleanup } = await this.streamLogsUntilTaskStops(cluster, taskArn, streamName);
+    const { output, shouldCleanup } = await this.streamLogsUntilTaskStops(
+      cluster,
+      taskArn,
+      streamName,
+    );
     let exitCode;
     let containerState;
     let taskData;
@@ -232,7 +257,8 @@ class AWSTaskRunner {
         }
         throw new Error('No task found');
       } catch (error: any) {
-        const isThrottle = error?.name === 'ThrottlingException' || /rate exceeded/i.test(String(error?.message));
+        const isThrottle =
+          error?.name === 'ThrottlingException' || /rate exceeded/i.test(String(error?.message));
         if (!isThrottle || attempt === maxAttempts) {
           throw error;
         }
@@ -247,7 +273,11 @@ class AWSTaskRunner {
     }
   }
 
-  static async streamLogsUntilTaskStops(clusterName: string, taskArn: string, kinesisStreamName: string) {
+  static async streamLogsUntilTaskStops(
+    clusterName: string,
+    taskArn: string,
+    kinesisStreamName: string,
+  ) {
     await new Promise((resolve) => setTimeout(resolve, 3000));
     OrchestratorLogger.log(`Streaming...`);
     const stream = await AWSTaskRunner.getLogStream(kinesisStreamName);
@@ -255,7 +285,10 @@ class AWSTaskRunner {
 
     const logBaseUrl = `https://${Input.region}.console.aws.amazon.com/cloudwatch/home?region=${Input.region}#logsV2:log-groups/log-group/${Orchestrator.buildParameters.awsStackName}${AWSTaskRunner.encodedUnderscore}${Orchestrator.buildParameters.awsStackName}-${Orchestrator.buildParameters.buildGuid}`;
     OrchestratorLogger.log(`You view the log stream on AWS Cloud Watch: ${logBaseUrl}`);
-    await GitHub.updateGitHubCheck(`You view the log stream on AWS Cloud Watch:  ${logBaseUrl}`, ``);
+    await GitHub.updateGitHubCheck(
+      `You view the log stream on AWS Cloud Watch:  ${logBaseUrl}`,
+      ``,
+    );
     let shouldReadLogs = true;
     let shouldCleanup = true;
     let timestamp: number = 0;
@@ -263,16 +296,21 @@ class AWSTaskRunner {
     while (shouldReadLogs) {
       await new Promise((resolve) => setTimeout(resolve, 1500));
       const taskData = await AWSTaskRunner.describeTasks(clusterName, taskArn);
-      ({ timestamp, shouldReadLogs } = AWSTaskRunner.checkStreamingShouldContinue(taskData, timestamp, shouldReadLogs));
+      ({ timestamp, shouldReadLogs } = AWSTaskRunner.checkStreamingShouldContinue(
+        taskData,
+        timestamp,
+        shouldReadLogs,
+      ));
       if (taskData?.lastStatus !== 'RUNNING') {
         await new Promise((resolve) => setTimeout(resolve, 3500));
       }
-      ({ iterator, shouldReadLogs, output, shouldCleanup } = await AWSTaskRunner.handleLogStreamIteration(
-        iterator,
-        shouldReadLogs,
-        output,
-        shouldCleanup,
-      ));
+      ({ iterator, shouldReadLogs, output, shouldCleanup } =
+        await AWSTaskRunner.handleLogStreamIteration(
+          iterator,
+          shouldReadLogs,
+          output,
+          shouldCleanup,
+        ));
     }
 
     return { output, shouldCleanup };
@@ -286,14 +324,19 @@ class AWSTaskRunner {
   ) {
     let records: any;
     try {
-      records = await AwsClientFactory.getKinesis().send(new GetRecordsCommand({ ShardIterator: iterator }));
+      records = await AwsClientFactory.getKinesis().send(
+        new GetRecordsCommand({ ShardIterator: iterator }),
+      );
     } catch (error: any) {
-      const isThrottle = error?.name === 'ThrottlingException' || /rate exceeded/i.test(String(error?.message));
+      const isThrottle =
+        error?.name === 'ThrottlingException' || /rate exceeded/i.test(String(error?.message));
       if (isThrottle) {
         const baseBackoffMs = 1000;
         const jitterMs = Math.floor(Math.random() * 1000);
         const sleepMs = baseBackoffMs + jitterMs;
-        OrchestratorLogger.log(`AWS throttled GetRecords, backing off ${sleepMs}ms (1000 + jitter ${jitterMs})`);
+        OrchestratorLogger.log(
+          `AWS throttled GetRecords, backing off ${sleepMs}ms (1000 + jitter ${jitterMs})`,
+        );
         await new Promise((r) => setTimeout(r, sleepMs));
 
         return { iterator, shouldReadLogs, output, shouldCleanup };
@@ -312,7 +355,11 @@ class AWSTaskRunner {
     return { iterator, shouldReadLogs, output, shouldCleanup };
   }
 
-  private static checkStreamingShouldContinue(taskData: any, timestamp: number, shouldReadLogs: boolean) {
+  private static checkStreamingShouldContinue(
+    taskData: any,
+    timestamp: number,
+    shouldReadLogs: boolean,
+  ) {
     if (taskData?.lastStatus === 'UNKNOWN') {
       OrchestratorLogger.log('## Orchestrator job unknwon');
     }
@@ -322,7 +369,9 @@ class AWSTaskRunner {
         timestamp = Date.now();
       }
       if (timestamp !== 0 && Date.now() - timestamp > 30000) {
-        OrchestratorLogger.log('## Orchestrator status is not RUNNING for 30 seconds, last query for logs');
+        OrchestratorLogger.log(
+          '## Orchestrator status is not RUNNING for 30 seconds, last query for logs',
+        );
         shouldReadLogs = false;
       }
       OrchestratorLogger.log(`## Status of job: ${taskData.lastStatus}`);
@@ -360,7 +409,9 @@ class AWSTaskRunner {
   }
 
   private static async getLogStream(kinesisStreamName: string) {
-    return await AwsClientFactory.getKinesis().send(new DescribeStreamCommand({ StreamName: kinesisStreamName }));
+    return await AwsClientFactory.getKinesis().send(
+      new DescribeStreamCommand({ StreamName: kinesisStreamName }),
+    );
   }
 
   private static async getLogIterator(stream: any) {

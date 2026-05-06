@@ -49,7 +49,9 @@ export class ChildWorkspaceService {
 
     try {
       if (!fs.existsSync(cachedWorkspacePath)) {
-        OrchestratorLogger.log(`[ChildWorkspace] No cached workspace found at ${cachedWorkspacePath}, starting fresh`);
+        OrchestratorLogger.log(
+          `[ChildWorkspace] No cached workspace found at ${cachedWorkspacePath}, starting fresh`,
+        );
 
         return false;
       }
@@ -57,7 +59,9 @@ export class ChildWorkspaceService {
       // Verify the cached workspace has content
       const entries = fs.readdirSync(cachedWorkspacePath);
       if (entries.length === 0) {
-        OrchestratorLogger.log(`[ChildWorkspace] Cached workspace at ${cachedWorkspacePath} is empty, starting fresh`);
+        OrchestratorLogger.log(
+          `[ChildWorkspace] Cached workspace at ${cachedWorkspacePath} is empty, starting fresh`,
+        );
         fs.rmSync(cachedWorkspacePath, { recursive: true, force: true });
 
         return false;
@@ -76,7 +80,9 @@ export class ChildWorkspaceService {
       }
 
       // Atomic move (rename) - O(1) on NTFS when on same volume
-      OrchestratorLogger.log(`[ChildWorkspace] Restoring workspace: ${cachedWorkspacePath} -> ${projectPath}`);
+      OrchestratorLogger.log(
+        `[ChildWorkspace] Restoring workspace: ${cachedWorkspacePath} -> ${projectPath}`,
+      );
       fs.renameSync(cachedWorkspacePath, projectPath);
       OrchestratorLogger.log(`[ChildWorkspace] Workspace restored via atomic move`);
 
@@ -87,7 +93,9 @@ export class ChildWorkspaceService {
 
       return true;
     } catch (error: any) {
-      OrchestratorLogger.logWarning(`[ChildWorkspace] Workspace restore failed: ${error.message}. Starting fresh.`);
+      OrchestratorLogger.logWarning(
+        `[ChildWorkspace] Workspace restore failed: ${error.message}. Starting fresh.`,
+      );
 
       return false;
     }
@@ -105,7 +113,9 @@ export class ChildWorkspaceService {
 
     try {
       if (!fs.existsSync(projectPath)) {
-        OrchestratorLogger.log(`[ChildWorkspace] Project path ${projectPath} does not exist, skipping save`);
+        OrchestratorLogger.log(
+          `[ChildWorkspace] Project path ${projectPath} does not exist, skipping save`,
+        );
 
         return;
       }
@@ -131,12 +141,16 @@ export class ChildWorkspaceService {
 
       // Remove any existing cached workspace to make room
       if (fs.existsSync(cachedWorkspacePath)) {
-        OrchestratorLogger.log(`[ChildWorkspace] Removing previous cached workspace: ${cachedWorkspacePath}`);
+        OrchestratorLogger.log(
+          `[ChildWorkspace] Removing previous cached workspace: ${cachedWorkspacePath}`,
+        );
         fs.rmSync(cachedWorkspacePath, { recursive: true, force: true });
       }
 
       // Atomic move (rename) - O(1) on NTFS when on same volume
-      OrchestratorLogger.log(`[ChildWorkspace] Saving workspace: ${projectPath} -> ${cachedWorkspacePath}`);
+      OrchestratorLogger.log(
+        `[ChildWorkspace] Saving workspace: ${projectPath} -> ${cachedWorkspacePath}`,
+      );
       fs.renameSync(projectPath, cachedWorkspacePath);
       OrchestratorLogger.log(`[ChildWorkspace] Workspace saved via atomic move`);
     } catch (error: any) {
@@ -177,12 +191,16 @@ export class ChildWorkspaceService {
         }
 
         // Atomic move
-        OrchestratorLogger.log(`[ChildWorkspace] Restoring ${folder} cache: ${backupPath} -> ${destination}`);
+        OrchestratorLogger.log(
+          `[ChildWorkspace] Restoring ${folder} cache: ${backupPath} -> ${destination}`,
+        );
         fs.renameSync(backupPath, destination);
         OrchestratorLogger.log(`[ChildWorkspace] ${folder} cache restored`);
         restored = true;
       } catch (error: any) {
-        OrchestratorLogger.logWarning(`[ChildWorkspace] ${folder} cache restore failed: ${error.message}`);
+        OrchestratorLogger.logWarning(
+          `[ChildWorkspace] ${folder} cache restore failed: ${error.message}`,
+        );
       }
     }
 
@@ -225,11 +243,15 @@ export class ChildWorkspaceService {
         }
 
         // Atomic move
-        OrchestratorLogger.log(`[ChildWorkspace] Caching ${folder}: ${folderPath} -> ${backupPath}`);
+        OrchestratorLogger.log(
+          `[ChildWorkspace] Caching ${folder}: ${folderPath} -> ${backupPath}`,
+        );
         fs.renameSync(folderPath, backupPath);
         OrchestratorLogger.log(`[ChildWorkspace] ${folder} cached separately`);
       } catch (error: any) {
-        OrchestratorLogger.logWarning(`[ChildWorkspace] ${folder} cache save failed: ${error.message}`);
+        OrchestratorLogger.logWarning(
+          `[ChildWorkspace] ${folder} cache save failed: ${error.message}`,
+        );
       }
     }
   }
@@ -250,7 +272,9 @@ export class ChildWorkspaceService {
 
       return ChildWorkspaceService.formatBytes(totalBytes);
     } catch (error: any) {
-      OrchestratorLogger.logWarning(`[ChildWorkspace] Failed to calculate workspace size: ${error.message}`);
+      OrchestratorLogger.logWarning(
+        `[ChildWorkspace] Failed to calculate workspace size: ${error.message}`,
+      );
 
       return 'unknown';
     }
@@ -265,7 +289,9 @@ export class ChildWorkspaceService {
   static cleanStaleWorkspaces(parentCacheRoot: string, retentionDays: number): void {
     try {
       if (!fs.existsSync(parentCacheRoot)) {
-        OrchestratorLogger.log(`[ChildWorkspace] Cache root ${parentCacheRoot} does not exist, nothing to clean`);
+        OrchestratorLogger.log(
+          `[ChildWorkspace] Cache root ${parentCacheRoot} does not exist, nothing to clean`,
+        );
 
         return;
       }
@@ -292,7 +318,9 @@ export class ChildWorkspaceService {
             );
           }
         } catch (error: any) {
-          OrchestratorLogger.logWarning(`[ChildWorkspace] Failed to clean ${entryPath}: ${error.message}`);
+          OrchestratorLogger.logWarning(
+            `[ChildWorkspace] Failed to clean ${entryPath}: ${error.message}`,
+          );
         }
       }
 
@@ -302,7 +330,9 @@ export class ChildWorkspaceService {
         )} freed`,
       );
     } catch (error: any) {
-      OrchestratorLogger.logWarning(`[ChildWorkspace] Stale workspace cleanup failed: ${error.message}`);
+      OrchestratorLogger.logWarning(
+        `[ChildWorkspace] Stale workspace cleanup failed: ${error.message}`,
+      );
     }
   }
 
@@ -329,7 +359,10 @@ export class ChildWorkspaceService {
    * Resolve the backup path for a specific cache folder.
    * Uses libraryBackupPath from config for backward compatibility with the first cache folder.
    */
-  private static resolveCacheFolderBackupPath(config: ChildWorkspaceConfig, folder: string): string {
+  private static resolveCacheFolderBackupPath(
+    config: ChildWorkspaceConfig,
+    folder: string,
+  ): string {
     // For backward compat: if libraryBackupPath is set and this is the first cache folder, use it
     if (config.libraryBackupPath && folder === getEngine().cacheFolders[0]) {
       return config.libraryBackupPath;

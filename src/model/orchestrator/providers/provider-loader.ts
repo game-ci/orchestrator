@@ -48,7 +48,9 @@ export default async function loadProvider(
       // Handle different source types
       switch (sourceInfo.type) {
         case 'github': {
-          OrchestratorLogger.log(`Processing GitHub repository: ${sourceInfo.owner}/${sourceInfo.repo}`);
+          OrchestratorLogger.log(
+            `Processing GitHub repository: ${sourceInfo.owner}/${sourceInfo.repo}`,
+          );
 
           // Ensure the repository is available locally
           const localRepoPath = await ProviderGitManager.ensureRepositoryAvailable(sourceInfo);
@@ -78,7 +80,10 @@ export default async function loadProvider(
     // Import the module
     importedModule = await import(modulePath);
   } catch (error) {
-    throw new Error(`Failed to load provider package '${providerSource}': ${(error as Error).message}`);
+    throw new Error(
+      `Failed to load provider package '${providerSource}': ${(error as Error).message}`,
+      { cause: error },
+    );
   }
 
   // Extract the provider class/function
@@ -86,7 +91,9 @@ export default async function loadProvider(
 
   // Validate that we have a constructor
   if (typeof Provider !== 'function') {
-    throw new TypeError(`Provider package '${providerSource}' does not export a constructor function`);
+    throw new TypeError(
+      `Provider package '${providerSource}' does not export a constructor function`,
+    );
   }
 
   // Instantiate the provider
@@ -94,7 +101,10 @@ export default async function loadProvider(
   try {
     instance = new Provider(buildParameters);
   } catch (error) {
-    throw new Error(`Failed to instantiate provider '${providerSource}': ${(error as Error).message}`);
+    throw new Error(
+      `Failed to instantiate provider '${providerSource}': ${(error as Error).message}`,
+      { cause: error },
+    );
   }
 
   // Validate that the instance implements the required interface
@@ -132,7 +142,10 @@ export class ProviderLoader {
    * @returns Promise<ProviderInterface> - The loaded provider instance
    * @throws Error if provider package is missing or doesn't implement ProviderInterface
    */
-  static async loadProvider(providerSource: string, buildParameters: BuildParameters): Promise<ProviderInterface> {
+  static async loadProvider(
+    providerSource: string,
+    buildParameters: BuildParameters,
+  ): Promise<ProviderInterface> {
     return loadProvider(providerSource, buildParameters);
   }
 
@@ -141,7 +154,18 @@ export class ProviderLoader {
    * @returns string[] - Array of available provider names
    */
   static getAvailableProviders(): string[] {
-    return ['aws', 'mock-aws', 'k8s', 'cli', 'test', 'local-docker', 'local-system', 'local', 'gcp-cloud-run', 'azure-aci'];
+    return [
+      'aws',
+      'mock-aws',
+      'k8s',
+      'cli',
+      'test',
+      'local-docker',
+      'local-system',
+      'local',
+      'gcp-cloud-run',
+      'azure-aci',
+    ];
   }
 
   /**

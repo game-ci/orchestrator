@@ -37,7 +37,12 @@ export class BuildReliabilityService {
   ]);
 
   // Lock files to look for in the .git directory
-  private static readonly LOCK_FILE_NAMES = new Set(['index.lock', 'shallow.lock', 'config.lock', 'HEAD.lock']);
+  private static readonly LOCK_FILE_NAMES = new Set([
+    'index.lock',
+    'shallow.lock',
+    'config.lock',
+    'HEAD.lock',
+  ]);
 
   // Maximum age in milliseconds before a lock file is considered stale (10 minutes)
   private static readonly LOCK_FILE_MAX_AGE_MS = 10 * 60 * 1000;
@@ -189,7 +194,9 @@ export class BuildReliabilityService {
               const backingStore = path.resolve(path.join(repoPath, submodulePath), gitdirMatch[1]);
               if (!fs.existsSync(backingStore)) {
                 broken.push(submodulePath);
-                core.warning(`[Reliability] Submodule ${submodulePath} has broken backing store: ${backingStore}`);
+                core.warning(
+                  `[Reliability] Submodule ${submodulePath} has broken backing store: ${backingStore}`,
+                );
               } else {
                 core.info(`[Reliability] Submodule ${submodulePath} backing store OK`);
               }
@@ -240,7 +247,9 @@ export class BuildReliabilityService {
       });
       core.info('[Reliability] Recovery: fetch completed');
     } catch (error: any) {
-      core.warning(`[Reliability] Recovery: fetch failed: ${error.stderr?.toString() ?? error.message}`);
+      core.warning(
+        `[Reliability] Recovery: fetch failed: ${error.stderr?.toString() ?? error.message}`,
+      );
     }
 
     // Step 3: Retry fsck
@@ -263,7 +272,9 @@ export class BuildReliabilityService {
   static cleanReservedFilenames(projectPath: string): string[] {
     const assetsPath = path.join(projectPath, 'Assets');
     if (!fs.existsSync(assetsPath)) {
-      core.info(`[Reliability] No Assets directory found at ${assetsPath}, skipping reserved filename scan`);
+      core.info(
+        `[Reliability] No Assets directory found at ${assetsPath}, skipping reserved filename scan`,
+      );
       return [];
     }
 
@@ -324,22 +335,30 @@ export class BuildReliabilityService {
   }
 
   static clearScriptAssemblies(projectPath: string): boolean {
-    return BuildReliabilityService.removeDirectoryWithRetry(path.join(projectPath, 'Library', 'ScriptAssemblies'));
+    return BuildReliabilityService.removeDirectoryWithRetry(
+      path.join(projectPath, 'Library', 'ScriptAssemblies'),
+    );
   }
 
   static clearBee(projectPath: string): boolean {
-    return BuildReliabilityService.removeDirectoryWithRetry(path.join(projectPath, 'Library', 'Bee'));
+    return BuildReliabilityService.removeDirectoryWithRetry(
+      path.join(projectPath, 'Library', 'Bee'),
+    );
   }
 
   static clearPackageCache(projectPath: string): boolean {
-    return BuildReliabilityService.removeDirectoryWithRetry(path.join(projectPath, 'Library', 'PackageCache'));
+    return BuildReliabilityService.removeDirectoryWithRetry(
+      path.join(projectPath, 'Library', 'PackageCache'),
+    );
   }
 
   static resetSourceAssetDatabase(projectPath: string): boolean {
     const removedSourceAssetDb = BuildReliabilityService.removeDirectoryWithRetry(
       path.join(projectPath, 'Library', 'SourceAssetDB'),
     );
-    const removedTemp = BuildReliabilityService.removeDirectoryWithRetry(path.join(projectPath, 'Temp'));
+    const removedTemp = BuildReliabilityService.removeDirectoryWithRetry(
+      path.join(projectPath, 'Temp'),
+    );
 
     return removedSourceAssetDb || removedTemp;
   }
@@ -351,7 +370,9 @@ export class BuildReliabilityService {
       const fullPath = path.resolve(projectPath, relativeAssetPath);
       const relativePath = path.relative(projectPath, fullPath);
       if (relativePath.startsWith('..') || path.isAbsolute(relativePath)) {
-        core.warning(`[Reliability] Refusing to remove asset outside project: ${relativeAssetPath}`);
+        core.warning(
+          `[Reliability] Refusing to remove asset outside project: ${relativeAssetPath}`,
+        );
         continue;
       }
 
@@ -373,7 +394,9 @@ export class BuildReliabilityService {
         removed.push(fullPath);
         core.info(`[Reliability] Removed auto-generated asset before Unity launch: ${fullPath}`);
       } catch (error: any) {
-        core.warning(`[Reliability] Failed to remove auto-generated asset ${fullPath}: ${error.message}`);
+        core.warning(
+          `[Reliability] Failed to remove auto-generated asset ${fullPath}: ${error.message}`,
+        );
       }
     }
 
@@ -417,7 +440,7 @@ export class BuildReliabilityService {
     try {
       if (process.platform === 'win32') {
         const drive = path.parse(directoryPath).root;
-        const driveLetter = drive.replace(/[:\\\/]/g, '');
+        const driveLetter = drive.replace(/[:\\/]/g, '');
         const output = execFileSync(
           'wmic',
           ['logicaldisk', 'where', `DeviceID='${driveLetter}:'`, 'get', 'FreeSpace', '/value'],
@@ -507,21 +530,28 @@ export class BuildReliabilityService {
         `[Reliability] Disk space check passed: need ~${neededMB}MB, available: ${Math.floor(availableSpaceMB)}MB`,
       );
     } else if (availableSpaceMB < 0) {
-      core.warning('[Reliability] Could not determine available disk space. Proceeding with archive cautiously.');
+      core.warning(
+        '[Reliability] Could not determine available disk space. Proceeding with archive cautiously.',
+      );
     }
 
     const timestamp = new Date().toISOString().replace(/[.:]/g, '-');
     const archiveFile = path.join(archivePath, `build-${timestamp}.tar.gz`);
 
     try {
-      execSync(`tar -czf "${archiveFile}" -C "${path.dirname(sourcePath)}" "${path.basename(sourcePath)}"`, {
-        encoding: 'utf8',
-        timeout: 600_000,
-        stdio: ['pipe', 'pipe', 'pipe'],
-      });
+      execSync(
+        `tar -czf "${archiveFile}" -C "${path.dirname(sourcePath)}" "${path.basename(sourcePath)}"`,
+        {
+          encoding: 'utf8',
+          timeout: 600_000,
+          stdio: ['pipe', 'pipe', 'pipe'],
+        },
+      );
       core.info(`[Reliability] Build output archived to ${archiveFile}`);
     } catch (error: any) {
-      core.warning(`[Reliability] Failed to archive build output: ${error.stderr?.toString() ?? error.message}`);
+      core.warning(
+        `[Reliability] Failed to archive build output: ${error.stderr?.toString() ?? error.message}`,
+      );
 
       // Clean up partial archive if it exists to avoid leaving corrupted files
       try {

@@ -14,9 +14,14 @@ export class OrchestratorFolders {
   // Only the following paths that do not start a path.join with another "Full" suffixed property need to start with an absolute /
 
   public static get uniqueOrchestratorJobFolderAbsolute(): string {
-    return Orchestrator.buildParameters && BuildParameters.shouldUseRetainedWorkspaceMode(Orchestrator.buildParameters)
+    return Orchestrator.buildParameters &&
+      BuildParameters.shouldUseRetainedWorkspaceMode(Orchestrator.buildParameters)
       ? path.join(`/`, OrchestratorFolders.buildVolumeFolder, Orchestrator.lockedWorkspace)
-      : path.join(`/`, OrchestratorFolders.buildVolumeFolder, Orchestrator.buildParameters.buildGuid);
+      : path.join(
+          `/`,
+          OrchestratorFolders.buildVolumeFolder,
+          Orchestrator.buildParameters.buildGuid,
+        );
   }
 
   public static get cacheFolderForAllFull(): string {
@@ -42,11 +47,17 @@ export class OrchestratorFolders {
   }
 
   public static get repoPathAbsolute(): string {
-    return path.join(OrchestratorFolders.uniqueOrchestratorJobFolderAbsolute, OrchestratorFolders.repositoryFolder);
+    return path.join(
+      OrchestratorFolders.uniqueOrchestratorJobFolderAbsolute,
+      OrchestratorFolders.repositoryFolder,
+    );
   }
 
   public static get projectPathAbsolute(): string {
-    return path.join(OrchestratorFolders.repoPathAbsolute, Orchestrator.buildParameters.projectPath);
+    return path.join(
+      OrchestratorFolders.repoPathAbsolute,
+      Orchestrator.buildParameters.projectPath,
+    );
   }
 
   public static engineCacheFolderAbsolute(folder: string): string {
@@ -134,7 +145,8 @@ fi`;
   public static async configureGitAuth(): Promise<void> {
     if (!OrchestratorFolders.useHeaderAuth) return;
 
-    const token = Orchestrator.buildParameters.gitPrivateToken || process.env.GIT_PRIVATE_TOKEN || '';
+    const token =
+      Orchestrator.buildParameters.gitPrivateToken || process.env.GIT_PRIVATE_TOKEN || '';
     if (!token) return;
 
     const encoded = Buffer.from(`x-access-token:${token}`).toString('base64');

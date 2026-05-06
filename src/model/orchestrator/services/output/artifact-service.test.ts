@@ -1,32 +1,53 @@
+import {
+  describe,
+  it,
+  expect,
+  beforeEach,
+  afterEach,
+  beforeAll,
+  afterAll,
+  vi,
+  type Mocked,
+} from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
 import { OutputTypeRegistry, OutputTypeDefinition } from './output-type-registry';
 import { OutputService } from './output-service';
 import { OutputManifest } from './output-manifest';
 import { ArtifactUploadHandler, ArtifactUploadConfig } from './artifact-upload-handler';
+// Mock node:fs and node:child_process. The execFileSync stub is exposed via
+// `vi.hoisted` so individual tests can override its implementation per-test.
+const { mockExecFileSync } = vi.hoisted(() => ({ mockExecFileSync: vi.fn() }));
 
-// Mock node:fs
-jest.mock('node:fs');
-const mockedFs = fs as jest.Mocked<typeof fs>;
+vi.mock('node:fs');
+vi.mock('node:child_process', async () => {
+  const actual = await vi.importActual<typeof import('node:child_process')>('node:child_process');
+  return {
+    ...actual,
+    execFileSync: mockExecFileSync,
+    default: { ...actual, execFileSync: mockExecFileSync },
+  };
+});
+const mockedFs = fs as Mocked<typeof fs>;
 
 // Mock @actions/core (used by OrchestratorLogger)
-jest.mock('@actions/core', () => ({
-  info: jest.fn(),
-  warning: jest.fn(),
-  error: jest.fn(),
-  setOutput: jest.fn(),
-  getInput: jest.fn(),
-  setFailed: jest.fn(),
-  setSecret: jest.fn(),
+vi.mock('@actions/core', () => ({
+  info: vi.fn(),
+  warning: vi.fn(),
+  error: vi.fn(),
+  setOutput: vi.fn(),
+  getInput: vi.fn(),
+  setFailed: vi.fn(),
+  setSecret: vi.fn(),
 }));
 
 // Mock @actions/exec (used by upload handler for rclone)
-jest.mock('@actions/exec', () => ({
-  exec: jest.fn().mockResolvedValue(0),
+vi.mock('@actions/exec', () => ({
+  exec: vi.fn().mockResolvedValue(0),
 }));
 
 afterEach(() => {
-  jest.restoreAllMocks();
+  vi.restoreAllMocks();
   OutputTypeRegistry.resetCustomTypes();
 });
 
@@ -41,15 +62,21 @@ describe('OutputTypeRegistry', () => {
       expect(builtInTypes).toHaveLength(8);
     });
 
-    it.each(['build', 'test-results', 'server-build', 'data-export', 'images', 'logs', 'metrics', 'coverage'])(
-      'should include built-in type "%s"',
-      (typeName) => {
-        const typeDef = OutputTypeRegistry.getType(typeName);
-        expect(typeDef).toBeDefined();
-        expect(typeDef!.name).toBe(typeName);
-        expect(typeDef!.builtIn).toBe(true);
-      },
-    );
+    it.each([
+      'build',
+      'test-results',
+      'server-build',
+      'data-export',
+      'images',
+      'logs',
+      'metrics',
+      'coverage',
+    ])('should include built-in type "%s"', (typeName) => {
+      const typeDef = OutputTypeRegistry.getType(typeName);
+      expect(typeDef).toBeDefined();
+      expect(typeDef!.name).toBe(typeName);
+      expect(typeDef!.builtIn).toBe(true);
+    });
 
     it('should return undefined for unknown types', () => {
       const typeDef = OutputTypeRegistry.getType('nonexistent');
@@ -253,7 +280,9 @@ describe('OutputService', () => {
       const manifestPath = '/output/manifest.json';
       await OutputService.collectOutputs(projectPath, buildGuid, 'logs', manifestPath);
 
-      expect(mockedFs.mkdirSync).toHaveBeenCalledWith(path.dirname(manifestPath), { recursive: true });
+      expect(mockedFs.mkdirSync).toHaveBeenCalledWith(path.dirname(manifestPath), {
+        recursive: true,
+      });
       expect(mockedFs.writeFileSync).toHaveBeenCalledWith(manifestPath, expect.any(String), 'utf8');
     });
 
@@ -266,7 +295,7 @@ describe('OutputService', () => {
       const manifestPath = '/output/manifest.json';
       await OutputService.collectOutputs(projectPath, buildGuid, 'coverage', manifestPath);
 
-      const writtenContent = (mockedFs.writeFileSync as jest.Mock).mock.calls[0][1];
+      const writtenContent = (mockedFs.writeFileSync as vi.Mock).mock.calls[0][1];
       const parsed = JSON.parse(writtenContent);
       expect(parsed.buildGuid).toBe(buildGuid);
       expect(Array.isArray(parsed.outputs)).toBe(true);
@@ -542,10 +571,8 @@ describe('ArtifactUploadHandler', () => {
     });
 
     it('should fail storage upload when rclone is not installed', async () => {
-      // Mock child_process.execFileSync to throw (rclone not found)
-      const childProcess = require('node:child_process');
-      const originalExecFileSync = childProcess.execFileSync;
-      childProcess.execFileSync = jest.fn(() => {
+      // Mock child_process.execFileSync to throw (rclone not found).
+      mockExecFileSync.mockImplementationOnce(() => {
         throw new Error('ENOENT');
       });
 
@@ -568,16 +595,11 @@ describe('ArtifactUploadHandler', () => {
       const result = await ArtifactUploadHandler.uploadArtifacts(manifest, config, projectPath);
       expect(result.success).toBe(false);
       expect(result.entries[0].error).toContain('rclone is not installed');
-
-      // Restore
-      childProcess.execFileSync = originalExecFileSync;
     });
 
     it('should accept valid rclone storage URI formats', async () => {
-      // Mock child_process.execFileSync to succeed (rclone available)
-      const childProcess = require('node:child_process');
-      const originalExecFileSync = childProcess.execFileSync;
-      childProcess.execFileSync = jest.fn(() => 'rclone v1.65.0');
+      // Mock child_process.execFileSync to succeed (rclone available).
+      mockExecFileSync.mockImplementationOnce(() => 'rclone v1.65.0');
 
       mockedFs.existsSync.mockReturnValue(true);
       mockedFs.statSync.mockReturnValue({ isDirectory: () => false, size: 256 } as any);
@@ -599,9 +621,6 @@ describe('ArtifactUploadHandler', () => {
       const result = await ArtifactUploadHandler.uploadArtifacts(manifest, config, projectPath);
       // Should succeed because exec is mocked to return 0
       expect(result.entries[0].success).toBe(true);
-
-      // Restore
-      childProcess.execFileSync = originalExecFileSync;
     });
   });
 });

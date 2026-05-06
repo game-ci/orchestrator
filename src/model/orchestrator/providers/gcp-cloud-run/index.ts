@@ -52,7 +52,11 @@ class GcpCloudRunProvider implements ProviderInterface {
 
   constructor(buildParameters: BuildParameters) {
     this.buildParameters = buildParameters;
-    this.project = buildParameters.gcpProject || process.env.GOOGLE_CLOUD_PROJECT || process.env.GCLOUD_PROJECT || '';
+    this.project =
+      buildParameters.gcpProject ||
+      process.env.GOOGLE_CLOUD_PROJECT ||
+      process.env.GCLOUD_PROJECT ||
+      '';
     this.region = buildParameters.gcpRegion || Input.region || 'us-central1';
     this.storageType = (buildParameters.gcpStorageType || 'gcs-fuse') as GcpStorageType;
     this.bucket = buildParameters.gcpBucket || '';
@@ -85,9 +89,13 @@ class GcpCloudRunProvider implements ProviderInterface {
         break;
       case 'nfs':
         if (!this.filestoreIp) {
-          OrchestratorLogger.logWarning('[GCP Cloud Run] Storage type "nfs" requires gcpFilestoreIp to be set.');
+          OrchestratorLogger.logWarning(
+            '[GCP Cloud Run] Storage type "nfs" requires gcpFilestoreIp to be set.',
+          );
         } else {
-          OrchestratorLogger.log(`[GCP Cloud Run] Filestore: ${this.filestoreIp}:${this.filestoreShare}`);
+          OrchestratorLogger.log(
+            `[GCP Cloud Run] Filestore: ${this.filestoreIp}:${this.filestoreShare}`,
+          );
         }
         if (!this.vpcConnector) {
           OrchestratorLogger.logWarning(
@@ -96,7 +104,9 @@ class GcpCloudRunProvider implements ProviderInterface {
         }
         break;
       case 'in-memory':
-        OrchestratorLogger.log(`[GCP Cloud Run] In-memory volume: ${Math.min(this.diskSizeGb, 32)} GiB (max 32)`);
+        OrchestratorLogger.log(
+          `[GCP Cloud Run] In-memory volume: ${Math.min(this.diskSizeGb, 32)} GiB (max 32)`,
+        );
         break;
       default:
         OrchestratorLogger.logWarning(
@@ -115,7 +125,11 @@ class GcpCloudRunProvider implements ProviderInterface {
     buildGuid: string,
     buildParameters: BuildParameters,
     branchName: string,
-    defaultSecretsArray: { ParameterKey: string; EnvironmentVariable: string; ParameterValue: string }[],
+    defaultSecretsArray: {
+      ParameterKey: string;
+      EnvironmentVariable: string;
+      ParameterValue: string;
+    }[],
   ) {
     OrchestratorLogger.log(`[GCP Cloud Run] Setting up workflow for build ${buildGuid}`);
     ResourceTracking.logAllocationSummary('gcp-cloud-run setup');
@@ -202,18 +216,32 @@ class GcpCloudRunProvider implements ProviderInterface {
 
   private async copyArtifactsIn(mountdir: string): Promise<void> {
     if (this.storageType !== 'gcs-copy' || !this.bucket) return;
-    OrchestratorLogger.log(`[GCP Cloud Run] Copying artifacts from gs://${this.bucket} to ${mountdir}`);
+    OrchestratorLogger.log(
+      `[GCP Cloud Run] Copying artifacts from gs://${this.bucket} to ${mountdir}`,
+    );
     try {
-      await OrchestratorSystem.Run(`gcloud storage cp -r "gs://${this.bucket}/*" "${mountdir}/" || true`, false, true);
+      await OrchestratorSystem.Run(
+        `gcloud storage cp -r "gs://${this.bucket}/*" "${mountdir}/" || true`,
+        false,
+        true,
+      );
     } catch {
-      OrchestratorLogger.log('[GCP Cloud Run] No existing artifacts to restore (bucket may be empty)');
+      OrchestratorLogger.log(
+        '[GCP Cloud Run] No existing artifacts to restore (bucket may be empty)',
+      );
     }
   }
 
   private async copyArtifactsOut(mountdir: string): Promise<void> {
     if (this.storageType !== 'gcs-copy' || !this.bucket) return;
-    OrchestratorLogger.log(`[GCP Cloud Run] Uploading artifacts from ${mountdir} to gs://${this.bucket}`);
-    await OrchestratorSystem.Run(`gcloud storage cp -r "${mountdir}/*" "gs://${this.bucket}/"`, false, true);
+    OrchestratorLogger.log(
+      `[GCP Cloud Run] Uploading artifacts from ${mountdir} to gs://${this.bucket}`,
+    );
+    await OrchestratorSystem.Run(
+      `gcloud storage cp -r "${mountdir}/*" "gs://${this.bucket}/"`,
+      false,
+      true,
+    );
   }
 
   async runTaskInWorkflow(
@@ -309,7 +337,9 @@ class GcpCloudRunProvider implements ProviderInterface {
     }
 
     // Execute the job
-    OrchestratorLogger.log(`[GCP Cloud Run] Executing job ${jobName} (storage: ${this.storageType})...`);
+    OrchestratorLogger.log(
+      `[GCP Cloud Run] Executing job ${jobName} (storage: ${this.storageType})...`,
+    );
     const executeCmd = [
       'gcloud run jobs execute',
       jobName,
@@ -328,7 +358,7 @@ class GcpCloudRunProvider implements ProviderInterface {
       OrchestratorLogger.log('[GCP Cloud Run] Job execution completed');
     } catch (error: any) {
       await this.streamJobLogs(jobName);
-      throw new Error(`[GCP Cloud Run] Job execution failed: ${error.message}`);
+      throw new Error(`[GCP Cloud Run] Job execution failed: ${error.message}`, { cause: error });
     }
 
     await this.streamJobLogs(jobName);
@@ -358,7 +388,11 @@ class GcpCloudRunProvider implements ProviderInterface {
   async cleanupWorkflow(
     buildParameters: BuildParameters,
     branchName: string,
-    defaultSecretsArray: { ParameterKey: string; EnvironmentVariable: string; ParameterValue: string }[],
+    defaultSecretsArray: {
+      ParameterKey: string;
+      EnvironmentVariable: string;
+      ParameterValue: string;
+    }[],
   ) {
     OrchestratorLogger.log('[GCP Cloud Run] Cleaning up workflow');
   }
@@ -366,7 +400,7 @@ class GcpCloudRunProvider implements ProviderInterface {
   async garbageCollect(
     filter: string,
     previewOnly: boolean,
-    olderThan: Number,
+    olderThan: number,
     fullCache: boolean,
     baseDependencies: boolean,
   ): Promise<string> {

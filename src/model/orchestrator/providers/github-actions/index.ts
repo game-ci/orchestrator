@@ -41,12 +41,18 @@ class GitHubActionsProvider implements ProviderInterface {
     // eslint-disable-next-line no-unused-vars
     branchName: string,
     // eslint-disable-next-line no-unused-vars
-    defaultSecretsArray: { ParameterKey: string; EnvironmentVariable: string; ParameterValue: string }[],
+    defaultSecretsArray: {
+      ParameterKey: string;
+      EnvironmentVariable: string;
+      ParameterValue: string;
+    }[],
   ): Promise<void> {
     OrchestratorLogger.log(`[GitHubActions] Setting up workflow dispatch to ${this.repo}`);
 
     if (!this.repo || !this.workflow) {
-      throw new Error('githubActionsRepo and githubActionsWorkflow are required for the github-actions provider');
+      throw new Error(
+        'githubActionsRepo and githubActionsWorkflow are required for the github-actions provider',
+      );
     }
 
     if (!this.token) {
@@ -58,9 +64,14 @@ class GitHubActionsProvider implements ProviderInterface {
       const result = await OrchestratorSystem.Run(
         `GH_TOKEN=${this.token} gh api repos/${this.repo}/actions/workflows/${this.workflow} --jq '.id'`,
       );
-      OrchestratorLogger.log(`[GitHubActions] Workflow verified: ${this.workflow} (ID: ${result.trim()})`);
+      OrchestratorLogger.log(
+        `[GitHubActions] Workflow verified: ${this.workflow} (ID: ${result.trim()})`,
+      );
     } catch (error: any) {
-      throw new Error(`Failed to verify workflow ${this.workflow} in ${this.repo}: ${error.message || error}`);
+      throw new Error(
+        `Failed to verify workflow ${this.workflow} in ${this.repo}: ${error.message || error}`,
+        { cause: error },
+      );
     }
   }
 
@@ -74,7 +85,9 @@ class GitHubActionsProvider implements ProviderInterface {
     // eslint-disable-next-line no-unused-vars
     secrets: OrchestratorSecret[],
   ): Promise<string> {
-    OrchestratorLogger.log(`[GitHubActions] Dispatching workflow ${this.workflow} on ${this.repo}@${this.ref}`);
+    OrchestratorLogger.log(
+      `[GitHubActions] Dispatching workflow ${this.workflow} on ${this.repo}@${this.ref}`,
+    );
 
     // Build inputs payload
     const inputs: Record<string, string> = {
@@ -87,7 +100,9 @@ class GitHubActionsProvider implements ProviderInterface {
 
     // Add environment variables as a JSON input
     if (environment.length > 0) {
-      inputs.environment = JSON.stringify(environment.map((element) => ({ name: element.name, value: element.value })));
+      inputs.environment = JSON.stringify(
+        environment.map((element) => ({ name: element.name, value: element.value })),
+      );
     }
 
     // Record the time before dispatch to identify the run
@@ -101,7 +116,7 @@ class GitHubActionsProvider implements ProviderInterface {
       );
       OrchestratorLogger.log(`[GitHubActions] Workflow dispatched`);
     } catch (error: any) {
-      throw new Error(`Failed to dispatch workflow: ${error.message || error}`);
+      throw new Error(`Failed to dispatch workflow: ${error.message || error}`, { cause: error });
     }
 
     // Poll for the run to appear
@@ -122,7 +137,9 @@ class GitHubActionsProvider implements ProviderInterface {
         const run = JSON.parse(runsJson.trim());
         if (run.id) {
           this.runId = run.id;
-          OrchestratorLogger.log(`[GitHubActions] Run started: ${this.runId} (status: ${run.status})`);
+          OrchestratorLogger.log(
+            `[GitHubActions] Run started: ${this.runId} (status: ${run.status})`,
+          );
           break;
         }
       } catch {
@@ -160,7 +177,9 @@ class GitHubActionsProvider implements ProviderInterface {
         status = result.status;
 
         if (status === 'completed') {
-          OrchestratorLogger.log(`[GitHubActions] Run ${this.runId} completed: ${result.conclusion}`);
+          OrchestratorLogger.log(
+            `[GitHubActions] Run ${this.runId} completed: ${result.conclusion}`,
+          );
 
           if (result.conclusion !== 'success') {
             throw new Error(`Workflow run failed with conclusion: ${result.conclusion}`);
@@ -177,7 +196,9 @@ class GitHubActionsProvider implements ProviderInterface {
         if (error.message && error.message.includes('did not complete within')) {
           throw error;
         }
-        OrchestratorLogger.logWarning(`[GitHubActions] Status check error: ${error.message || error}`);
+        OrchestratorLogger.logWarning(
+          `[GitHubActions] Status check error: ${error.message || error}`,
+        );
       }
     }
 
@@ -200,7 +221,11 @@ class GitHubActionsProvider implements ProviderInterface {
     // eslint-disable-next-line no-unused-vars
     branchName: string,
     // eslint-disable-next-line no-unused-vars
-    defaultSecretsArray: { ParameterKey: string; EnvironmentVariable: string; ParameterValue: string }[],
+    defaultSecretsArray: {
+      ParameterKey: string;
+      EnvironmentVariable: string;
+      ParameterValue: string;
+    }[],
   ): Promise<void> {
     OrchestratorLogger.log(`[GitHubActions] Cleanup complete (no resources to tear down)`);
   }
@@ -211,7 +236,7 @@ class GitHubActionsProvider implements ProviderInterface {
     // eslint-disable-next-line no-unused-vars
     previewOnly: boolean,
     // eslint-disable-next-line no-unused-vars
-    olderThan: Number,
+    olderThan: number,
     // eslint-disable-next-line no-unused-vars
     fullCache: boolean,
     // eslint-disable-next-line no-unused-vars

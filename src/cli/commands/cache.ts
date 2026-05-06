@@ -25,7 +25,10 @@ const cacheCommand: CommandModule = {
         default: '.',
       })
       .example('game-ci orchestrate cache list', 'List all cached workspaces')
-      .example('game-ci orchestrate cache restore --cache-dir ./my-cache', 'Restore a cached workspace')
+      .example(
+        'game-ci orchestrate cache restore --cache-dir ./my-cache',
+        'Restore a cached workspace',
+      )
       .example('game-ci orchestrate cache clear', 'Clear all cached workspaces');
   },
   handler: async (cliArguments) => {
@@ -51,7 +54,9 @@ const cacheCommand: CommandModule = {
         }
 
         default: {
-          throw new Error(`Unknown cache action: ${action}. Available actions: list, restore, clear`);
+          throw new Error(
+            `Unknown cache action: ${action}. Available actions: list, restore, clear`,
+          );
         }
       }
     } catch (error: any) {
@@ -90,7 +95,9 @@ async function listCache(cacheDirectory: string, projectPath: string): Promise<v
 
   if (cacheDirectory && cacheDirectory !== libraryPath && fs.existsSync(cacheDirectory)) {
     core.info(`\nCache directory: ${cacheDirectory}`);
-    const cacheFiles = fs.readdirSync(cacheDirectory).filter((f) => f.endsWith('.tar') || f.endsWith('.tar.lz4'));
+    const cacheFiles = fs
+      .readdirSync(cacheDirectory)
+      .filter((f) => f.endsWith('.tar') || f.endsWith('.tar.lz4'));
     if (cacheFiles.length > 0) {
       core.info(`  Cache archives found: ${cacheFiles.length}`);
       for (const file of cacheFiles) {
@@ -117,7 +124,9 @@ async function restoreCache(cacheDirectory: string): Promise<void> {
     return;
   }
 
-  const cacheFiles = fs.readdirSync(cacheDirectory).filter((f) => f.endsWith('.tar') || f.endsWith('.tar.lz4'));
+  const cacheFiles = fs
+    .readdirSync(cacheDirectory)
+    .filter((f) => f.endsWith('.tar') || f.endsWith('.tar.lz4'));
   if (cacheFiles.length === 0) {
     core.info('No cache archives found to restore.');
 
@@ -137,7 +146,9 @@ async function clearCache(cacheDirectory: string): Promise<void> {
   let cleared = false;
 
   if (cacheDirectory && fs.existsSync(cacheDirectory)) {
-    const cacheFiles = fs.readdirSync(cacheDirectory).filter((f) => f.endsWith('.tar') || f.endsWith('.tar.lz4'));
+    const cacheFiles = fs
+      .readdirSync(cacheDirectory)
+      .filter((f) => f.endsWith('.tar') || f.endsWith('.tar.lz4'));
     if (cacheFiles.length > 0) {
       for (const file of cacheFiles) {
         fs.unlinkSync(path.join(cacheDirectory, file));

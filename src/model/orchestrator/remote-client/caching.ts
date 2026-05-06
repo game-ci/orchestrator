@@ -10,7 +10,8 @@ import { RemoteClientLogger } from './remote-client-logger';
 import { Cli } from '../../cli/cli';
 import { CliFunction } from '../../cli/cli-functions-repository';
 // eslint-disable-next-line github/no-then
-const fileExists = async (fpath: fs.PathLike) => !!(await fs.promises.stat(fpath).catch(() => false));
+const fileExists = async (fpath: fs.PathLike) =>
+  !!(await fs.promises.stat(fpath).catch(() => false));
 
 export class Caching {
   @CliFunction(`cache-push`, `push to cache`)
@@ -43,7 +44,11 @@ export class Caching {
     }
   }
 
-  public static async PushToCache(cacheFolder: string, sourceFolder: string, cacheArtifactName: string) {
+  public static async PushToCache(
+    cacheFolder: string,
+    sourceFolder: string,
+    cacheArtifactName: string,
+  ) {
     OrchestratorLogger.log(`Pushing to cache ${sourceFolder}`);
     cacheArtifactName = cacheArtifactName.replace(' ', '');
     const startPath = process.cwd();
@@ -51,7 +56,9 @@ export class Caching {
     if (Orchestrator.buildParameters.useCompressionStrategy === true) {
       compressionSuffix = `.lz4`;
     }
-    OrchestratorLogger.log(`Compression: ${Orchestrator.buildParameters.useCompressionStrategy} ${compressionSuffix}`);
+    OrchestratorLogger.log(
+      `Compression: ${Orchestrator.buildParameters.useCompressionStrategy} ${compressionSuffix}`,
+    );
     try {
       if (!(await fileExists(cacheFolder))) {
         await OrchestratorSystem.Run(`mkdir -p ${cacheFolder}`);
@@ -82,7 +89,9 @@ export class Caching {
       // Check disk space before creating tar archive and clean up if needed
       let diskUsagePercent = 0;
       try {
-        const diskCheckOutput = await OrchestratorSystem.Run(`df . 2>/dev/null || df /data 2>/dev/null || true`);
+        const diskCheckOutput = await OrchestratorSystem.Run(
+          `df . 2>/dev/null || df /data 2>/dev/null || true`,
+        );
         OrchestratorLogger.log(`Disk space before tar: ${diskCheckOutput}`);
 
         // Parse disk usage percentage (e.g., "72G  72G  196M 100%")
@@ -96,7 +105,9 @@ export class Caching {
 
       // If disk usage is high (>90%), proactively clean up old cache files
       if (diskUsagePercent > 90) {
-        OrchestratorLogger.log(`Disk usage is ${diskUsagePercent}% - cleaning up old cache files before tar operation`);
+        OrchestratorLogger.log(
+          `Disk usage is ${diskUsagePercent}% - cleaning up old cache files before tar operation`,
+        );
         try {
           const cacheParent = path.dirname(cacheFolder);
           if (await fileExists(cacheParent)) {
@@ -122,7 +133,9 @@ export class Caching {
             );
 
             // Also try to remove old cache directories
-            await OrchestratorSystem.Run(`find ${cacheParent} -type d -empty -delete 2>/dev/null || true`);
+            await OrchestratorSystem.Run(
+              `find ${cacheParent} -type d -empty -delete 2>/dev/null || true`,
+            );
 
             // If disk is still very high (>95%), be even more aggressive
             if (diskUsagePercent > 95) {
@@ -140,7 +153,9 @@ export class Caching {
             }
 
             OrchestratorLogger.log(`Cleanup completed. Checking disk space again...`);
-            const diskCheckAfter = await OrchestratorSystem.Run(`df . 2>/dev/null || df /data 2>/dev/null || true`);
+            const diskCheckAfter = await OrchestratorSystem.Run(
+              `df . 2>/dev/null || df /data 2>/dev/null || true`,
+            );
             OrchestratorLogger.log(`Disk space after cleanup: ${diskCheckAfter}`);
 
             // Check disk usage again after cleanup
@@ -170,7 +185,10 @@ export class Caching {
           }
         } catch (cleanupError) {
           // If cleanupError is our disk space error, rethrow it
-          if (cleanupError instanceof Error && cleanupError.message.includes('Cannot create cache archive')) {
+          if (
+            cleanupError instanceof Error &&
+            cleanupError.message.includes('Cannot create cache archive')
+          ) {
             throw cleanupError;
           }
           OrchestratorLogger.log(`Proactive cleanup failed: ${cleanupError}`);
@@ -179,7 +197,9 @@ export class Caching {
 
       // Clean up any existing incomplete tar files
       try {
-        await OrchestratorSystem.Run(`rm -f ${cacheArtifactName}.tar${compressionSuffix} 2>/dev/null || true`);
+        await OrchestratorSystem.Run(
+          `rm -f ${cacheArtifactName}.tar${compressionSuffix} 2>/dev/null || true`,
+        );
       } catch {
         // Ignore cleanup errors
       }
@@ -238,7 +258,9 @@ export class Caching {
               );
 
               // Remove empty cache directories
-              await OrchestratorSystem.Run(`find ${cacheParent} -type d -empty -delete 2>/dev/null || true`);
+              await OrchestratorSystem.Run(
+                `find ${cacheParent} -type d -empty -delete 2>/dev/null || true`,
+              );
 
               // Also try to clean up the entire cache folder if it's getting too large
               const cacheRoot = path.resolve(cacheParent, '..');
@@ -272,6 +294,7 @@ export class Caching {
                   `Failed to create cache archive after cleanup. Original error: ${errorMessage}. Retry error: ${
                     retryError?.message || retryError
                   }`,
+                  { cause: retryError },
                 );
               }
 
@@ -284,6 +307,7 @@ export class Caching {
             } else {
               throw new Error(
                 `Failed to create cache archive due to insufficient disk space. Error: ${errorMessage}. Cleanup not possible - cache folder missing.`,
+                { cause: error },
               );
             }
           } catch (cleanupError: any) {
@@ -292,6 +316,7 @@ export class Caching {
               `Failed to create cache archive due to insufficient disk space. Error: ${errorMessage}. Cleanup failed: ${
                 cleanupError?.message || cleanupError
               }`,
+              { cause: cleanupError },
             );
           }
         } else {
@@ -299,7 +324,10 @@ export class Caching {
         }
       }
       await OrchestratorSystem.Run(`du ${cacheArtifactName}.tar${compressionSuffix}`);
-      assert(await fileExists(`${cacheArtifactName}.tar${compressionSuffix}`), 'cache archive exists');
+      assert(
+        await fileExists(`${cacheArtifactName}.tar${compressionSuffix}`),
+        'cache archive exists',
+      );
       assert(await fileExists(path.basename(sourceFolder)), 'source folder exists');
 
       // Ensure the cache folder directory exists before moving the file
@@ -307,7 +335,9 @@ export class Caching {
       if (!(await fileExists(cacheFolder))) {
         await OrchestratorSystem.Run(`mkdir -p ${cacheFolder}`);
       }
-      await OrchestratorSystem.Run(`mv ${cacheArtifactName}.tar${compressionSuffix} ${cacheFolder}`);
+      await OrchestratorSystem.Run(
+        `mv ${cacheArtifactName}.tar${compressionSuffix} ${cacheFolder}`,
+      );
       RemoteClientLogger.log(`moved cache entry ${cacheArtifactName} to ${cacheFolder}`);
       assert(
         await fileExists(`${path.join(cacheFolder, cacheArtifactName)}.tar${compressionSuffix}`),
@@ -319,8 +349,14 @@ export class Caching {
     }
     process.chdir(`${startPath}`);
   }
-  public static async PullFromCache(cacheFolder: string, destinationFolder: string, cacheArtifactName: string = ``) {
-    OrchestratorLogger.log(`Pulling from cache ${destinationFolder} ${Orchestrator.buildParameters.skipCache}`);
+  public static async PullFromCache(
+    cacheFolder: string,
+    destinationFolder: string,
+    cacheArtifactName: string = ``,
+  ) {
+    OrchestratorLogger.log(
+      `Pulling from cache ${destinationFolder} ${Orchestrator.buildParameters.skipCache}`,
+    );
     if (`${Orchestrator.buildParameters.skipCache}` === `true`) {
       OrchestratorLogger.log(`Skipping cache debugSkipCache is true`);
 
@@ -332,7 +368,9 @@ export class Caching {
       compressionSuffix = `.lz4`;
     }
     const startPath = process.cwd();
-    RemoteClientLogger.log(`Caching for (lz4 ${compressionSuffix}) ${path.basename(destinationFolder)}`);
+    RemoteClientLogger.log(
+      `Caching for (lz4 ${compressionSuffix}) ${path.basename(destinationFolder)}`,
+    );
     try {
       if (!(await fileExists(cacheFolder))) {
         await fs.promises.mkdir(cacheFolder);
@@ -343,7 +381,9 @@ export class Caching {
       }
 
       const latestInBranch = await (
-        await OrchestratorSystem.Run(`ls -t "${cacheFolder}" | grep .tar${compressionSuffix}$ | head -1`)
+        await OrchestratorSystem.Run(
+          `ls -t "${cacheFolder}" | grep .tar${compressionSuffix}$ | head -1`,
+        )
       )
         .replace(/\n/g, ``)
         .replace(`.tar${compressionSuffix}`, '');
@@ -351,7 +391,8 @@ export class Caching {
       process.chdir(cacheFolder);
 
       const cacheSelection =
-        cacheArtifactName !== `` && (await fileExists(`${cacheArtifactName}.tar${compressionSuffix}`))
+        cacheArtifactName !== `` &&
+        (await fileExists(`${cacheArtifactName}.tar${compressionSuffix}`))
           ? cacheArtifactName
           : latestInBranch;
       await OrchestratorLogger.log(`cache key ${cacheArtifactName} selection ${cacheSelection}`);
@@ -360,7 +401,9 @@ export class Caching {
         // Check disk space before extraction to prevent hangs
         let diskUsagePercent = 0;
         try {
-          const diskCheckOutput = await OrchestratorSystem.Run(`df . 2>/dev/null || df /data 2>/dev/null || true`);
+          const diskCheckOutput = await OrchestratorSystem.Run(
+            `df . 2>/dev/null || df /data 2>/dev/null || true`,
+          );
           const usageMatch = diskCheckOutput.match(/(\d+)%/);
           if (usageMatch) {
             diskUsagePercent = Number.parseInt(usageMatch[1], 10);
@@ -401,7 +444,9 @@ export class Caching {
 
         const resultsFolder = `results${Orchestrator.buildParameters.buildGuid}`;
         await OrchestratorSystem.Run(`mkdir -p ${resultsFolder}`);
-        RemoteClientLogger.log(`cache item exists ${cacheFolder}/${cacheSelection}.tar${compressionSuffix}`);
+        RemoteClientLogger.log(
+          `cache item exists ${cacheFolder}/${cacheSelection}.tar${compressionSuffix}`,
+        );
         const fullResultsFolder = path.join(cacheFolder, resultsFolder);
 
         // Extract with timeout to prevent infinite hangs
@@ -459,7 +504,9 @@ export class Caching {
           `There is ${contents.length} files/dir in the cache pulled contents for ${path.basename(destinationFolder)}`,
         );
       } else {
-        RemoteClientLogger.logWarning(`cache item ${cacheArtifactName} doesn't exist ${destinationFolder}`);
+        RemoteClientLogger.logWarning(
+          `cache item ${cacheArtifactName} doesn't exist ${destinationFolder}`,
+        );
         if (cacheSelection !== ``) {
           RemoteClientLogger.logWarning(
             `cache item ${cacheArtifactName}.tar${compressionSuffix} doesn't exist ${destinationFolder}`,

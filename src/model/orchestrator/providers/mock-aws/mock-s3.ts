@@ -10,22 +10,18 @@ import OrchestratorLogger from '../../services/core/orchestrator-logger';
 
 export class MockS3 {
   /** List objects in a bucket. */
-  static listObjectsV2(params: {
-    Bucket: string;
-    Prefix?: string;
-    ContinuationToken?: string;
-  }): {
+  static listObjectsV2(params: { Bucket: string; Prefix?: string; ContinuationToken?: string }): {
     Contents: Array<{ Key: string; Size: number; LastModified: Date }>;
     IsTruncated: boolean;
     NextContinuationToken?: string;
   } {
     const objects = MockAwsState.s3Buckets.get(params.Bucket) || [];
     const filtered = params.Prefix
-      ? objects.filter(o => o.Key.startsWith(params.Prefix!))
+      ? objects.filter((o) => o.Key.startsWith(params.Prefix!))
       : objects;
 
     return {
-      Contents: filtered.map(o => ({
+      Contents: filtered.map((o) => ({
         Key: o.Key,
         Size: o.Size,
         LastModified: o.LastModified,
@@ -35,11 +31,7 @@ export class MockS3 {
   }
 
   /** Put an object into a bucket. */
-  static putObject(params: {
-    Bucket: string;
-    Key: string;
-    Body: string;
-  }): void {
+  static putObject(params: { Bucket: string; Key: string; Body: string }): void {
     const objects = MockAwsState.s3Buckets.get(params.Bucket);
     if (!objects) {
       // Auto-create bucket
@@ -48,7 +40,7 @@ export class MockS3 {
     const bucket = MockAwsState.s3Buckets.get(params.Bucket)!;
 
     // Upsert
-    const existing = bucket.findIndex(o => o.Key === params.Key);
+    const existing = bucket.findIndex((o) => o.Key === params.Key);
     const obj: MockS3Object = {
       Key: params.Key,
       Size: params.Body.length,
@@ -62,7 +54,9 @@ export class MockS3 {
       bucket.push(obj);
     }
 
-    OrchestratorLogger.log(`[mock-aws] S3 PutObject: s3://${params.Bucket}/${params.Key} (${obj.Size} bytes)`);
+    OrchestratorLogger.log(
+      `[mock-aws] S3 PutObject: s3://${params.Bucket}/${params.Key} (${obj.Size} bytes)`,
+    );
   }
 
   /** Get an object from a bucket. */
@@ -73,7 +67,7 @@ export class MockS3 {
     const bucket = MockAwsState.s3Buckets.get(params.Bucket);
     if (!bucket) return null;
 
-    const obj = bucket.find(o => o.Key === params.Key);
+    const obj = bucket.find((o) => o.Key === params.Key);
     if (!obj) return null;
 
     return { Body: obj.Body || '', ContentLength: obj.Size };
@@ -84,7 +78,7 @@ export class MockS3 {
     const bucket = MockAwsState.s3Buckets.get(params.Bucket);
     if (!bucket) return;
 
-    const idx = bucket.findIndex(o => o.Key === params.Key);
+    const idx = bucket.findIndex((o) => o.Key === params.Key);
     if (idx >= 0) {
       bucket.splice(idx, 1);
       OrchestratorLogger.log(`[mock-aws] S3 DeleteObject: s3://${params.Bucket}/${params.Key}`);

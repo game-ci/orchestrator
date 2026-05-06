@@ -51,7 +51,11 @@ export class MiddlewareService {
    * After hooks: descending priority (highest priority runs first, closest to core phase).
    * This produces the wrapping pattern: outermost middleware's before runs first and after runs last.
    */
-  static resolveCommandHooks(middleware: Middleware[], phase: string, timing: 'before' | 'after'): CommandHook[] {
+  static resolveCommandHooks(
+    middleware: Middleware[],
+    phase: string,
+    timing: 'before' | 'after',
+  ): CommandHook[] {
     const applicable = middleware
       .filter((m) => m.type === 'command')
       .filter((m) => MiddlewareService.evaluateTrigger(m.trigger, phase));
@@ -90,7 +94,11 @@ export class MiddlewareService {
    * Resolve middleware to ContainerHooks for a given phase and timing.
    * Same ordering logic as resolveCommandHooks.
    */
-  static resolveContainerHooks(middleware: Middleware[], phase: string, timing: 'before' | 'after'): ContainerHook[] {
+  static resolveContainerHooks(
+    middleware: Middleware[],
+    phase: string,
+    timing: 'before' | 'after',
+  ): ContainerHook[] {
     const applicable = middleware
       .filter((m) => m.type === 'container')
       .filter((m) => MiddlewareService.evaluateTrigger(m.trigger, phase));
@@ -138,7 +146,8 @@ export class MiddlewareService {
 
     // Provider filter (if specified)
     if (trigger.provider && trigger.provider.length > 0) {
-      const currentProvider = Orchestrator.buildParameters?.providerStrategy || OrchestratorOptions.providerStrategy;
+      const currentProvider =
+        Orchestrator.buildParameters?.providerStrategy || OrchestratorOptions.providerStrategy;
       if (!trigger.provider.includes(currentProvider)) {
         return false;
       }
@@ -202,7 +211,9 @@ export class MiddlewareService {
     }
 
     // Unknown expression format — log warning, default to true
-    OrchestratorLogger.logWarning(`Middleware: unknown expression format "${expression}", defaulting to true`);
+    OrchestratorLogger.logWarning(
+      `Middleware: unknown expression format "${expression}", defaulting to true`,
+    );
 
     return true;
   }
@@ -248,8 +259,12 @@ export class MiddlewareService {
     // Parse trigger — normalize scalar values to arrays
     middleware.trigger = {
       phase: MiddlewareService.toStringArray(m.trigger?.phase),
-      provider: m.trigger?.provider ? MiddlewareService.toStringArray(m.trigger.provider) : undefined,
-      platform: m.trigger?.platform ? MiddlewareService.toStringArray(m.trigger.platform) : undefined,
+      provider: m.trigger?.provider
+        ? MiddlewareService.toStringArray(m.trigger.provider)
+        : undefined,
+      platform: m.trigger?.platform
+        ? MiddlewareService.toStringArray(m.trigger.platform)
+        : undefined,
       when: m.trigger?.when,
     };
 
@@ -272,7 +287,8 @@ export class MiddlewareService {
       middleware.secrets = m.secrets.map((s: any) => ({
         ParameterKey: s.name,
         EnvironmentVariable: Input.ToEnvVarFormat(s.name),
-        ParameterValue: s.value ?? process.env[s.name] ?? process.env[Input.ToEnvVarFormat(s.name)] ?? '',
+        ParameterValue:
+          s.value ?? process.env[s.name] ?? process.env[Input.ToEnvVarFormat(s.name)] ?? '',
       }));
     }
 
@@ -307,7 +323,9 @@ export class MiddlewareService {
           const contents = fs.readFileSync(path.join(middlewarePath, file), 'utf8');
           results.push(...MiddlewareService.parseMiddleware(contents));
         } catch (error: any) {
-          OrchestratorLogger.logWarning(`Middleware: failed to parse file ${file} — ${error.message}`);
+          OrchestratorLogger.logWarning(
+            `Middleware: failed to parse file ${file} — ${error.message}`,
+          );
         }
       }
     } catch {

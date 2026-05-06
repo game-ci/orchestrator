@@ -1,22 +1,35 @@
+import {
+  describe,
+  it,
+  expect,
+  beforeEach,
+  afterEach,
+  beforeAll,
+  afterAll,
+  vi,
+  type MockedFunction,
+} from 'vitest';
 import AnsibleProvider from '.';
 import BuildParameters from '../../../build-parameters';
 import { OrchestratorSystem } from '../../services/core/orchestrator-system';
 import OrchestratorLogger from '../../services/core/orchestrator-logger';
 import * as core from '@actions/core';
 
-jest.mock('../../services/core/orchestrator-system');
-jest.mock('../../services/core/orchestrator-logger');
-jest.mock('@actions/core', () => ({
-  info: jest.fn(),
-  warning: jest.fn(),
-  error: jest.fn(),
-  setOutput: jest.fn(),
-  getInput: jest.fn(() => ''),
+vi.mock('../../services/core/orchestrator-system');
+vi.mock('../../services/core/orchestrator-logger');
+vi.mock('@actions/core', () => ({
+  info: vi.fn(),
+  warning: vi.fn(),
+  error: vi.fn(),
+  setOutput: vi.fn(),
+  getInput: vi.fn(() => ''),
 }));
 
-const mockRun = OrchestratorSystem.Run as jest.MockedFunction<typeof OrchestratorSystem.Run>;
-const mockLog = OrchestratorLogger.log as jest.MockedFunction<typeof OrchestratorLogger.log>;
-const mockLogWarning = OrchestratorLogger.logWarning as jest.MockedFunction<typeof OrchestratorLogger.logWarning>;
+const mockRun = OrchestratorSystem.Run as MockedFunction<typeof OrchestratorSystem.Run>;
+const mockLog = OrchestratorLogger.log as MockedFunction<typeof OrchestratorLogger.log>;
+const mockLogWarning = OrchestratorLogger.logWarning as MockedFunction<
+  typeof OrchestratorLogger.logWarning
+>;
 
 function createBuildParameters(overrides: Partial<BuildParameters> = {}): BuildParameters {
   return {
@@ -32,7 +45,7 @@ describe('AnsibleProvider', () => {
   let provider: AnsibleProvider;
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     provider = new AnsibleProvider(createBuildParameters());
   });
 
@@ -72,7 +85,9 @@ describe('AnsibleProvider', () => {
       expect(mockRun.mock.calls[1][0]).toContain('ansible-playbook');
       expect(mockRun.mock.calls[2][0]).toContain('test -e "/etc/ansible/hosts"');
       expect(mockLog).toHaveBeenCalledWith(expect.stringContaining('ansible'));
-      expect(mockLog).toHaveBeenCalledWith(expect.stringContaining('ansible-playbook binary verified'));
+      expect(mockLog).toHaveBeenCalledWith(
+        expect.stringContaining('ansible-playbook binary verified'),
+      );
     });
 
     it('throws when inventory is not configured', async () => {
@@ -87,20 +102,22 @@ describe('AnsibleProvider', () => {
     it('throws when ansible binary is not found on PATH', async () => {
       mockRun.mockRejectedValueOnce(new Error('command not found: ansible'));
 
-      await expect(provider.setupWorkflow('guid-123', createBuildParameters(), 'main', [])).rejects.toThrow(
-        'Ansible not found on PATH',
-      );
+      await expect(
+        provider.setupWorkflow('guid-123', createBuildParameters(), 'main', []),
+      ).rejects.toThrow('Ansible not found on PATH');
     });
 
     it('throws when ansible-playbook binary is not found', async () => {
       mockRun.mockResolvedValueOnce('ansible [core 2.14.0]'); // ansible version OK
       mockRun.mockRejectedValueOnce(new Error('command not found')); // ansible-playbook missing
 
-      await expect(provider.setupWorkflow('guid-123', createBuildParameters(), 'main', [])).rejects.toThrow(
-        'ansible-playbook not found on PATH',
-      );
+      await expect(
+        provider.setupWorkflow('guid-123', createBuildParameters(), 'main', []),
+      ).rejects.toThrow('ansible-playbook not found on PATH');
 
-      expect(core.error).toHaveBeenCalledWith('ansible-playbook not found. Install Ansible or ensure it is in PATH.');
+      expect(core.error).toHaveBeenCalledWith(
+        'ansible-playbook not found. Install Ansible or ensure it is in PATH.',
+      );
     });
 
     it('throws when inventory file does not exist', async () => {
@@ -108,9 +125,9 @@ describe('AnsibleProvider', () => {
       mockRun.mockResolvedValueOnce('/usr/bin/ansible-playbook'); // ansible-playbook OK
       mockRun.mockRejectedValueOnce(new Error('test -e failed')); // inventory missing
 
-      await expect(provider.setupWorkflow('guid-123', createBuildParameters(), 'main', [])).rejects.toThrow(
-        'Inventory not found: /etc/ansible/hosts',
-      );
+      await expect(
+        provider.setupWorkflow('guid-123', createBuildParameters(), 'main', []),
+      ).rejects.toThrow('Inventory not found: /etc/ansible/hosts');
     });
   });
 
@@ -148,9 +165,9 @@ describe('AnsibleProvider', () => {
       const params = createBuildParameters({ ansiblePlaybook: '' });
       provider = new AnsibleProvider(params);
 
-      await expect(provider.runTaskInWorkflow('guid-nopb', 'img', 'cmd', '/m', '/w', [], [])).rejects.toThrow(
-        'ansiblePlaybook is required',
-      );
+      await expect(
+        provider.runTaskInWorkflow('guid-nopb', 'img', 'cmd', '/m', '/w', [], []),
+      ).rejects.toThrow('ansiblePlaybook is required');
     });
 
     it('passes environment variables as extra-vars in snake_case', async () => {
@@ -193,7 +210,9 @@ describe('AnsibleProvider', () => {
 
       await provider.runTaskInWorkflow('guid-badjson', 'img', 'cmd', '/m', '/w', [], []);
 
-      expect(mockLogWarning).toHaveBeenCalledWith(expect.stringContaining('Failed to parse ansibleExtraVars'));
+      expect(mockLogWarning).toHaveBeenCalledWith(
+        expect.stringContaining('Failed to parse ansibleExtraVars'),
+      );
     });
 
     it('includes vault password file flag when configured', async () => {
@@ -224,7 +243,15 @@ describe('AnsibleProvider', () => {
         { ParameterKey: 'key2', EnvironmentVariable: 'DEPLOY_KEY', ParameterValue: 'dk-xyz' },
       ];
 
-      await provider.runTaskInWorkflow('guid-secrets', 'img', 'cmd', '/m', '/w', [], secrets as any);
+      await provider.runTaskInWorkflow(
+        'guid-secrets',
+        'img',
+        'cmd',
+        '/m',
+        '/w',
+        [],
+        secrets as any,
+      );
 
       const command = mockRun.mock.calls[0][0];
       expect(command).toMatch(/^SECRET_TOKEN='tok-abc'/);
@@ -236,9 +263,9 @@ describe('AnsibleProvider', () => {
       const execError = new Error('UNREACHABLE! Host unreachable');
       mockRun.mockRejectedValueOnce(execError);
 
-      await expect(provider.runTaskInWorkflow('guid-hostfail', 'img', 'cmd', '/m', '/w', [], [])).rejects.toThrow(
-        'UNREACHABLE',
-      );
+      await expect(
+        provider.runTaskInWorkflow('guid-hostfail', 'img', 'cmd', '/m', '/w', [], []),
+      ).rejects.toThrow('UNREACHABLE');
 
       expect(mockLogWarning).toHaveBeenCalledWith(expect.stringContaining('Playbook failed'));
     });

@@ -133,7 +133,10 @@ export class TaxonomyFilterService {
    * Hierarchical dot-notation supports prefix matching (e.g., filter "Combat.Melee"
    * matches test category "Combat.Melee.Sword").
    */
-  static matchesFilter(testCategories: Record<string, string>, filters: Record<string, string>): boolean {
+  static matchesFilter(
+    testCategories: Record<string, string>,
+    filters: Record<string, string>,
+  ): boolean {
     for (const [dimension, valueSpec] of Object.entries(filters)) {
       const testValue = testCategories[dimension];
 

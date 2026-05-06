@@ -3,7 +3,10 @@ import OrchestratorOptions from './orchestrator-options';
 
 class OrchestratorOptionsReader {
   static GetProperties() {
-    return [...Object.getOwnPropertyNames(Input), ...Object.getOwnPropertyNames(OrchestratorOptions)];
+    return [
+      ...Object.getOwnPropertyNames(Input),
+      ...Object.getOwnPropertyNames(OrchestratorOptions),
+    ];
   }
 }
 

@@ -10,10 +10,7 @@ import OrchestratorLogger from '../../services/core/orchestrator-logger';
 
 export class MockCloudWatchLogs {
   /** Describe log groups (with optional pagination). */
-  static describeLogGroups(params?: {
-    logGroupNamePrefix?: string;
-    nextToken?: string;
-  }): {
+  static describeLogGroups(params?: { logGroupNamePrefix?: string; nextToken?: string }): {
     logGroups: Array<{
       logGroupName: string;
       creationTime: number;
@@ -24,7 +21,7 @@ export class MockCloudWatchLogs {
     let groups = [...MockAwsState.logGroups.values()];
 
     if (params?.logGroupNamePrefix) {
-      groups = groups.filter(g => g.logGroupName.startsWith(params.logGroupNamePrefix!));
+      groups = groups.filter((g) => g.logGroupName.startsWith(params.logGroupNamePrefix!));
     }
 
     return { logGroups: groups };

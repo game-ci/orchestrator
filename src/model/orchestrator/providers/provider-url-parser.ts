@@ -45,7 +45,9 @@ export function parseProviderSource(source: string): ProviderSourceInfo {
   }
 
   // Check if it's a GitHub SSH URL
-  const githubSshMatch = source.match(/^git@github\.com:([^/]+)\/([^/]+?)(?:\.git)?\/?(?:tree\/([^/]+))?(?:\/(.+))?$/);
+  const githubSshMatch = source.match(
+    /^git@github\.com:([^/]+)\/([^/]+?)(?:\.git)?\/?(?:tree\/([^/]+))?(?:\/(.+))?$/,
+  );
   if (githubSshMatch) {
     const [, owner, repo, branch, path] = githubSshMatch;
 
@@ -61,7 +63,12 @@ export function parseProviderSource(source: string): ProviderSourceInfo {
 
   // Check if it's a shorthand GitHub reference (owner/repo)
   const shorthandMatch = source.match(/^([^/@]+)\/([^/@]+)(?:@([^/]+))?(?:\/(.+))?$/);
-  if (shorthandMatch && !source.startsWith('.') && !source.startsWith('/') && !source.includes('\\')) {
+  if (
+    shorthandMatch &&
+    !source.startsWith('.') &&
+    !source.startsWith('/') &&
+    !source.includes('\\')
+  ) {
     const [, owner, repo, branch, path] = shorthandMatch;
 
     return {
@@ -75,7 +82,12 @@ export function parseProviderSource(source: string): ProviderSourceInfo {
   }
 
   // Check if it's a local path
-  if (source.startsWith('./') || source.startsWith('../') || source.startsWith('/') || source.includes('\\')) {
+  if (
+    source.startsWith('./') ||
+    source.startsWith('../') ||
+    source.startsWith('/') ||
+    source.includes('\\')
+  ) {
     return {
       type: 'local',
       path: source,

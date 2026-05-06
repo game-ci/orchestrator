@@ -1,4 +1,8 @@
-import { CloudFormation, DeleteStackCommand, waitUntilStackDeleteComplete } from '@aws-sdk/client-cloudformation';
+import {
+  CloudFormation,
+  DeleteStackCommand,
+  waitUntilStackDeleteComplete,
+} from '@aws-sdk/client-cloudformation';
 import OrchestratorSecret from '../../options/orchestrator-secret';
 import OrchestratorEnvironmentVariable from '../../options/orchestrator-environment-variable';
 import OrchestratorAWSTaskDef from './orchestrator-aws-task-def';
@@ -57,7 +61,7 @@ class AWSBuildEnvironment implements ProviderInterface {
   async garbageCollect(
     filter: string,
     previewOnly: boolean,
-    olderThan: Number,
+    olderThan: number,
     // eslint-disable-next-line no-unused-vars
     fullCache: boolean,
     // eslint-disable-next-line no-unused-vars
@@ -72,7 +76,11 @@ class AWSBuildEnvironment implements ProviderInterface {
     // eslint-disable-next-line no-unused-vars
     branchName: string,
     // eslint-disable-next-line no-unused-vars
-    defaultSecretsArray: { ParameterKey: string; EnvironmentVariable: string; ParameterValue: string }[],
+    defaultSecretsArray: {
+      ParameterKey: string;
+      EnvironmentVariable: string;
+      ParameterValue: string;
+    }[],
   ) {}
   async setupWorkflow(
     // eslint-disable-next-line no-unused-vars
@@ -82,7 +90,11 @@ class AWSBuildEnvironment implements ProviderInterface {
     // eslint-disable-next-line no-unused-vars
     branchName: string,
     // eslint-disable-next-line no-unused-vars
-    defaultSecretsArray: { ParameterKey: string; EnvironmentVariable: string; ParameterValue: string }[],
+    defaultSecretsArray: {
+      ParameterKey: string;
+      EnvironmentVariable: string;
+      ParameterValue: string;
+    }[],
   ) {
     process.env.AWS_REGION = Input.region;
     const CF = AwsClientFactory.getCloudFormation();
@@ -104,7 +116,8 @@ class AWSBuildEnvironment implements ProviderInterface {
     AwsClientFactory.getECS();
     const CF = AwsClientFactory.getCloudFormation();
     AwsClientFactory.getKinesis();
-    const resolvedRegion = typeof CF.config.region === 'function' ? await CF.config.region() : CF.config.region;
+    const resolvedRegion =
+      typeof CF.config.region === 'function' ? await CF.config.region() : CF.config.region;
     OrchestratorLogger.log(`AWS Region: ${resolvedRegion}`);
     const entrypoint = ['/bin/sh'];
     const startTimeMs = Date.now();
@@ -122,16 +135,27 @@ class AWSBuildEnvironment implements ProviderInterface {
     let postRunTaskTimeMs;
     try {
       const postSetupStacksTimeMs = Date.now();
-      OrchestratorLogger.log(`Setup job time: ${Math.floor((postSetupStacksTimeMs - startTimeMs) / 1000)}s`);
-      const { output, shouldCleanup } = await AwsTaskRunner.runTask(taskDef, environment, secrets, commands);
+      OrchestratorLogger.log(
+        `Setup job time: ${Math.floor((postSetupStacksTimeMs - startTimeMs) / 1000)}s`,
+      );
+      const { output, shouldCleanup } = await AwsTaskRunner.runTask(
+        taskDef,
+        environment,
+        secrets,
+        commands,
+      );
       postRunTaskTimeMs = Date.now();
-      OrchestratorLogger.log(`Run job time: ${Math.floor((postRunTaskTimeMs - postSetupStacksTimeMs) / 1000)}s`);
+      OrchestratorLogger.log(
+        `Run job time: ${Math.floor((postRunTaskTimeMs - postSetupStacksTimeMs) / 1000)}s`,
+      );
       if (shouldCleanup) {
         await this.cleanupResources(CF, taskDef);
       }
       const postCleanupTimeMs = Date.now();
       if (postRunTaskTimeMs !== undefined)
-        OrchestratorLogger.log(`Cleanup job time: ${Math.floor((postCleanupTimeMs - postRunTaskTimeMs) / 1000)}s`);
+        OrchestratorLogger.log(
+          `Cleanup job time: ${Math.floor((postCleanupTimeMs - postRunTaskTimeMs) / 1000)}s`,
+        );
 
       return output;
     } catch (error) {
@@ -143,7 +167,9 @@ class AWSBuildEnvironment implements ProviderInterface {
 
   async cleanupResources(CF: CloudFormation, taskDef: OrchestratorAWSTaskDef) {
     const stackWaitTimeSeconds = getStackWaitTime();
-    OrchestratorLogger.log(`Cleanup starting (waiting up to ${stackWaitTimeSeconds}s for stack deletion)`);
+    OrchestratorLogger.log(
+      `Cleanup starting (waiting up to ${stackWaitTimeSeconds}s for stack deletion)`,
+    );
     await CF.send(new DeleteStackCommand({ StackName: taskDef.taskDefStackName }));
     if (OrchestratorOptions.useCleanupCron) {
       await CF.send(new DeleteStackCommand({ StackName: `${taskDef.taskDefStackName}-cleanup` }));

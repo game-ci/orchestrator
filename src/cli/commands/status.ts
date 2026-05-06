@@ -51,7 +51,9 @@ const statusCommand: CommandModule = {
           for (const build of builds) {
             const buildPath = path.join(buildsPath, build);
             const buildStats = fs.statSync(buildPath);
-            core.info(`  - ${build} (${buildStats.isDirectory() ? 'dir' : 'file'}, ${buildStats.mtime.toISOString()})`);
+            core.info(
+              `  - ${build} (${buildStats.isDirectory() ? 'dir' : 'file'}, ${buildStats.mtime.toISOString()})`,
+            );
           }
         }
       }

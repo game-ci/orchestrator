@@ -24,7 +24,10 @@ describe('Orchestrator Locking Core', () => {
       const overrides: any = {
         versioning: 'None',
         projectPath: 'test-project',
-        unityVersion: UnityVersioning.determineUnityVersion('test-project', UnityVersioning.read('test-project')),
+        unityVersion: UnityVersioning.determineUnityVersion(
+          'test-project',
+          UnityVersioning.read('test-project'),
+        ),
         targetPlatform: 'StandaloneLinux64',
         cacheKey: `test-case-${uuidv4()}`,
         maxRetainedWorkspaces: 3,
@@ -32,13 +35,18 @@ describe('Orchestrator Locking Core', () => {
       const buildParameters = await CreateParameters(overrides);
       Orchestrator.buildParameters = buildParameters;
       const newWorkspaceName = `test-workspace-${uuidv4()}`;
-      expect(await SharedWorkspaceLocking.CreateWorkspace(newWorkspaceName, buildParameters)).toBeTruthy();
+      expect(
+        await SharedWorkspaceLocking.CreateWorkspace(newWorkspaceName, buildParameters),
+      ).toBeTruthy();
     }, 150000);
     it(`Create Workspace And Lock Workspace`, async () => {
       const overrides: any = {
         versioning: 'None',
         projectPath: 'test-project',
-        unityVersion: UnityVersioning.determineUnityVersion('test-project', UnityVersioning.read('test-project')),
+        unityVersion: UnityVersioning.determineUnityVersion(
+          'test-project',
+          UnityVersioning.read('test-project'),
+        ),
         targetPlatform: 'StandaloneLinux64',
         cacheKey: `test-case-${uuidv4()}`,
         maxRetainedWorkspaces: 3,
@@ -47,14 +55,21 @@ describe('Orchestrator Locking Core', () => {
       const buildParameters = await CreateParameters(overrides);
       Orchestrator.buildParameters = buildParameters;
       const newWorkspaceName = `test-workspace-${uuidv4()}`;
-      expect(await SharedWorkspaceLocking.CreateWorkspace(newWorkspaceName, buildParameters)).toBeTruthy();
-      expect(await SharedWorkspaceLocking.LockWorkspace(newWorkspaceName, runId, buildParameters)).toBeTruthy();
+      expect(
+        await SharedWorkspaceLocking.CreateWorkspace(newWorkspaceName, buildParameters),
+      ).toBeTruthy();
+      expect(
+        await SharedWorkspaceLocking.LockWorkspace(newWorkspaceName, runId, buildParameters),
+      ).toBeTruthy();
     }, 150000);
     it(`0 free workspaces after locking`, async () => {
       const overrides: any = {
         versioning: 'None',
         projectPath: 'test-project',
-        unityVersion: UnityVersioning.determineUnityVersion('test-project', UnityVersioning.read('test-project')),
+        unityVersion: UnityVersioning.determineUnityVersion(
+          'test-project',
+          UnityVersioning.read('test-project'),
+        ),
         targetPlatform: 'StandaloneLinux64',
         cacheKey: `test-case-${uuidv4()}`,
         maxRetainedWorkspaces: 3,
@@ -64,13 +79,25 @@ describe('Orchestrator Locking Core', () => {
       const newWorkspaceName = `test-workspace-${uuidv4()}`;
       const runId = uuidv4();
       Orchestrator.buildParameters = buildParameters;
-      expect(await SharedWorkspaceLocking.CreateWorkspace(newWorkspaceName, buildParameters)).toBeTruthy();
-      expect(await SharedWorkspaceLocking.LockWorkspace(newWorkspaceName, runId, buildParameters)).toBeTruthy();
-      expect(await SharedWorkspaceLocking.HasWorkspaceLock(newWorkspaceName, runId, buildParameters)).toBeTruthy();
-      expect(await SharedWorkspaceLocking.DoesWorkspaceExist(newWorkspaceName, buildParameters)).toBeTruthy();
+      expect(
+        await SharedWorkspaceLocking.CreateWorkspace(newWorkspaceName, buildParameters),
+      ).toBeTruthy();
+      expect(
+        await SharedWorkspaceLocking.LockWorkspace(newWorkspaceName, runId, buildParameters),
+      ).toBeTruthy();
+      expect(
+        await SharedWorkspaceLocking.HasWorkspaceLock(newWorkspaceName, runId, buildParameters),
+      ).toBeTruthy();
+      expect(
+        await SharedWorkspaceLocking.DoesWorkspaceExist(newWorkspaceName, buildParameters),
+      ).toBeTruthy();
       expect(await SharedWorkspaceLocking.GetAllWorkspaces(buildParameters)).toHaveLength(1);
-      expect(await SharedWorkspaceLocking.GetAllLocksForWorkspace(newWorkspaceName, buildParameters)).toHaveLength(1);
-      expect(await SharedWorkspaceLocking.IsWorkspaceLocked(newWorkspaceName, buildParameters)).toBeTruthy();
+      expect(
+        await SharedWorkspaceLocking.GetAllLocksForWorkspace(newWorkspaceName, buildParameters),
+      ).toHaveLength(1);
+      expect(
+        await SharedWorkspaceLocking.IsWorkspaceLocked(newWorkspaceName, buildParameters),
+      ).toBeTruthy();
 
       const files = await SharedWorkspaceLocking.ReadLines(
         `aws s3 ls ${SharedWorkspaceLocking.workspaceRoot}${buildParameters.cacheKey}/`,
@@ -91,12 +118,19 @@ describe('Orchestrator Locking Core', () => {
       const result: string[] = [];
       const workspaces = await SharedWorkspaceLocking.GetAllWorkspaces(buildParameters);
       for (const element of workspaces) {
-        expect((await SharedWorkspaceLocking.GetAllWorkspaces(buildParameters)).join()).toContain(element);
+        expect((await SharedWorkspaceLocking.GetAllWorkspaces(buildParameters)).join()).toContain(
+          element,
+        );
         expect(await SharedWorkspaceLocking.GetAllWorkspaces(buildParameters)).toHaveLength(1);
-        expect(await SharedWorkspaceLocking.DoesWorkspaceExist(element, buildParameters)).toBeTruthy();
+        expect(
+          await SharedWorkspaceLocking.DoesWorkspaceExist(element, buildParameters),
+        ).toBeTruthy();
         await new Promise((promise) => setTimeout(promise, 1500));
         const isLocked = await SharedWorkspaceLocking.IsWorkspaceLocked(element, buildParameters);
-        const isBelowMax = await SharedWorkspaceLocking.IsWorkspaceBelowMax(element, buildParameters);
+        const isBelowMax = await SharedWorkspaceLocking.IsWorkspaceBelowMax(
+          element,
+          buildParameters,
+        );
         OrchestratorLogger.log(`workspace ${element} locked:${isLocked} below max:${isBelowMax}`);
         const lock = files.find((x) => {
           return x.endsWith(`_lock`);
