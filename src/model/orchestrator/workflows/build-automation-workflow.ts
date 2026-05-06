@@ -103,24 +103,7 @@ export class BuildAutomationWorkflow implements WorkflowInterface {
       OrchestratorFolders.builderPathAbsolute,
     )}
 ${OrchestratorFolders.gitAuthConfigScript}
-BRANCH="${Orchestrator.buildParameters.orchestratorBranch}"
-REPO="${OrchestratorFolders.unityBuilderRepoUrl}"
-REPO_PLAIN="https://github.com/${Orchestrator.buildParameters.orchestratorRepoName}.git"
-DEST="${OrchestratorFolders.ToLinuxFolder(OrchestratorFolders.builderPathAbsolute)}"
-if [ -n "$(git ls-remote --heads "$REPO" "$BRANCH" 2>/dev/null)" ]; then
-  git clone -q -b "$BRANCH" "$REPO" "$DEST"
-elif git clone -q -b main "$REPO" "$DEST" 2>/dev/null; then
-  echo "Cloned default branch from $REPO"
-elif [ "$REPO" != "$REPO_PLAIN" ]; then
-  echo "Authenticated clone failed; retrying without credentials"
-  git config --global --unset-all http.https://github.com/.extraHeader 2>/dev/null || true
-  git clone -q -b "$BRANCH" "$REPO_PLAIN" "$DEST" 2>/dev/null \
-    || git clone -q -b main "$REPO_PLAIN" "$DEST" 2>/dev/null \
-    || git clone -q "$REPO_PLAIN" "$DEST"
-else
-  echo "Remote branch $BRANCH not found in $REPO; falling back to default branch"
-  git clone -q "$REPO" "$DEST"
-fi
+${OrchestratorFolders.cloneBuilderScript(OrchestratorFolders.ToLinuxFolder(OrchestratorFolders.builderPathAbsolute))}
 chmod +x ${builderPath}`;
 
     if (isContainerized) {
