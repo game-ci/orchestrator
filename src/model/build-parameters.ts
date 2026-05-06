@@ -47,6 +47,7 @@ class BuildParameters {
   providerStrategy!: string;
   maxRetainedWorkspaces!: number;
   maxCacheEntries!: number;
+  minCacheEntries!: number;
   gcTimeoutMinutes!: number;
   useLargePackages!: boolean;
   useCompressionStrategy!: boolean;
@@ -213,6 +214,7 @@ class BuildParameters {
     p.providerStrategy = Input.providerStrategy || 'local';
     p.maxRetainedWorkspaces = Number(Input.getInput('maxRetainedWorkspaces')) || 0;
     p.maxCacheEntries = Number(Input.getInput('maxCacheEntries')) || 2;
+    p.minCacheEntries = Number(Input.getInput('minCacheEntries')) || 0;
     p.gcTimeoutMinutes = Number(Input.getInput('gcTimeoutMinutes')) || 0;
     try {
       p.configFiles = JSON.parse(Input.getInput('configFiles') || '{}');

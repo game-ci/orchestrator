@@ -589,6 +589,10 @@ inputs:
     description: 'Max cache tar entries to retain per folder'
     default: '2'
     required: false
+  minCacheEntries:
+    description: 'Minimum cache entries to keep during age-based GC (floor)'
+    default: '0'
+    required: false
   gcTimeoutMinutes:
     description: 'Force garbage collection after this many minutes (0 = disabled)'
     default: '0'
@@ -819,6 +823,7 @@ runs:
         INPUT_SKIPLFS: ${{ inputs.skipLfs }}
         INPUT_SKIPCACHE: ${{ inputs.skipCache }}
         INPUT_MAXCACHEENTRIES: ${{ inputs.maxCacheEntries }}
+        INPUT_MINCACHEENTRIES: ${{ inputs.minCacheEntries }}
         INPUT_GCTIMEOUTMINUTES: ${{ inputs.gcTimeoutMinutes }}
         INPUT_CONFIGFILES: ${{ inputs.configFiles }}
         INPUT_POSTBUILDSTEPS: ${{ inputs.postBuildSteps }}

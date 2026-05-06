@@ -689,7 +689,11 @@ export class LocalCacheService {
   /**
    * Remove cache entries older than maxAgeDays from the cache root.
    */
-  static async garbageCollect(cacheRoot: string, maxAgeDays: number = 7): Promise<void> {
+  static async garbageCollect(
+    cacheRoot: string,
+    maxAgeDays: number = 7,
+    minCacheEntries: number = 0,
+  ): Promise<void> {
     try {
       if (!fs.existsSync(cacheRoot)) {
         OrchestratorLogger.log(`[LocalCache] Cache root does not exist, nothing to collect`);
@@ -699,22 +703,39 @@ export class LocalCacheService {
 
       const now = Date.now();
       const maxAgeMs = maxAgeDays * 24 * 60 * 60 * 1000;
-      const entries = fs.readdirSync(cacheRoot);
+      const entries = fs
+        .readdirSync(cacheRoot)
+        .map((name) => {
+          const entryPath = path.join(cacheRoot, name);
+          try {
+            const stat = fs.statSync(entryPath);
+            return { name, entryPath, isDir: stat.isDirectory(), mtimeMs: stat.mtimeMs };
+          } catch {
+            return { name, entryPath, isDir: false, mtimeMs: 0 };
+          }
+        })
+        .filter((e) => e.isDir)
+        .sort((a, b) => b.mtimeMs - a.mtimeMs);
+
       let removedCount = 0;
 
-      for (const entry of entries) {
-        const entryPath = path.join(cacheRoot, entry);
-        try {
-          const stat = fs.statSync(entryPath);
-          if (stat.isDirectory() && now - stat.mtimeMs > maxAgeMs) {
-            fs.rmSync(entryPath, { recursive: true, force: true });
+      for (let i = 0; i < entries.length; i++) {
+        const entry = entries[i];
+        // Never remove entries if we'd drop below minCacheEntries
+        const remaining = entries.length - removedCount;
+        if (minCacheEntries > 0 && remaining <= minCacheEntries) {
+          break;
+        }
+        if (now - entry.mtimeMs > maxAgeMs) {
+          try {
+            fs.rmSync(entry.entryPath, { recursive: true, force: true });
             removedCount++;
-            OrchestratorLogger.log(`[LocalCache] Garbage collected: ${entryPath}`);
+            OrchestratorLogger.log(`[LocalCache] Garbage collected: ${entry.entryPath}`);
+          } catch (error: any) {
+            OrchestratorLogger.logWarning(
+              `[LocalCache] Failed to garbage collect ${entry.entryPath}: ${error.message}`,
+            );
           }
-        } catch (error: any) {
-          OrchestratorLogger.logWarning(
-            `[LocalCache] Failed to garbage collect ${entryPath}: ${error.message}`,
-          );
         }
       }
 

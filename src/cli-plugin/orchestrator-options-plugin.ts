@@ -393,6 +393,12 @@ export function configureOrchestratorOptions(yargs: any): void {
     default: 2,
   });
 
+  yargs.option('minCacheEntries', {
+    description: 'Minimum cache entries to keep during age-based GC (floor)',
+    type: 'number',
+    default: 0,
+  });
+
   yargs.option('gcTimeoutMinutes', {
     description: 'Force garbage collection after this many minutes (0 = disabled)',
     type: 'number',

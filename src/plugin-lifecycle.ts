@@ -223,6 +223,9 @@ const config = {
   get maxCacheEntries() {
     return Number(getInput('maxCacheEntries')) || 2;
   },
+  get minCacheEntries() {
+    return Number(getInput('minCacheEntries')) || 0;
+  },
 
   // Git hooks
   get gitHooksEnabled() {
@@ -652,6 +655,12 @@ export function createPlugin(): OrchestratorPlugin {
         }
         if (config.localCacheLfs) {
           await LocalCacheService.saveLfsCache(ws, cacheRoot, cacheKey, config.maxCacheEntries);
+        }
+
+        // Run local cache age-based GC if cacheRetentionDays is configured
+        const retentionDays = Number(coreParams.cacheRetentionDays) || 0;
+        if (retentionDays > 0) {
+          await LocalCacheService.garbageCollect(cacheRoot, retentionDays, config.minCacheEntries);
         }
       }
 

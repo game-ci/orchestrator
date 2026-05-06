@@ -47,6 +47,7 @@ export interface OrchestratorConfig {
   skipLfs: boolean;
   maxRetainedWorkspaces: number; // mutable for retry logic
   maxCacheEntries?: number;
+  minCacheEntries?: number;
   gcTimeoutMinutes?: number;
   configFiles?: Record<string, string>;
   localCacheRoot?: string;
