@@ -9,6 +9,7 @@ import serveCommand from './cli/commands/serve';
 import statusCommand from './cli/commands/status';
 import versionCommand from './cli/commands/version';
 import updateCommand from './cli/commands/update';
+import initCommand from './cli/commands/init';
 import * as core from '@actions/core';
 
 const cli = yargs(hideBin(process.argv))
@@ -21,6 +22,7 @@ const cli = yargs(hideBin(process.argv))
   .command(statusCommand)
   .command(versionCommand)
   .command(updateCommand)
+  .command(initCommand)
   .demandCommand(1, 'You must specify a command. Run game-ci --help for available commands.')
   .strict()
   .alias('h', 'help')

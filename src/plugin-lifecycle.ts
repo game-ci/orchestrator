@@ -220,6 +220,12 @@ const config = {
   get localCacheMode() {
     return getInput('localCacheMode') || 'tar';
   },
+  get maxCacheEntries() {
+    return Number(getInput('maxCacheEntries')) || 2;
+  },
+  get minCacheEntries() {
+    return Number(getInput('minCacheEntries')) || 0;
+  },
 
   // Git hooks
   get gitHooksEnabled() {
@@ -644,10 +650,17 @@ export function createPlugin(): OrchestratorPlugin {
           await LocalCacheService.saveEngineCache(projectFullPath, cacheRoot, cacheKey, {
             saveMode: config.localCacheMode as any,
             skipOnLfsPointerPoisoning: true,
+            maxCacheEntries: config.maxCacheEntries,
           });
         }
         if (config.localCacheLfs) {
-          await LocalCacheService.saveLfsCache(ws, cacheRoot, cacheKey);
+          await LocalCacheService.saveLfsCache(ws, cacheRoot, cacheKey, config.maxCacheEntries);
+        }
+
+        // Run local cache age-based GC if cacheRetentionDays is configured
+        const retentionDays = Number(coreParams.cacheRetentionDays) || 0;
+        if (retentionDays > 0) {
+          await LocalCacheService.garbageCollect(cacheRoot, retentionDays, config.minCacheEntries);
         }
       }
 

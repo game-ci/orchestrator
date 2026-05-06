@@ -126,6 +126,30 @@ export class OrchestratorFolders {
    * Only emits commands when gitAuthMode is 'header' (default). In 'url' mode,
    * returns a no-op comment since the token is already in the URL.
    */
+  /**
+   * Shell script to clone the orchestrator/builder repo with multi-branch
+   * fallback and credential recovery. Used by both build-automation and
+   * async workflows.
+   */
+  public static cloneBuilderScript(dest: string): string {
+    const repoName = Orchestrator.buildParameters.orchestratorRepoName;
+    return `BRANCH="${Orchestrator.buildParameters.orchestratorBranch}"
+REPO="${OrchestratorFolders.unityBuilderRepoUrl}"
+REPO_PLAIN="https://github.com/${repoName}.git"
+CLONE_DEST="${dest}"
+if [ -n "$(git ls-remote --heads "$REPO" "$BRANCH" 2>/dev/null)" ]; then
+  git clone -q -b "$BRANCH" "$REPO" "$CLONE_DEST"
+elif git clone -q -b main "$REPO" "$CLONE_DEST" 2>/dev/null; then
+  echo "Cloned default branch from $REPO"
+else
+  echo "Authenticated clone failed; retrying without credentials"
+  git config --global --unset-all http.https://github.com/.extraHeader 2>/dev/null || true
+  git clone -q -b "$BRANCH" "$REPO_PLAIN" "$CLONE_DEST" 2>/dev/null \\
+    || git clone -q -b main "$REPO_PLAIN" "$CLONE_DEST" 2>/dev/null \\
+    || git clone -q "$REPO_PLAIN" "$CLONE_DEST"
+fi`;
+  }
+
   public static get gitAuthConfigScript(): string {
     if (!OrchestratorFolders.useHeaderAuth) {
       return `# git auth: using token-in-URL mode (legacy)`;

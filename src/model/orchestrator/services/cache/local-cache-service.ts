@@ -15,6 +15,7 @@ export interface LocalCacheSaveOptions {
   skipOnCrashEvidence?: boolean;
   skipOnLfsPointerPoisoning?: boolean;
   saveMode?: 'tar' | 'move-directory' | 'copy-directory';
+  maxCacheEntries?: number;
 }
 
 export class LocalCacheService {
@@ -335,8 +336,8 @@ export class LocalCacheService {
       await OrchestratorSystem.Run(`tar -cf "${tarPath}" -C "${projectPath}" "${folder}"`, true);
       OrchestratorLogger.log(`[LocalCache] ${folder} cache saved successfully`);
 
-      // Clean up old entries - keep latest 2
-      await LocalCacheService.cleanupOldEntries(cachePath, 2);
+      // Clean up old entries - keep latest N (default 2)
+      await LocalCacheService.cleanupOldEntries(cachePath, options.maxCacheEntries ?? 2);
     } catch (error: any) {
       OrchestratorLogger.logWarning(`[LocalCache] ${folder} cache save failed: ${error.message}`);
     }
@@ -642,7 +643,12 @@ export class LocalCacheService {
    * Save .git/lfs folder to the local cache as a tar archive.
    * Keeps only the latest 2 cache entries.
    */
-  static async saveLfsCache(repoPath: string, cacheRoot: string, cacheKey: string): Promise<void> {
+  static async saveLfsCache(
+    repoPath: string,
+    cacheRoot: string,
+    cacheKey: string,
+    maxCacheEntries: number = 2,
+  ): Promise<void> {
     const lfsPath = path.join(repoPath, '.git', 'lfs');
 
     try {
@@ -673,8 +679,8 @@ export class LocalCacheService {
       );
       OrchestratorLogger.log(`[LocalCache] LFS cache saved successfully`);
 
-      // Clean up old entries - keep latest 2
-      await LocalCacheService.cleanupOldEntries(cachePath, 2);
+      // Clean up old entries - keep latest N (default 2)
+      await LocalCacheService.cleanupOldEntries(cachePath, maxCacheEntries);
     } catch (error: any) {
       OrchestratorLogger.logWarning(`[LocalCache] LFS cache save failed: ${error.message}`);
     }
@@ -683,7 +689,11 @@ export class LocalCacheService {
   /**
    * Remove cache entries older than maxAgeDays from the cache root.
    */
-  static async garbageCollect(cacheRoot: string, maxAgeDays: number = 7): Promise<void> {
+  static async garbageCollect(
+    cacheRoot: string,
+    maxAgeDays: number = 7,
+    minCacheEntries: number = 0,
+  ): Promise<void> {
     try {
       if (!fs.existsSync(cacheRoot)) {
         OrchestratorLogger.log(`[LocalCache] Cache root does not exist, nothing to collect`);
@@ -693,22 +703,39 @@ export class LocalCacheService {
 
       const now = Date.now();
       const maxAgeMs = maxAgeDays * 24 * 60 * 60 * 1000;
-      const entries = fs.readdirSync(cacheRoot);
+      const entries = fs
+        .readdirSync(cacheRoot)
+        .map((name) => {
+          const entryPath = path.join(cacheRoot, name);
+          try {
+            const stat = fs.statSync(entryPath);
+            return { name, entryPath, isDir: stat.isDirectory(), mtimeMs: stat.mtimeMs };
+          } catch {
+            return { name, entryPath, isDir: false, mtimeMs: 0 };
+          }
+        })
+        .filter((e) => e.isDir)
+        .sort((a, b) => b.mtimeMs - a.mtimeMs);
+
       let removedCount = 0;
 
-      for (const entry of entries) {
-        const entryPath = path.join(cacheRoot, entry);
-        try {
-          const stat = fs.statSync(entryPath);
-          if (stat.isDirectory() && now - stat.mtimeMs > maxAgeMs) {
-            fs.rmSync(entryPath, { recursive: true, force: true });
+      for (let i = 0; i < entries.length; i++) {
+        const entry = entries[i];
+        // Never remove entries if we'd drop below minCacheEntries
+        const remaining = entries.length - removedCount;
+        if (minCacheEntries > 0 && remaining <= minCacheEntries) {
+          break;
+        }
+        if (now - entry.mtimeMs > maxAgeMs) {
+          try {
+            fs.rmSync(entry.entryPath, { recursive: true, force: true });
             removedCount++;
-            OrchestratorLogger.log(`[LocalCache] Garbage collected: ${entryPath}`);
+            OrchestratorLogger.log(`[LocalCache] Garbage collected: ${entry.entryPath}`);
+          } catch (error: any) {
+            OrchestratorLogger.logWarning(
+              `[LocalCache] Failed to garbage collect ${entry.entryPath}: ${error.message}`,
+            );
           }
-        } catch (error: any) {
-          OrchestratorLogger.logWarning(
-            `[LocalCache] Failed to garbage collect ${entryPath}: ${error.message}`,
-          );
         }
       }
 
