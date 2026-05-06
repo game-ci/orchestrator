@@ -405,8 +405,10 @@ export class LocalCacheService {
         return false;
       }
 
-      // DAG file repair: fix stale workspace paths in Bee DAG files
+      // Cross-runner path repair: fix stale workspace paths in cached metadata files.
+      // Repair-over-delete pattern: preserve compiled artifacts, only fix path references.
       LocalCacheService.repairDagFiles(dest);
+      LocalCacheService.repairPackageManagerPaths(dest);
 
       OrchestratorLogger.log(`[LocalCache] ${folder} directory cache restored successfully`);
 
@@ -421,9 +423,15 @@ export class LocalCacheService {
   }
 
   /**
-   * Scan Library/Bee/ for .dag files and replace stale workspace paths
+   * Scan Library/Bee/ for DAG and companion files and replace stale workspace paths
    * with the current workspace path. This prevents "stale DAG" errors
    * when Library cache is shared across runners with different workspace paths.
+   *
+   * Repair-over-delete: instead of deleting Bee/artifacts/ (which forces a 10-15 minute
+   * full recompile), we repair paths in metadata files. The compiled artifacts (DLLs)
+   * work regardless of which runner compiled them.
+   *
+   * Files repaired: *.dag, *.dag.json, *.dag.outputdata, *-inputdata.json
    */
   static repairDagFiles(libraryPath: string): number {
     const beePath = path.join(libraryPath, 'Bee');
@@ -431,6 +439,12 @@ export class LocalCacheService {
 
     const currentWorkspace = path.resolve(path.join(libraryPath, '..'));
     let repaired = 0;
+
+    const isDagOrCompanion = (name: string): boolean =>
+      name.endsWith('.dag') ||
+      name.endsWith('.dag.json') ||
+      name.endsWith('.dag.outputdata') ||
+      name.endsWith('-inputdata.json');
 
     const scanAndRepair = (directory: string): void => {
       let names: string[];
@@ -452,7 +466,7 @@ export class LocalCacheService {
           continue;
         }
 
-        if (!name.endsWith('.dag')) continue;
+        if (!isDagOrCompanion(name)) continue;
 
         try {
           const content = fs.readFileSync(fullPath, 'utf8');
@@ -498,7 +512,83 @@ export class LocalCacheService {
     scanAndRepair(beePath);
 
     if (repaired > 0) {
-      OrchestratorLogger.log(`[LocalCache] Repaired ${repaired} stale DAG file(s) in Bee/`);
+      OrchestratorLogger.log(
+        `[LocalCache] Repaired ${repaired} stale DAG/companion file(s) in Bee/`,
+      );
+    }
+
+    return repaired;
+  }
+
+  /**
+   * Repair absolute workspace paths in Library/PackageManager/ metadata files.
+   *
+   * projectResolution.json and ProjectCache contain absolute workspace paths that
+   * become stale on cross-runner Library restores, causing "Could not restore
+   * immutable package asset" errors and cascading CS0246 compilation failures.
+   *
+   * Repair-over-delete: sed-replace old runner paths with the current workspace path,
+   * preserving package resolution metadata. Unity would regenerate these files from
+   * manifest.json + packages-lock.json in ~5-10 seconds, but repair is instantaneous.
+   * Falls back to deletion only if repair fails.
+   */
+  static repairPackageManagerPaths(libraryPath: string): number {
+    const pmPath = path.join(libraryPath, 'PackageManager');
+    if (!fs.existsSync(pmPath)) return 0;
+
+    const currentWorkspace = path.resolve(path.join(libraryPath, '..'));
+    const currentFwd = currentWorkspace.replace(/\\/g, '/');
+    const currentBackEscaped = currentWorkspace.replace(/\\/g, '\\\\');
+    let repaired = 0;
+
+    const pmFiles = ['projectResolution.json', 'ProjectCache'];
+    for (const fileName of pmFiles) {
+      const filePath = path.join(pmPath, fileName);
+      if (!fs.existsSync(filePath)) continue;
+
+      try {
+        let content = fs.readFileSync(filePath, 'utf8');
+        let changed = false;
+
+        // Forward-slash paths (e.g., D:/actions-runner-unity-dynamic-2/_work/GameClient/GameClient)
+        const fwdMatch = content.match(
+          /((?:[A-Z]:\/)?[\w./-]*actions-runner[^/]*\/_work\/\w+\/\w+)/,
+        );
+        if (fwdMatch && fwdMatch[1] !== currentFwd) {
+          content = content.split(fwdMatch[1]).join(currentFwd);
+          changed = true;
+        }
+
+        // Backslash-escaped paths in JSON (e.g., D:\\actions-runner-unity-dynamic-2\\_work\\...)
+        const backMatch = content.match(
+          /((?:[A-Z]:\\\\)?[\w.\\/-]*actions-runner[^\\]*\\\\_work\\\\\w+\\\\\w+)/,
+        );
+        if (backMatch && backMatch[1] !== currentBackEscaped) {
+          content = content.split(backMatch[1]).join(currentBackEscaped);
+          changed = true;
+        }
+
+        if (changed) {
+          fs.writeFileSync(filePath, content, 'utf8');
+          repaired++;
+        }
+      } catch {
+        // Repair failed -- delete file as fallback (Unity regenerates in ~5-10s)
+        try {
+          fs.unlinkSync(filePath);
+          OrchestratorLogger.logWarning(
+            `[LocalCache] Removed ${fileName} (repair failed, Unity will regenerate)`,
+          );
+        } catch {
+          // Ignore cleanup failures
+        }
+      }
+    }
+
+    if (repaired > 0) {
+      OrchestratorLogger.log(
+        `[LocalCache] Repaired ${repaired} PackageManager file(s) -- replaced stale workspace paths`,
+      );
     }
 
     return repaired;
