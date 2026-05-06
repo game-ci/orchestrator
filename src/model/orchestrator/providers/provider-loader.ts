@@ -3,6 +3,7 @@ import BuildParameters from '../../build-parameters';
 import OrchestratorLogger from '../services/core/orchestrator-logger';
 import { parseProviderSource, logProviderSource, ProviderSourceInfo } from './provider-url-parser';
 import { ProviderGitManager } from './provider-git-manager';
+import ConfigProvider from './config/config-provider';
 
 // import path from 'path'; // Not currently used
 
@@ -17,6 +18,12 @@ export default async function loadProvider(
   buildParameters: BuildParameters,
 ): Promise<ProviderInterface> {
   OrchestratorLogger.log(`Loading provider: ${providerSource}`);
+
+  if (ConfigProvider.isConfigProviderSource(providerSource)) {
+    OrchestratorLogger.log(`Loading config provider: ${providerSource}`);
+
+    return ConfigProvider.fromFile(providerSource, buildParameters);
+  }
 
   // Built-in provider map — check this FIRST before URL/npm parsing
   const providerModuleMap: Record<string, string> = {
@@ -165,6 +172,7 @@ export class ProviderLoader {
       'local',
       'gcp-cloud-run',
       'azure-aci',
+      'config:<path>',
     ];
   }
 
