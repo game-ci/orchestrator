@@ -58,7 +58,7 @@ export class PreBuildCleanupService {
    */
   static getDisableAssemblyUpdaterArg(customParameters: string): string {
     // Don't add if user already specified it
-    if (/\-disable-assembly-updater/i.test(customParameters)) {
+    if (/-disable-assembly-updater/i.test(customParameters)) {
       return '';
     }
 
