@@ -30,12 +30,20 @@ git config --global filter.lfs.process "git-lfs filter-process --skip"
 ${OrchestratorFolders.gitAuthConfigScript}
 BRANCH="${Orchestrator.buildParameters.orchestratorBranch}"
 REPO="${OrchestratorFolders.unityBuilderRepoUrl}"
+REPO_PLAIN="https://github.com/${Orchestrator.buildParameters.orchestratorRepoName}.git"
 if [ -n "$(git ls-remote --heads "$REPO" "$BRANCH" 2>/dev/null)" ]; then
   git clone -q -b "$BRANCH" "$REPO" /builder
+elif git clone -q -b main "$REPO" /builder 2>/dev/null; then
+  echo "Cloned default branch from $REPO"
+elif [ "$REPO" != "$REPO_PLAIN" ]; then
+  echo "Authenticated clone failed; retrying without credentials"
+  git config --global --unset-all http.https://github.com/.extraHeader 2>/dev/null || true
+  git clone -q -b "$BRANCH" "$REPO_PLAIN" /builder 2>/dev/null \
+    || git clone -q -b main "$REPO_PLAIN" /builder 2>/dev/null \
+    || git clone -q "$REPO_PLAIN" /builder
 else
-  echo "Remote branch $BRANCH not found in $REPO; falling back to a known branch"
-  git clone -q -b main "$REPO" /builder \
-    || git clone -q "$REPO" /builder
+  echo "Remote branch $BRANCH not found in $REPO; falling back to default branch"
+  git clone -q "$REPO" /builder
 fi
 git clone -q -b ${Orchestrator.buildParameters.branch} ${OrchestratorFolders.targetBuildRepoUrl} /repo
 cd /repo

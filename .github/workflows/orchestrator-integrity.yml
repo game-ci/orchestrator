@@ -252,11 +252,21 @@ jobs:
       # ==========================================
       - name: Run orchestrator unit tests (fast, no infra)
         timeout-minutes: 2
-        # vitest accepts a positional pattern as a substring filter against
-        # the test file path (equivalent to jest's --testPathPattern).
+        # vitest positional filters are separate arguments (not pipe-separated).
+        # Each argument is matched as a substring against the test file path.
         run: >-
           yarn vitest run
-          "orchestrator-guid|orchestrator-folders|task-parameter-serializer|follow-log-stream-service|runner-availability-service|provider-url-parser|provider-loader|provider-git-manager|orchestrator-image|orchestrator-hooks|orchestrator-github-checks"
+          "orchestrator-guid"
+          "orchestrator-folders"
+          "task-parameter-serializer"
+          "follow-log-stream-service"
+          "runner-availability-service"
+          "provider-url-parser"
+          "provider-loader"
+          "provider-git-manager"
+          "orchestrator-image"
+          "orchestrator-hooks"
+          "orchestrator-github-checks"
           --reporter=verbose --no-file-parallelism
       # ==========================================
       # K8S TESTS SECTION
