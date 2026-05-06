@@ -362,7 +362,9 @@ export class UnityBuildDiagnosticsService {
 
     // Console output
     core.info(`[BuildDiagnostics] Category: ${summary.category}`);
-    core.info(`[BuildDiagnostics] Exit code: ${summary.exitCode}, Runtime: ${summary.runtimeSeconds}s`);
+    core.info(
+      `[BuildDiagnostics] Exit code: ${summary.exitCode}, Runtime: ${summary.runtimeSeconds}s`,
+    );
     core.info(`[BuildDiagnostics] Signals: ${summary.detectedSignals.join(', ') || 'none'}`);
     if (summary.compileErrorCount > 0) {
       core.info(`[BuildDiagnostics] Compile errors: ${summary.compileErrorCount}`);

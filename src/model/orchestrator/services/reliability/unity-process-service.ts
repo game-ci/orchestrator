@@ -175,9 +175,7 @@ Write-Output ("ILPP_KILLED=" + $killed)
 
       return killed;
     } catch (error: any) {
-      OrchestratorLogger.logWarning(
-        `[UnityProcess] ILPP process cleanup failed: ${error.message}`,
-      );
+      OrchestratorLogger.logWarning(`[UnityProcess] ILPP process cleanup failed: ${error.message}`);
       return 0;
     }
   }

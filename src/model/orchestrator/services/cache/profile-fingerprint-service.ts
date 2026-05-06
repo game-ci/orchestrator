@@ -60,10 +60,7 @@ export class ProfileFingerprintService {
     const libraryPath = path.join(projectPath, 'Library');
     fs.mkdirSync(libraryPath, { recursive: true });
 
-    const fingerprintPath = path.join(
-      libraryPath,
-      ProfileFingerprintService.FINGERPRINT_FILE,
-    );
+    const fingerprintPath = path.join(libraryPath, ProfileFingerprintService.FINGERPRINT_FILE);
     fs.writeFileSync(fingerprintPath, fingerprint, 'utf8');
   }
 
@@ -73,11 +70,7 @@ export class ProfileFingerprintService {
    *
    * Returns true if the profile changed and caches were cleared.
    */
-  static detectAndClear(
-    projectPath: string,
-    profilePath: string,
-    variantPath?: string,
-  ): boolean {
+  static detectAndClear(projectPath: string, profilePath: string, variantPath?: string): boolean {
     const currentFingerprint = ProfileFingerprintService.computeFingerprint(
       profilePath,
       variantPath,
@@ -85,9 +78,7 @@ export class ProfileFingerprintService {
     const cachedFingerprint = ProfileFingerprintService.readCachedFingerprint(projectPath);
 
     if (cachedFingerprint === currentFingerprint) {
-      core.info(
-        `[ProfileFingerprint] Profile unchanged (${currentFingerprint.slice(0, 12)}...)`,
-      );
+      core.info(`[ProfileFingerprint] Profile unchanged (${currentFingerprint.slice(0, 12)}...)`);
       return false;
     }
 

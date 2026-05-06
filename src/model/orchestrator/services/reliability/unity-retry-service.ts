@@ -16,7 +16,11 @@ export interface UnityRetryResult {
   actionsPerformed: string[];
 }
 
-type UnityRunCallback = () => Promise<{ exitCode: number; logText: string; runtimeSeconds: number }>;
+type UnityRunCallback = () => Promise<{
+  exitCode: number;
+  logText: string;
+  runtimeSeconds: number;
+}>;
 
 /**
  * Multi-phase retry service that chains recovery actions based on failure category.
@@ -80,9 +84,7 @@ export class UnityRetryService {
 
       const decision = UnityRecoveryService.decide(diagnostics, budgets);
       if (!decision.shouldRetry) {
-        core.info(
-          `[UnityRetry] No retry available: ${decision.reason}`,
-        );
+        core.info(`[UnityRetry] No retry available: ${decision.reason}`);
         break;
       }
 

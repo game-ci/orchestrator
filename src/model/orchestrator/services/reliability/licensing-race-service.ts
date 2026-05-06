@@ -26,11 +26,7 @@ export class LicensingRaceService {
   /**
    * Detect whether a Unity failure looks like a licensing race condition.
    */
-  static isLicensingRace(
-    exitCode: number,
-    runtimeSeconds: number,
-    logText: string,
-  ): boolean {
+  static isLicensingRace(exitCode: number, runtimeSeconds: number, logText: string): boolean {
     if (exitCode !== -1 && exitCode !== 4294967295) return false;
     if (runtimeSeconds >= 120) return false;
     if (!/Access token is unavailable|Failed to update license/i.test(logText)) return false;
