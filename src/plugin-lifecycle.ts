@@ -220,6 +220,12 @@ const config = {
   get localCacheMode() {
     return getInput('localCacheMode') || 'tar';
   },
+  get upmOfflineEnabled() {
+    return getBool('upmOfflineEnabled', true);
+  },
+  get backgroundCacheSave() {
+    return getBool('backgroundCacheSave');
+  },
 
   // Git hooks
   get gitHooksEnabled() {
@@ -536,6 +542,15 @@ export function createPlugin(): OrchestratorPlugin {
         }
       }
 
+      // ── UPM offline fingerprinting ─────────────────────────────
+      if (config.upmOfflineEnabled && config.localCacheEnabled && localCacheState) {
+        const { UpmCacheService } =
+          await import('./model/orchestrator/services/cache/upm-cache-service');
+        const projectFullPath = path.join(ws, coreParams.projectPath);
+        const upmCachePath = path.join(localCacheState.cacheRoot, localCacheState.cacheKey);
+        UpmCacheService.applyOfflineMode(projectFullPath, upmCachePath);
+      }
+
       // ── Git hooks ──────────────────────────────────────────────
       if (config.gitHooksEnabled) {
         const { GitHooksService } =
@@ -644,10 +659,20 @@ export function createPlugin(): OrchestratorPlugin {
           await LocalCacheService.saveEngineCache(projectFullPath, cacheRoot, cacheKey, {
             saveMode: config.localCacheMode as any,
             skipOnLfsPointerPoisoning: true,
+            backgroundSave: config.backgroundCacheSave,
           });
         }
         if (config.localCacheLfs) {
           await LocalCacheService.saveLfsCache(ws, cacheRoot, cacheKey);
+        }
+
+        // Save UPM fingerprint alongside cache
+        if (config.upmOfflineEnabled) {
+          const { UpmCacheService } =
+            await import('./model/orchestrator/services/cache/upm-cache-service');
+          const projectFullPath = path.join(ws, coreParams.projectPath);
+          const upmCachePath = path.join(cacheRoot, cacheKey);
+          UpmCacheService.saveFingerprint(projectFullPath, upmCachePath);
         }
       }
 
