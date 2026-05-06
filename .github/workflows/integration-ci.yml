@@ -102,8 +102,8 @@ jobs:
           orchestratorTests: true
           TARGET_PLATFORM: StandaloneWindows64
           versioning: None
-          GIT_PRIVATE_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN }}
-          GITHUB_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN }}
+          GIT_PRIVATE_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN || github.token }}
+          GITHUB_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN || github.token }}
 
       - name: Light cleanup
         if: always()
@@ -125,8 +125,8 @@ jobs:
           INPUT_AWSENDPOINT: http://localhost:4566
           AWS_S3_FORCE_PATH_STYLE: 'true'
           AWS_EC2_METADATA_DISABLED: 'true'
-          GIT_PRIVATE_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN }}
-          GITHUB_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN }}
+          GIT_PRIVATE_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN || github.token }}
+          GITHUB_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN || github.token }}
 
       - name: Final cleanup
         if: always()
@@ -279,8 +279,8 @@ jobs:
           INPUT_AWSENDPOINT: http://localhost:4566
           AWS_S3_FORCE_PATH_STYLE: 'true'
           AWS_EC2_METADATA_DISABLED: 'true'
-          GIT_PRIVATE_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN }}
-          GITHUB_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN }}
+          GIT_PRIVATE_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN || github.token }}
+          GITHUB_TOKEN: ${{ secrets.GIT_PRIVATE_TOKEN || github.token }}
           UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
           UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
           UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
