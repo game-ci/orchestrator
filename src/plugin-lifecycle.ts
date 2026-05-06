@@ -220,6 +220,9 @@ const config = {
   get localCacheMode() {
     return getInput('localCacheMode') || 'tar';
   },
+  get maxCacheEntries() {
+    return Number(getInput('maxCacheEntries')) || 2;
+  },
 
   // Git hooks
   get gitHooksEnabled() {
@@ -644,10 +647,11 @@ export function createPlugin(): OrchestratorPlugin {
           await LocalCacheService.saveEngineCache(projectFullPath, cacheRoot, cacheKey, {
             saveMode: config.localCacheMode as any,
             skipOnLfsPointerPoisoning: true,
+            maxCacheEntries: config.maxCacheEntries,
           });
         }
         if (config.localCacheLfs) {
-          await LocalCacheService.saveLfsCache(ws, cacheRoot, cacheKey);
+          await LocalCacheService.saveLfsCache(ws, cacheRoot, cacheKey, config.maxCacheEntries);
         }
       }
 

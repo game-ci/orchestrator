@@ -46,9 +46,12 @@ class BuildParameters {
   // ── orchestrator ────────────────────────────────────────────────────
   providerStrategy!: string;
   maxRetainedWorkspaces!: number;
+  maxCacheEntries!: number;
+  gcTimeoutMinutes!: number;
   useLargePackages!: boolean;
   useCompressionStrategy!: boolean;
   garbageMaxAge!: number;
+  configFiles!: Record<string, string>;
   githubChecks!: boolean;
   asyncWorkflow!: boolean;
   githubCheckId!: string;
@@ -209,6 +212,13 @@ class BuildParameters {
     // Orchestrator fields
     p.providerStrategy = Input.providerStrategy || 'local';
     p.maxRetainedWorkspaces = Number(Input.getInput('maxRetainedWorkspaces')) || 0;
+    p.maxCacheEntries = Number(Input.getInput('maxCacheEntries')) || 2;
+    p.gcTimeoutMinutes = Number(Input.getInput('gcTimeoutMinutes')) || 0;
+    try {
+      p.configFiles = JSON.parse(Input.getInput('configFiles') || '{}');
+    } catch {
+      p.configFiles = {};
+    }
     p.githubChecks = false;
     p.asyncWorkflow = false;
     p.githubCheckId = '';

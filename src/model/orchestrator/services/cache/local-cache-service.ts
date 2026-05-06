@@ -15,6 +15,7 @@ export interface LocalCacheSaveOptions {
   skipOnCrashEvidence?: boolean;
   skipOnLfsPointerPoisoning?: boolean;
   saveMode?: 'tar' | 'move-directory' | 'copy-directory';
+  maxCacheEntries?: number;
 }
 
 export class LocalCacheService {
@@ -335,8 +336,8 @@ export class LocalCacheService {
       await OrchestratorSystem.Run(`tar -cf "${tarPath}" -C "${projectPath}" "${folder}"`, true);
       OrchestratorLogger.log(`[LocalCache] ${folder} cache saved successfully`);
 
-      // Clean up old entries - keep latest 2
-      await LocalCacheService.cleanupOldEntries(cachePath, 2);
+      // Clean up old entries - keep latest N (default 2)
+      await LocalCacheService.cleanupOldEntries(cachePath, options.maxCacheEntries ?? 2);
     } catch (error: any) {
       OrchestratorLogger.logWarning(`[LocalCache] ${folder} cache save failed: ${error.message}`);
     }
@@ -642,7 +643,12 @@ export class LocalCacheService {
    * Save .git/lfs folder to the local cache as a tar archive.
    * Keeps only the latest 2 cache entries.
    */
-  static async saveLfsCache(repoPath: string, cacheRoot: string, cacheKey: string): Promise<void> {
+  static async saveLfsCache(
+    repoPath: string,
+    cacheRoot: string,
+    cacheKey: string,
+    maxCacheEntries: number = 2,
+  ): Promise<void> {
     const lfsPath = path.join(repoPath, '.git', 'lfs');
 
     try {
@@ -673,8 +679,8 @@ export class LocalCacheService {
       );
       OrchestratorLogger.log(`[LocalCache] LFS cache saved successfully`);
 
-      // Clean up old entries - keep latest 2
-      await LocalCacheService.cleanupOldEntries(cachePath, 2);
+      // Clean up old entries - keep latest N (default 2)
+      await LocalCacheService.cleanupOldEntries(cachePath, maxCacheEntries);
     } catch (error: any) {
       OrchestratorLogger.logWarning(`[LocalCache] LFS cache save failed: ${error.message}`);
     }

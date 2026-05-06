@@ -86,6 +86,17 @@ class KubernetesJobSpecFactory {
                 claimName: pvcName,
               },
             },
+            ...(buildParameters.configFiles && Object.keys(buildParameters.configFiles).length > 0
+              ? [
+                  {
+                    name: 'config-files',
+                    configMap: {
+                      name: `config-files-${buildGuid}`,
+                      defaultMode: 0o755,
+                    },
+                  },
+                ]
+              : []),
           ],
           containers: [
             {
@@ -160,6 +171,16 @@ class KubernetesJobSpecFactory {
                   name: 'build-mount',
                   mountPath: `${mountdir}`,
                 },
+                ...(buildParameters.configFiles &&
+                Object.keys(buildParameters.configFiles).length > 0
+                  ? [
+                      {
+                        name: 'config-files',
+                        mountPath: '/game-ci/config',
+                        readOnly: true,
+                      },
+                    ]
+                  : []),
               ],
               lifecycle: {
                 preStop: {

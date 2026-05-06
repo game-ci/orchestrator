@@ -387,10 +387,28 @@ export function configureOrchestratorOptions(yargs: any): void {
     default: '0',
   });
 
+  yargs.option('maxCacheEntries', {
+    description: 'Max cache tar entries to retain per folder (default: 2)',
+    type: 'number',
+    default: 2,
+  });
+
+  yargs.option('gcTimeoutMinutes', {
+    description: 'Force garbage collection after this many minutes (0 = disabled)',
+    type: 'number',
+    default: 0,
+  });
+
   yargs.option('garbageMaxAge', {
     description: 'Max age in hours for garbage collection',
     type: 'number',
     default: 24,
+  });
+
+  yargs.option('configFiles', {
+    description: 'JSON map of filename to content to inject into container workspace',
+    type: 'string',
+    default: '{}',
   });
 
   yargs.option('dryRun', {

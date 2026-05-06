@@ -11,6 +11,7 @@ import { ProviderResource } from '../provider-resource';
 import { ProviderWorkflow } from '../provider-workflow';
 import { OrchestratorSystem } from '../../services/core/orchestrator-system';
 import * as fs from 'node:fs';
+import * as path from 'node:path';
 import { CommandHookService } from '../../services/hooks/command-hook-service';
 import { StringKeyValuePair } from '../../../shared-types';
 
@@ -270,6 +271,25 @@ find ${sharedFolder} -maxdepth 1 -type f -name "test-*" -exec cp -a {} /github/w
     writeFileSync(`${workspace}/${entrypointFilePath}`, fileContents, {
       flag: 'w',
     });
+
+    // Write injected config files to workspace so they're available inside the container
+    if (
+      Orchestrator.buildParameters.configFiles &&
+      Object.keys(Orchestrator.buildParameters.configFiles).length > 0
+    ) {
+      const configDir = path.join(workspace, 'game-ci-config');
+      fs.mkdirSync(configDir, { recursive: true });
+      for (const [filename, fileContent] of Object.entries(
+        Orchestrator.buildParameters.configFiles,
+      )) {
+        const filePath = path.join(configDir, filename);
+        fs.mkdirSync(path.dirname(filePath), { recursive: true });
+        writeFileSync(filePath, fileContent);
+      }
+      OrchestratorLogger.log(
+        `Injected ${Object.keys(Orchestrator.buildParameters.configFiles).length} config files into ${configDir}`,
+      );
+    }
 
     if (Orchestrator.buildParameters.orchestratorDebug) {
       OrchestratorLogger.log(`Running local-docker: \n ${fileContents}`);
