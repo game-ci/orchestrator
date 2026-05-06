@@ -118,6 +118,68 @@ Write-Output ("LICENSING=" + $licensingRunning)
 `;
   }
 
+  /**
+   * Clean up crashed ILPP (IL Post Processing) processes scoped to the workspace.
+   * ILPP runners can linger after Unity crashes and hold file locks on
+   * ScriptAssemblies, causing subsequent builds to fail with access errors.
+   *
+   * Returns the number of ILPP processes killed.
+   */
+  static cleanupIlppProcesses(projectPath: string): number {
+    if (process.platform !== 'win32') {
+      return 0;
+    }
+
+    const normalizedProjectPath = path.resolve(projectPath);
+    const escapedProjectPath = normalizedProjectPath.replace(/'/g, "''");
+
+    const script = `
+$projectPath = '${escapedProjectPath}'
+$escapedProjectPath = [Regex]::Escape($projectPath)
+$killed = 0
+$processes = @(Get-CimInstance Win32_Process -ErrorAction SilentlyContinue)
+$ilppProcesses = @($processes | Where-Object {
+  ($_.Name -ieq 'Unity.ILPP.Runner.exe' -or $_.Name -ieq 'Unity.ILPP.Trigger.exe') -and
+  $_.CommandLine -match $escapedProjectPath
+})
+
+foreach ($process in $ilppProcesses) {
+  try {
+    Stop-Process -Id $process.ProcessId -Force -ErrorAction Stop
+    $killed++
+  } catch {}
+}
+
+Write-Output ("ILPP_KILLED=" + $killed)
+`;
+
+    try {
+      const output = execFileSync(
+        'powershell.exe',
+        ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command', script],
+        {
+          encoding: 'utf8',
+          timeout: 30_000,
+          windowsHide: true,
+        },
+      );
+
+      const match = output.match(/ILPP_KILLED=(\d+)/);
+      const killed = match ? Number.parseInt(match[1], 10) : 0;
+
+      if (killed > 0) {
+        OrchestratorLogger.log(
+          `[UnityProcess] Cleaned ${killed} stale ILPP process(es) for ${normalizedProjectPath}`,
+        );
+      }
+
+      return killed;
+    } catch (error: any) {
+      OrchestratorLogger.logWarning(`[UnityProcess] ILPP process cleanup failed: ${error.message}`);
+      return 0;
+    }
+  }
+
   static parseCleanupOutput(output: string): UnityProcessCleanupResult {
     const killedLine = output.split(/\r?\n/).find((line) => line.startsWith('KILLED='));
     const hubLine = output.split(/\r?\n/).find((line) => line.startsWith('HUB='));

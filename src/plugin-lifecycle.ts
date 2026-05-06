@@ -117,6 +117,36 @@ const config = {
   get unityProcessCleanup() {
     return getBool('unityProcessCleanup');
   },
+  get enableBuildDiagnostics() {
+    return getBool('enableBuildDiagnostics', true);
+  },
+  get enableUnityRetry() {
+    return getBool('enableUnityRetry');
+  },
+  get unityRetryMaxAttempts() {
+    return getNumber('unityRetryMaxAttempts', 3);
+  },
+  get licensingStaggerDelay() {
+    return getBool('licensingStaggerDelay', true);
+  },
+  get profileFingerprintEnabled() {
+    return getBool('profileFingerprintEnabled');
+  },
+  get workerCount() {
+    return getNumber('workerCount', 0);
+  },
+  get ilppCleanupEnabled() {
+    return getBool('ilppCleanupEnabled', true);
+  },
+  get acceleratorMode() {
+    return (getInput('acceleratorMode') || 'enabled') as 'enabled' | 'disabled' | 'download-only';
+  },
+  get testResultCleanup() {
+    return getBool('testResultCleanup', true);
+  },
+  get disableAssemblyUpdater() {
+    return getBool('disableAssemblyUpdater', true);
+  },
 
   // Build archive
   get buildArchiveEnabled() {
@@ -382,6 +412,12 @@ export function createPlugin(): OrchestratorPlugin {
         UnityProcessService.cleanupWorkspaceProcesses(path.join(ws, coreParams.projectPath));
       }
 
+      // ── ILPP process cleanup ──────────────────────────────────
+      if (config.ilppCleanupEnabled) {
+        const { UnityProcessService } = await import('./model/orchestrator/services/reliability');
+        UnityProcessService.cleanupIlppProcesses(path.join(ws, coreParams.projectPath));
+      }
+
       // ── Child workspace restore ────────────────────────────────
       if (config.childWorkspacesEnabled && config.childWorkspaceName) {
         const { ChildWorkspaceService } =
@@ -431,6 +467,21 @@ export function createPlugin(): OrchestratorPlugin {
             ws,
             config.submoduleToken || coreParams.gitPrivateToken,
           );
+        }
+      }
+
+      // ── Profile fingerprinting ─────────────────────────────────
+      if (config.profileFingerprintEnabled && config.submoduleProfilePath) {
+        const { ProfileFingerprintService } =
+          await import('./model/orchestrator/services/cache/profile-fingerprint-service');
+        const projectFullPath = path.join(ws, coreParams.projectPath);
+        const changed = ProfileFingerprintService.detectAndClear(
+          projectFullPath,
+          config.submoduleProfilePath,
+          config.submoduleVariantPath || undefined,
+        );
+        if (changed) {
+          core.info('Profile fingerprint changed — stale compilation artifacts cleared');
         }
       }
 
@@ -498,6 +549,55 @@ export function createPlugin(): OrchestratorPlugin {
         }
       }
 
+      // ── Accelerator mode ────────────────────────────────────────
+      if (config.acceleratorMode !== 'enabled') {
+        const { AcceleratorService } =
+          await import('./model/orchestrator/services/reliability/accelerator-service');
+        const projectFullPath = path.join(ws, coreParams.projectPath);
+        AcceleratorService.patchEditorSettings(projectFullPath, config.acceleratorMode);
+      }
+
+      // ── Test result cleanup ───────────────────────────────────
+      if (config.testResultCleanup) {
+        const { PreBuildCleanupService } =
+          await import('./model/orchestrator/services/reliability/pre-build-cleanup-service');
+        const testResultPath = coreParams.testResultPath || path.join(ws, 'test-results');
+        PreBuildCleanupService.cleanTestResults(testResultPath);
+      }
+
+      // ── Disable assembly updater ──────────────────────────────
+      if (config.disableAssemblyUpdater && coreParams.customParameters !== undefined) {
+        const { PreBuildCleanupService } =
+          await import('./model/orchestrator/services/reliability/pre-build-cleanup-service');
+        const arg = PreBuildCleanupService.getDisableAssemblyUpdaterArg(
+          coreParams.customParameters || '',
+        );
+        if (arg) {
+          coreParams.customParameters = `${coreParams.customParameters || ''} ${arg}`.trim();
+          core.info(`[PreBuild] Added ${arg} to custom parameters`);
+        }
+      }
+
+      // ── Worker count ──────────────────────────────────────────
+      if (config.workerCount > 0) {
+        const workerArg = `-job-worker-count ${config.workerCount}`;
+        if (
+          coreParams.customParameters !== undefined &&
+          !coreParams.customParameters.includes('-job-worker-count')
+        ) {
+          coreParams.customParameters = `${coreParams.customParameters || ''} ${workerArg}`.trim();
+          core.info(`[PreBuild] Set Unity worker count: ${config.workerCount}`);
+        }
+      }
+
+      // ── Licensing stagger delay ─────────────────────────────────
+      if (config.licensingStaggerDelay) {
+        const { LicensingRaceService } =
+          await import('./model/orchestrator/services/reliability/licensing-race-service');
+        const staggerConfig = LicensingRaceService.createConfig(true);
+        await LicensingRaceService.applyStaggerDelay(staggerConfig);
+      }
+
       // ── Incremental sync strategy ─────────────────────────────
       const syncStrategy = config.syncStrategy;
       if (syncStrategy !== 'full') {
@@ -507,6 +607,32 @@ export function createPlugin(): OrchestratorPlugin {
     },
 
     async afterLocalBuild(ws: string, exitCode: number): Promise<void> {
+      // ── Build diagnostics ─────────────────────────────────────
+      if (config.enableBuildDiagnostics && exitCode !== 0) {
+        const { UnityBuildDiagnosticsService } =
+          await import('./model/orchestrator/services/reliability');
+        const projectFullPath = path.join(ws, coreParams.projectPath);
+
+        // Attempt to read Unity Editor log for diagnostics
+        let logText = '';
+        const editorLogPath = path.join(projectFullPath, 'Builds', 'Logs', 'Editor.log');
+        try {
+          const fs = await import('node:fs');
+          if (fs.existsSync(editorLogPath)) {
+            logText = fs.readFileSync(editorLogPath, 'utf8');
+          }
+        } catch {
+          // Log not available -- diagnostics will work with exit code only
+        }
+
+        const diagnostics = UnityBuildDiagnosticsService.analyzeRun({
+          exitCode,
+          logText,
+          projectPath: projectFullPath,
+        });
+        UnityBuildDiagnosticsService.emitSummary(diagnostics);
+      }
+
       // ── Local cache save ───────────────────────────────────────
       if (config.localCacheEnabled && localCacheState) {
         const { LocalCacheService } =
@@ -517,6 +643,7 @@ export function createPlugin(): OrchestratorPlugin {
           const projectFullPath = path.join(ws, coreParams.projectPath);
           await LocalCacheService.saveEngineCache(projectFullPath, cacheRoot, cacheKey, {
             saveMode: config.localCacheMode as any,
+            skipOnLfsPointerPoisoning: true,
           });
         }
         if (config.localCacheLfs) {

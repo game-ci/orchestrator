@@ -345,6 +345,46 @@ inputs:
     required: false
     default: 'false'
     description: 'On Windows self-hosted runners, clean stale Unity processes scoped to the project path before launch.'
+  enableBuildDiagnostics:
+    required: false
+    default: 'true'
+    description: 'Analyze Unity Editor log after build/test and emit categorized failure summary to console and GitHub Step Summary.'
+  enableUnityRetry:
+    required: false
+    default: 'false'
+    description: 'Enable multi-phase Unity retry with automatic recovery actions based on failure category.'
+  unityRetryMaxAttempts:
+    required: false
+    default: '3'
+    description: 'Maximum number of Unity retry attempts (including the initial run).'
+  licensingStaggerDelay:
+    required: false
+    default: 'true'
+    description: 'Apply hash-based stagger delay before Unity launch to avoid licensing IPC mutex contention on self-hosted runners.'
+  profileFingerprintEnabled:
+    required: false
+    default: 'false'
+    description: 'Detect submodule profile changes and clear stale ScriptAssemblies/Bee when the profile fingerprint differs from cache.'
+  workerCount:
+    required: false
+    default: '0'
+    description: 'Set -job-worker-count for Unity launch. 0 means use Unity default. Controls import parallelism.'
+  ilppCleanupEnabled:
+    required: false
+    default: 'true'
+    description: 'Clean up crashed ILPP processes scoped to the workspace before Unity launch (Windows only).'
+  acceleratorMode:
+    required: false
+    default: 'enabled'
+    description: 'Unity Accelerator mode: enabled (full), disabled (off), or download-only (pull but no upload).'
+  testResultCleanup:
+    required: false
+    default: 'true'
+    description: 'Delete stale test result XML files before test runner launch to prevent false positives.'
+  disableAssemblyUpdater:
+    required: false
+    default: 'true'
+    description: 'Add -disable-assembly-updater to batchmode launches to prevent ApiUpdater from destabilizing CI sessions.'
 
   # ─── Build archive ─────────────────────────────────────────────────
   buildArchiveEnabled:
@@ -701,6 +741,16 @@ runs:
         INPUT_GITAUTORECOVER: ${{ inputs.gitAutoRecover }}
         INPUT_CLEANRESERVEDFILENAMES: ${{ inputs.cleanReservedFilenames }}
         INPUT_UNITYPROCESSCLEANUP: ${{ inputs.unityProcessCleanup }}
+        INPUT_ENABLEBUILDDIAGNOSTICS: ${{ inputs.enableBuildDiagnostics }}
+        INPUT_ENABLEUNITYRETRY: ${{ inputs.enableUnityRetry }}
+        INPUT_UNITYRETRYMAXATTEMPTS: ${{ inputs.unityRetryMaxAttempts }}
+        INPUT_LICENSINGSTAGGERDELAY: ${{ inputs.licensingStaggerDelay }}
+        INPUT_PROFILEFINGERPRINTENABLED: ${{ inputs.profileFingerprintEnabled }}
+        INPUT_WORKERCOUNT: ${{ inputs.workerCount }}
+        INPUT_ILPPCLEANUPENABLED: ${{ inputs.ilppCleanupEnabled }}
+        INPUT_ACCELERATORMODE: ${{ inputs.acceleratorMode }}
+        INPUT_TESTRESULTCLEANUP: ${{ inputs.testResultCleanup }}
+        INPUT_DISABLEASSEMBLYUPDATER: ${{ inputs.disableAssemblyUpdater }}
         INPUT_BUILDARCHIVEENABLED: ${{ inputs.buildArchiveEnabled }}
         INPUT_BUILDARCHIVEPATH: ${{ inputs.buildArchivePath }}
         INPUT_BUILDARCHIVERETENTION: ${{ inputs.buildArchiveRetention }}

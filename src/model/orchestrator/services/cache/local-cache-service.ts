@@ -13,6 +13,7 @@ export interface LocalCacheRestoreOptions {
 export interface LocalCacheSaveOptions {
   diagnostics?: { crashEvidenceFound?: boolean };
   skipOnCrashEvidence?: boolean;
+  skipOnLfsPointerPoisoning?: boolean;
   saveMode?: 'tar' | 'move-directory' | 'copy-directory';
 }
 
@@ -303,6 +304,19 @@ export class LocalCacheService {
         return;
       }
 
+      // LFS pointer poisoning detection: skip save if unhydrated LFS pointers found
+      if (options.skipOnLfsPointerPoisoning) {
+        const poisonedFiles = LocalCacheService.detectLfsPointerPoisoning(projectPath);
+        if (poisonedFiles.length > 0) {
+          OrchestratorLogger.logWarning(
+            `[LocalCache] ${folder} cache save SKIPPED: ${poisonedFiles.length} LFS pointer file(s) detected. ` +
+              `Saving this cache would poison future restores.`,
+          );
+
+          return;
+        }
+      }
+
       const cachePath = path.join(cacheRoot, cacheKey, folder);
       fs.mkdirSync(cachePath, { recursive: true });
 
@@ -377,6 +391,9 @@ export class LocalCacheService {
         return false;
       }
 
+      // DAG file repair: fix stale workspace paths in Bee DAG files
+      LocalCacheService.repairDagFiles(dest);
+
       OrchestratorLogger.log(`[LocalCache] ${folder} directory cache restored successfully`);
 
       return true;
@@ -386,6 +403,160 @@ export class LocalCacheService {
       );
 
       return false;
+    }
+  }
+
+  /**
+   * Scan Library/Bee/ for .dag files and replace stale workspace paths
+   * with the current workspace path. This prevents "stale DAG" errors
+   * when Library cache is shared across runners with different workspace paths.
+   */
+  static repairDagFiles(libraryPath: string): number {
+    const beePath = path.join(libraryPath, 'Bee');
+    if (!fs.existsSync(beePath)) return 0;
+
+    const currentWorkspace = path.resolve(path.join(libraryPath, '..'));
+    let repaired = 0;
+
+    const scanAndRepair = (directory: string): void => {
+      let names: string[];
+      try {
+        names = fs.readdirSync(directory) as string[];
+      } catch {
+        return;
+      }
+
+      for (const name of names) {
+        const fullPath = path.join(directory, name);
+        try {
+          const stat = fs.statSync(fullPath);
+          if (typeof stat.isDirectory === 'function' && stat.isDirectory()) {
+            scanAndRepair(fullPath);
+            continue;
+          }
+        } catch {
+          continue;
+        }
+
+        if (!name.endsWith('.dag')) continue;
+
+        try {
+          const content = fs.readFileSync(fullPath, 'utf8');
+          // Look for absolute paths that differ from current workspace
+          // DAG files contain paths like D:\actions-runner\_work\GameClient\GameClient
+          const workspacePattern =
+            /([A-Z]:[\\/][^\s"';,\n]+[\\/])(?=Library[\\/]|Assets[\\/]|Packages[\\/]|Temp[\\/])/gi;
+          const matches = content.match(workspacePattern);
+          if (!matches) continue;
+
+          // Find paths that differ from the current workspace
+          const normalizedCurrent = currentWorkspace.replace(/\\/g, '/').toLowerCase();
+          const staleRoots = new Set<string>();
+          for (const match of matches) {
+            const normalizedMatch = match.replace(/\\/g, '/').toLowerCase().replace(/\/$/, '');
+            if (normalizedMatch !== normalizedCurrent) {
+              staleRoots.add(match.replace(/[\\/]$/, ''));
+            }
+          }
+
+          if (staleRoots.size === 0) continue;
+
+          let updatedContent = content;
+          for (const staleRoot of staleRoots) {
+            // Replace preserving separator style (forward or back slash)
+            const escapedStale = staleRoot.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            updatedContent = updatedContent.replace(
+              new RegExp(escapedStale, 'gi'),
+              currentWorkspace,
+            );
+          }
+
+          if (updatedContent !== content) {
+            fs.writeFileSync(fullPath, updatedContent, 'utf8');
+            repaired++;
+          }
+        } catch {
+          // Skip unreadable DAG files
+        }
+      }
+    };
+
+    scanAndRepair(beePath);
+
+    if (repaired > 0) {
+      OrchestratorLogger.log(`[LocalCache] Repaired ${repaired} stale DAG file(s) in Bee/`);
+    }
+
+    return repaired;
+  }
+
+  /**
+   * Detect LFS pointer poisoning in Library/ScriptAssemblies/*.dll and
+   * other key binary locations. If any file < 200 bytes contains the
+   * LFS pointer header, the cache is poisoned and should not be saved.
+   *
+   * Returns list of poisoned file paths (empty = safe to save).
+   */
+  static detectLfsPointerPoisoning(projectPath: string): string[] {
+    const poisoned: string[] = [];
+    const LFS_HEADER = 'version https://git-lfs.github.com/spec/v1';
+    const scanTargets = [
+      path.join(projectPath, 'Library', 'ScriptAssemblies'),
+      path.join(projectPath, 'Library', 'PackageCache'),
+    ];
+
+    for (const target of scanTargets) {
+      if (!fs.existsSync(target)) continue;
+      LocalCacheService.scanForLfsPointers(target, LFS_HEADER, poisoned);
+    }
+
+    if (poisoned.length > 0) {
+      OrchestratorLogger.logWarning(
+        `[LocalCache] LFS pointer poisoning detected in ${poisoned.length} file(s)`,
+      );
+      for (const file of poisoned.slice(0, 5)) {
+        OrchestratorLogger.logWarning(`[LocalCache]   Poisoned: ${file}`);
+      }
+    }
+
+    return poisoned;
+  }
+
+  private static scanForLfsPointers(
+    directory: string,
+    lfsHeader: string,
+    results: string[],
+    maxBytes = 200,
+  ): void {
+    let entries: fs.Dirent[];
+    try {
+      entries = fs.readdirSync(directory, { withFileTypes: true });
+    } catch {
+      return;
+    }
+
+    for (const entry of entries) {
+      const fullPath = path.join(directory, entry.name);
+      if (entry.isDirectory()) {
+        LocalCacheService.scanForLfsPointers(fullPath, lfsHeader, results, maxBytes);
+        continue;
+      }
+
+      if (!entry.isFile()) continue;
+      const ext = entry.name.toLowerCase();
+      if (!ext.endsWith('.dll') && !ext.endsWith('.so') && !ext.endsWith('.dylib')) continue;
+
+      try {
+        const stat = fs.statSync(fullPath);
+        if (stat.size > maxBytes || stat.size === 0) continue;
+
+        const content = fs.readFileSync(fullPath, 'utf8');
+        if (content.startsWith(lfsHeader)) {
+          results.push(fullPath);
+        }
+      } catch {
+        // Skip unreadable files
+      }
     }
   }
 
