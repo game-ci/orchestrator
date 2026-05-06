@@ -28,6 +28,7 @@ export type {
 export { default as Orchestrator } from './model/orchestrator/orchestrator';
 export { default as loadProvider } from './model/orchestrator/providers/provider-loader';
 export { ProviderLoader } from './model/orchestrator/providers/provider-loader';
+export { ConfigProvider } from './model/orchestrator/providers/config/config-provider';
 export { BuildParameters } from './model/build-parameters';
 export { GitHub } from './model/github';
 export { Input } from './model/input';
