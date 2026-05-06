@@ -315,6 +315,7 @@ class Orchestrator {
     // Setup workflow with optional init timeout
     await Orchestrator.setupWorkflowWithTimeout();
 
+    const buildStartTime = Date.now();
     try {
       if (buildParameters.maxRetainedWorkspaces > 0) {
         Orchestrator.lockedWorkspace = SharedWorkspaceLocking.NewWorkspaceName();
@@ -410,6 +411,27 @@ class Orchestrator {
         Orchestrator.defaultSecrets,
       );
       throw error;
+    } finally {
+      // Force GC if build exceeded the configured timeout
+      if (buildParameters.gcTimeoutMinutes > 0) {
+        const elapsedMinutes = (Date.now() - buildStartTime) / 60_000;
+        if (elapsedMinutes >= buildParameters.gcTimeoutMinutes) {
+          OrchestratorLogger.log(
+            `Build exceeded GC timeout (${elapsedMinutes.toFixed(1)}m >= ${buildParameters.gcTimeoutMinutes}m), forcing GC`,
+          );
+          try {
+            await Orchestrator.Provider.garbageCollect(
+              '',
+              false,
+              buildParameters.garbageMaxAge,
+              true,
+              true,
+            );
+          } catch (gcError: any) {
+            OrchestratorLogger.logWarning(`GC timeout force failed: ${gcError.message}`);
+          }
+        }
+      }
     }
   }
 
