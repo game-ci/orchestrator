@@ -113,9 +113,7 @@ export class UpmCacheService {
       const fingerprint = UpmCacheService.computeFingerprint(projectPath);
       if (fingerprint) {
         UpmCacheService.writeCachedFingerprint(cachePath, fingerprint);
-        OrchestratorLogger.log(
-          `[UpmCache] Saved fingerprint (${fingerprint.slice(0, 12)}...)`,
-        );
+        OrchestratorLogger.log(`[UpmCache] Saved fingerprint (${fingerprint.slice(0, 12)}...)`);
       }
     } catch (error: any) {
       OrchestratorLogger.logWarning(`[UpmCache] Failed to save fingerprint: ${error.message}`);

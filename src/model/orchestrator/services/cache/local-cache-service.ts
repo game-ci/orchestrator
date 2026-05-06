@@ -828,7 +828,9 @@ export class LocalCacheService {
             process.kill(pid, 0); // Signal 0 = existence check
           } catch {
             // Process is gone, remove stale lock
-            OrchestratorLogger.log('[LocalCache] Background save process exited, removing stale lock');
+            OrchestratorLogger.log(
+              '[LocalCache] Background save process exited, removing stale lock',
+            );
             try {
               fs.unlinkSync(lockPath);
             } catch {}
@@ -869,9 +871,7 @@ export class LocalCacheService {
     if (existing.length === 0) return [];
 
     const startTime = Date.now();
-    OrchestratorLogger.log(
-      `[LocalCache] Removing ${existing.length} directories in parallel...`,
-    );
+    OrchestratorLogger.log(`[LocalCache] Removing ${existing.length} directories in parallel...`);
 
     const results = await Promise.all(
       existing.map(async (dir) => {
@@ -879,9 +879,7 @@ export class LocalCacheService {
           await fs.promises.rm(dir, { recursive: true, force: true });
           return dir;
         } catch (error: any) {
-          OrchestratorLogger.logWarning(
-            `[LocalCache] Failed to remove ${dir}: ${error.message}`,
-          );
+          OrchestratorLogger.logWarning(`[LocalCache] Failed to remove ${dir}: ${error.message}`);
           return null;
         }
       }),
