@@ -227,16 +227,15 @@ class Kubernetes implements ProviderInterface {
       );
 
       // Create ConfigMap for injected config files
-      if (
-        buildParameters.configFiles &&
-        Object.keys(buildParameters.configFiles).length > 0
-      ) {
+      if (buildParameters.configFiles && Object.keys(buildParameters.configFiles).length > 0) {
         const configMapName = `config-files-${buildParameters.buildGuid}`;
         await this.kubeClient.createNamespacedConfigMap(this.namespace, {
           metadata: { name: configMapName, namespace: this.namespace },
           data: buildParameters.configFiles,
         });
-        OrchestratorLogger.log(`Created ConfigMap ${configMapName} with ${Object.keys(buildParameters.configFiles).length} files`);
+        OrchestratorLogger.log(
+          `Created ConfigMap ${configMapName} with ${Object.keys(buildParameters.configFiles).length} files`,
+        );
       }
     } catch (error) {
       throw error;
@@ -578,10 +577,7 @@ class Kubernetes implements ProviderInterface {
       await this.kubeClient.deleteNamespacedPersistentVolumeClaim(this.pvcName, this.namespace);
       await this.kubeClient.deleteNamespacedServiceAccount(this.serviceAccountName, this.namespace);
       // Clean up ConfigMap if config files were injected
-      if (
-        buildParameters.configFiles &&
-        Object.keys(buildParameters.configFiles).length > 0
-      ) {
+      if (buildParameters.configFiles && Object.keys(buildParameters.configFiles).length > 0) {
         try {
           await this.kubeClient.deleteNamespacedConfigMap(
             `config-files-${buildParameters.buildGuid}`,

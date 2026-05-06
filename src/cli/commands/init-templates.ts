@@ -147,10 +147,7 @@ build:
 `;
 }
 
-export const templateGenerators: Record<
-  string,
-  Record<string, (config: InitConfig) => string>
-> = {
+export const templateGenerators: Record<string, Record<string, (config: InitConfig) => string>> = {
   github: {
     ci: generateGitHubCIWorkflow,
     cd: generateGitHubCDWorkflow,
