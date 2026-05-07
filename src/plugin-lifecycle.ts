@@ -118,7 +118,7 @@ const config = {
     return getBool('unityProcessCleanup');
   },
   get enableBuildDiagnostics() {
-    return getBool('enableBuildDiagnostics', true);
+    return getBool('enableBuildDiagnostics');
   },
   get enableUnityRetry() {
     return getBool('enableUnityRetry');
@@ -127,7 +127,7 @@ const config = {
     return getNumber('unityRetryMaxAttempts', 3);
   },
   get licensingStaggerDelay() {
-    return getBool('licensingStaggerDelay', true);
+    return getBool('licensingStaggerDelay');
   },
   get profileFingerprintEnabled() {
     return getBool('profileFingerprintEnabled');
@@ -136,16 +136,16 @@ const config = {
     return getNumber('workerCount', 0);
   },
   get ilppCleanupEnabled() {
-    return getBool('ilppCleanupEnabled', true);
+    return getBool('ilppCleanupEnabled');
   },
   get acceleratorMode() {
     return (getInput('acceleratorMode') || 'enabled') as 'enabled' | 'disabled' | 'download-only';
   },
   get testResultCleanup() {
-    return getBool('testResultCleanup', true);
+    return getBool('testResultCleanup');
   },
   get disableAssemblyUpdater() {
-    return getBool('disableAssemblyUpdater', true);
+    return getBool('disableAssemblyUpdater');
   },
 
   // Build archive
@@ -226,6 +226,12 @@ const config = {
   get minCacheEntries() {
     return Number(getInput('minCacheEntries')) || 0;
   },
+  get upmOfflineEnabled() {
+    return getBool('upmOfflineEnabled');
+  },
+  get backgroundCacheSave() {
+    return getBool('backgroundCacheSave');
+  },
 
   // Git hooks
   get gitHooksEnabled() {
@@ -301,8 +307,10 @@ export function createPlugin(): OrchestratorPlugin {
       coreParams = params;
       workspace = ws;
 
-      // Always configure git environment for CI reliability
-      BuildReliabilityService.configureGitEnvironment();
+      // Configure git environment for CI reliability (opt-in)
+      if (getBool('configureGitEnvironment')) {
+        BuildReliabilityService.configureGitEnvironment();
+      }
     },
 
     canHandleBuild(): boolean {
@@ -542,6 +550,15 @@ export function createPlugin(): OrchestratorPlugin {
         }
       }
 
+      // ── UPM offline fingerprinting ─────────────────────────────
+      if (config.upmOfflineEnabled && config.localCacheEnabled && localCacheState) {
+        const { UpmCacheService } =
+          await import('./model/orchestrator/services/cache/upm-cache-service');
+        const projectFullPath = path.join(ws, coreParams.projectPath);
+        const upmCachePath = path.join(localCacheState.cacheRoot, localCacheState.cacheKey);
+        UpmCacheService.applyOfflineMode(projectFullPath, upmCachePath);
+      }
+
       // ── Git hooks ──────────────────────────────────────────────
       if (config.gitHooksEnabled) {
         const { GitHooksService } =
@@ -650,6 +667,7 @@ export function createPlugin(): OrchestratorPlugin {
           await LocalCacheService.saveEngineCache(projectFullPath, cacheRoot, cacheKey, {
             saveMode: config.localCacheMode as any,
             skipOnLfsPointerPoisoning: true,
+            backgroundSave: config.backgroundCacheSave,
             maxCacheEntries: config.maxCacheEntries,
           });
         }
@@ -661,6 +679,15 @@ export function createPlugin(): OrchestratorPlugin {
         const retentionDays = Number(coreParams.cacheRetentionDays) || 0;
         if (retentionDays > 0) {
           await LocalCacheService.garbageCollect(cacheRoot, retentionDays, config.minCacheEntries);
+        }
+
+        // Save UPM fingerprint alongside cache (only on successful builds)
+        if (config.upmOfflineEnabled && exitCode === 0) {
+          const { UpmCacheService } =
+            await import('./model/orchestrator/services/cache/upm-cache-service');
+          const projectFullPath = path.join(ws, coreParams.projectPath);
+          const upmCachePath = path.join(cacheRoot, cacheKey);
+          UpmCacheService.saveFingerprint(projectFullPath, upmCachePath);
         }
       }
 

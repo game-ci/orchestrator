@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { execSync, spawn } from 'node:child_process';
 import { OrchestratorSystem } from '../core/orchestrator-system';
 import OrchestratorLogger from '../core/orchestrator-logger';
 import { getEngine } from '../../../engine';
@@ -16,7 +17,11 @@ export interface LocalCacheSaveOptions {
   skipOnLfsPointerPoisoning?: boolean;
   saveMode?: 'tar' | 'move-directory' | 'copy-directory';
   maxCacheEntries?: number;
+  backgroundSave?: boolean;
 }
+
+/** Marker file written during background cache saves, contains the PID. */
+const BACKGROUND_LOCK_FILE = '.game-ci-cache-save.lock';
 
 export class LocalCacheService {
   /**
@@ -322,7 +327,12 @@ export class LocalCacheService {
       fs.mkdirSync(cachePath, { recursive: true });
 
       if (options.saveMode && options.saveMode !== 'tar') {
-        LocalCacheService.saveDirectoryCache(folderPath, cachePath, options.saveMode);
+        LocalCacheService.saveDirectoryCache(
+          folderPath,
+          cachePath,
+          options.saveMode,
+          options.backgroundSave,
+        );
 
         return;
       }
@@ -350,6 +360,9 @@ export class LocalCacheService {
     options: LocalCacheRestoreOptions,
   ): boolean {
     const dest = path.join(projectPath, folder);
+
+    // Wait if a background save is still writing to this cache path
+    LocalCacheService.waitForBackgroundLock(cachePath);
 
     try {
       if (!LocalCacheService.isCacheFolderComplete(cachePath, folder)) {
@@ -392,8 +405,10 @@ export class LocalCacheService {
         return false;
       }
 
-      // DAG file repair: fix stale workspace paths in Bee DAG files
+      // Cross-runner path repair: fix stale workspace paths in cached metadata files.
+      // Repair-over-delete pattern: preserve compiled artifacts, only fix path references.
       LocalCacheService.repairDagFiles(dest);
+      LocalCacheService.repairPackageManagerPaths(dest);
 
       OrchestratorLogger.log(`[LocalCache] ${folder} directory cache restored successfully`);
 
@@ -408,9 +423,15 @@ export class LocalCacheService {
   }
 
   /**
-   * Scan Library/Bee/ for .dag files and replace stale workspace paths
+   * Scan Library/Bee/ for DAG and companion files and replace stale workspace paths
    * with the current workspace path. This prevents "stale DAG" errors
    * when Library cache is shared across runners with different workspace paths.
+   *
+   * Repair-over-delete: instead of deleting Bee/artifacts/ (which forces a 10-15 minute
+   * full recompile), we repair paths in metadata files. The compiled artifacts (DLLs)
+   * work regardless of which runner compiled them.
+   *
+   * Files repaired: *.dag, *.dag.json, *.dag.outputdata, *-inputdata.json
    */
   static repairDagFiles(libraryPath: string): number {
     const beePath = path.join(libraryPath, 'Bee');
@@ -418,6 +439,12 @@ export class LocalCacheService {
 
     const currentWorkspace = path.resolve(path.join(libraryPath, '..'));
     let repaired = 0;
+
+    const isDagOrCompanion = (name: string): boolean =>
+      name.endsWith('.dag') ||
+      name.endsWith('.dag.json') ||
+      name.endsWith('.dag.outputdata') ||
+      name.endsWith('-inputdata.json');
 
     const scanAndRepair = (directory: string): void => {
       let names: string[];
@@ -439,7 +466,7 @@ export class LocalCacheService {
           continue;
         }
 
-        if (!name.endsWith('.dag')) continue;
+        if (!isDagOrCompanion(name)) continue;
 
         try {
           const content = fs.readFileSync(fullPath, 'utf8');
@@ -485,22 +512,223 @@ export class LocalCacheService {
     scanAndRepair(beePath);
 
     if (repaired > 0) {
-      OrchestratorLogger.log(`[LocalCache] Repaired ${repaired} stale DAG file(s) in Bee/`);
+      OrchestratorLogger.log(
+        `[LocalCache] Repaired ${repaired} stale DAG/companion file(s) in Bee/`,
+      );
     }
 
     return repaired;
   }
 
   /**
-   * Detect LFS pointer poisoning in Library/ScriptAssemblies/*.dll and
-   * other key binary locations. If any file < 200 bytes contains the
-   * LFS pointer header, the cache is poisoned and should not be saved.
+   * Repair absolute workspace paths in Library/PackageManager/ metadata files.
+   *
+   * projectResolution.json and ProjectCache contain absolute workspace paths that
+   * become stale on cross-runner Library restores, causing "Could not restore
+   * immutable package asset" errors and cascading CS0246 compilation failures.
+   *
+   * Repair-over-delete: sed-replace old runner paths with the current workspace path,
+   * preserving package resolution metadata. Unity would regenerate these files from
+   * manifest.json + packages-lock.json in ~5-10 seconds, but repair is instantaneous.
+   * Falls back to deletion only if repair fails.
+   */
+  static repairPackageManagerPaths(libraryPath: string): number {
+    const pmPath = path.join(libraryPath, 'PackageManager');
+    if (!fs.existsSync(pmPath)) return 0;
+
+    const currentWorkspace = path.resolve(path.join(libraryPath, '..'));
+    const currentFwd = currentWorkspace.replace(/\\/g, '/');
+    const currentBackEscaped = currentWorkspace.replace(/\\/g, '\\\\');
+    let repaired = 0;
+
+    const pmFiles = ['projectResolution.json', 'ProjectCache'];
+    for (const fileName of pmFiles) {
+      const filePath = path.join(pmPath, fileName);
+      if (!fs.existsSync(filePath)) continue;
+
+      try {
+        let content = fs.readFileSync(filePath, 'utf8');
+        let changed = false;
+
+        // Forward-slash paths (e.g., D:/actions-runner-unity-dynamic-2/_work/GameClient/GameClient)
+        const fwdMatch = content.match(
+          /((?:[A-Z]:\/)?[\w./-]*actions-runner[^/]*\/_work\/\w+\/\w+)/,
+        );
+        if (fwdMatch && fwdMatch[1] !== currentFwd) {
+          content = content.split(fwdMatch[1]).join(currentFwd);
+          changed = true;
+        }
+
+        // Backslash-escaped paths in JSON (e.g., D:\\actions-runner-unity-dynamic-2\\_work\\...)
+        const backMatch = content.match(
+          /((?:[A-Z]:\\\\)?[\w.\\/-]*actions-runner[^\\]*\\\\_work\\\\\w+\\\\\w+)/,
+        );
+        if (backMatch && backMatch[1] !== currentBackEscaped) {
+          content = content.split(backMatch[1]).join(currentBackEscaped);
+          changed = true;
+        }
+
+        if (changed) {
+          fs.writeFileSync(filePath, content, 'utf8');
+          repaired++;
+        }
+      } catch {
+        // Repair failed -- delete file as fallback (Unity regenerates in ~5-10s)
+        try {
+          fs.unlinkSync(filePath);
+          OrchestratorLogger.logWarning(
+            `[LocalCache] Removed ${fileName} (repair failed, Unity will regenerate)`,
+          );
+        } catch {
+          // Ignore cleanup failures
+        }
+      }
+    }
+
+    if (repaired > 0) {
+      OrchestratorLogger.log(
+        `[LocalCache] Repaired ${repaired} PackageManager file(s) -- replaced stale workspace paths`,
+      );
+    }
+
+    return repaired;
+  }
+
+  /**
+   * Layered LFS pointer poisoning detection cascade.
+   *
+   * Layer 1 — Count comparison: compare `git lfs ls-files` pointer count vs hydrated count.
+   * Layer 2 — Diff-based: if a validated commit marker exists, only scan files changed since then.
+   * Layer 3 — Size heuristic: files < 200 bytes are suspect; only those get header reads.
+   * Layer 4 — Full scan fallback: if anything unexpected, do the full directory scan.
+   *
+   * Edge cases: first run (no marker), corrupt marker, .gitattributes/.lfsconfig changes,
+   * new submodules, git command failures — all fall back to full scan.
    *
    * Returns list of poisoned file paths (empty = safe to save).
    */
   static detectLfsPointerPoisoning(projectPath: string): string[] {
-    const poisoned: string[] = [];
     const LFS_HEADER = 'version https://git-lfs.github.com/spec/v1';
+
+    // ── Layer 1: Count comparison ──────────────────────────────────
+    try {
+      const lsFilesOutput = execSync('git lfs ls-files -l', {
+        cwd: projectPath,
+        encoding: 'utf8',
+        timeout: 30_000,
+        stdio: ['pipe', 'pipe', 'pipe'],
+      }).trim();
+
+      if (lsFilesOutput) {
+        const lines = lsFilesOutput.split('\n').filter(Boolean);
+        const pointerCount = lines.filter((line) => line.includes(' - ')).length;
+        const hydratedCount = lines.filter((line) => line.includes(' * ')).length;
+
+        if (pointerCount > 0) {
+          OrchestratorLogger.logWarning(
+            `[LocalCache] LFS count check: ${pointerCount} pointer(s) vs ${hydratedCount} hydrated — falling through to scan`,
+          );
+          // Fall through to deeper layers
+        } else if (hydratedCount > 0) {
+          OrchestratorLogger.log(
+            `[LocalCache] LFS count check passed: all ${hydratedCount} files hydrated`,
+          );
+        }
+      }
+    } catch {
+      OrchestratorLogger.log('[LocalCache] LFS count check unavailable, falling back to scan');
+    }
+
+    // ── Layer 2: Diff-based (scan only changed files since last validated commit) ──
+    const markerPath = path.join(projectPath, 'Library', '.game-ci-lfs-validated-sha');
+    let diffBasedResult: string[] | null = null;
+
+    try {
+      if (fs.existsSync(markerPath)) {
+        const lastSha = fs.readFileSync(markerPath, 'utf8').trim();
+
+        // Validate the SHA is a real commit
+        if (/^[0-9a-f]{40}$/i.test(lastSha)) {
+          // Check if .gitattributes or .lfsconfig changed — if so, skip diff-based
+          const configDiff = execSync(
+            `git diff --name-only ${lastSha} -- .gitattributes .lfsconfig`,
+            {
+              cwd: projectPath,
+              encoding: 'utf8',
+              timeout: 10_000,
+              stdio: ['pipe', 'pipe', 'pipe'],
+            },
+          ).trim();
+
+          if (!configDiff) {
+            const changedFiles = execSync(`git diff --name-only ${lastSha}`, {
+              cwd: projectPath,
+              encoding: 'utf8',
+              timeout: 30_000,
+              stdio: ['pipe', 'pipe', 'pipe'],
+            })
+              .trim()
+              .split('\n')
+              .filter(Boolean);
+
+            if (changedFiles.length === 0) {
+              OrchestratorLogger.log(
+                '[LocalCache] LFS diff-based check: no files changed since last validation',
+              );
+              return [];
+            }
+
+            // Only scan changed files that are LFS-tracked binaries
+            diffBasedResult = [];
+            for (const file of changedFiles) {
+              const fullPath = path.join(projectPath, file);
+              if (!fs.existsSync(fullPath)) continue;
+
+              try {
+                const stat = fs.statSync(fullPath);
+                if (stat.size > 0 && stat.size < 200) {
+                  const content = fs.readFileSync(fullPath, 'utf8');
+                  if (content.startsWith(LFS_HEADER)) {
+                    diffBasedResult.push(fullPath);
+                  }
+                }
+              } catch {
+                // Skip unreadable files
+              }
+            }
+
+            if (diffBasedResult.length === 0) {
+              OrchestratorLogger.log(
+                `[LocalCache] LFS diff-based check passed: ${changedFiles.length} changed file(s) are clean`,
+              );
+              return [];
+            }
+
+            // Found poisoned files via diff — report and return
+            OrchestratorLogger.logWarning(
+              `[LocalCache] LFS diff-based check found ${diffBasedResult.length} poisoned file(s)`,
+            );
+          } else {
+            OrchestratorLogger.log(
+              '[LocalCache] LFS config files changed since last validation, using full scan',
+            );
+          }
+        }
+      }
+    } catch {
+      OrchestratorLogger.log('[LocalCache] LFS diff-based check unavailable, using full scan');
+    }
+
+    // If diff-based found poisoned files, return them
+    if (diffBasedResult && diffBasedResult.length > 0) {
+      for (const file of diffBasedResult.slice(0, 5)) {
+        OrchestratorLogger.logWarning(`[LocalCache]   Poisoned: ${file}`);
+      }
+      return diffBasedResult;
+    }
+
+    // ── Layers 3+4: Size heuristic + full scan ─────────────────────
+    const poisoned: string[] = [];
     const scanTargets = [
       path.join(projectPath, 'Library', 'ScriptAssemblies'),
       path.join(projectPath, 'Library', 'PackageCache'),
@@ -518,9 +746,34 @@ export class LocalCacheService {
       for (const file of poisoned.slice(0, 5)) {
         OrchestratorLogger.logWarning(`[LocalCache]   Poisoned: ${file}`);
       }
+    } else {
+      // Save validated SHA marker for future diff-based checks
+      LocalCacheService.saveLfsValidatedSha(projectPath);
     }
 
     return poisoned;
+  }
+
+  /**
+   * Save the current HEAD SHA as the last-validated LFS commit marker.
+   */
+  static saveLfsValidatedSha(projectPath: string): void {
+    try {
+      const sha = execSync('git rev-parse HEAD', {
+        cwd: projectPath,
+        encoding: 'utf8',
+        timeout: 10_000,
+        stdio: ['pipe', 'pipe', 'pipe'],
+      }).trim();
+
+      if (/^[0-9a-f]{40}$/i.test(sha)) {
+        const markerPath = path.join(projectPath, 'Library', '.game-ci-lfs-validated-sha');
+        fs.mkdirSync(path.dirname(markerPath), { recursive: true });
+        fs.writeFileSync(markerPath, sha, 'utf8');
+      }
+    } catch {
+      // Non-critical — next run will just use full scan
+    }
   }
 
   private static scanForLfsPointers(
@@ -565,7 +818,16 @@ export class LocalCacheService {
     folderPath: string,
     cachePath: string,
     saveMode: 'move-directory' | 'copy-directory',
+    backgroundSave = false,
   ): void {
+    // Wait if a previous background save is still in progress
+    LocalCacheService.waitForBackgroundLock(cachePath);
+
+    if (backgroundSave && saveMode === 'copy-directory') {
+      LocalCacheService.spawnBackgroundSave(folderPath, cachePath);
+      return;
+    }
+
     if (fs.existsSync(cachePath)) {
       fs.rmSync(cachePath, { recursive: true, force: true });
     }
@@ -580,6 +842,148 @@ export class LocalCacheService {
     OrchestratorLogger.log(
       `[LocalCache] ${path.basename(folderPath)} directory cache saved successfully`,
     );
+  }
+
+  /**
+   * Spawn a detached background process to copy the cache directory.
+   * Writes a lock file with PID before starting; removes it on completion.
+   */
+  private static spawnBackgroundSave(folderPath: string, cachePath: string): void {
+    const lockPath = path.join(path.dirname(cachePath), BACKGROUND_LOCK_FILE);
+
+    // Build a Node.js one-liner that performs the copy
+    const script = [
+      `const fs = require('node:fs');`,
+      `const lockPath = ${JSON.stringify(lockPath)};`,
+      `try {`,
+      `  if (fs.existsSync(${JSON.stringify(cachePath)})) fs.rmSync(${JSON.stringify(cachePath)}, { recursive: true, force: true });`,
+      `  fs.mkdirSync(require('node:path').dirname(${JSON.stringify(cachePath)}), { recursive: true });`,
+      `  fs.cpSync(${JSON.stringify(folderPath)}, ${JSON.stringify(cachePath)}, { recursive: true });`,
+      `} finally {`,
+      `  try { fs.unlinkSync(lockPath); } catch {}`,
+      `}`,
+    ].join(' ');
+
+    try {
+      // Write lock file before spawning to close the race window
+      fs.mkdirSync(path.dirname(lockPath), { recursive: true });
+      fs.writeFileSync(lockPath, 'pending', 'utf8');
+
+      const child = spawn(process.execPath, ['-e', script], {
+        detached: true,
+        stdio: 'ignore',
+      });
+
+      // Update lock with actual PID for monitoring
+      fs.writeFileSync(lockPath, String(child.pid), 'utf8');
+      child.unref();
+
+      OrchestratorLogger.log(
+        `[LocalCache] Background cache save started (PID ${child.pid}) for ${path.basename(folderPath)}`,
+      );
+    } catch (error: any) {
+      OrchestratorLogger.logWarning(
+        `[LocalCache] Background save spawn failed, falling back to sync: ${error.message}`,
+      );
+      // Clean up lock if we wrote it
+      try {
+        fs.unlinkSync(lockPath);
+      } catch {}
+      // Fall back to synchronous save
+      if (fs.existsSync(cachePath)) {
+        fs.rmSync(cachePath, { recursive: true, force: true });
+      }
+      fs.mkdirSync(path.dirname(cachePath), { recursive: true });
+      fs.cpSync(folderPath, cachePath, { recursive: true });
+    }
+  }
+
+  /**
+   * Wait for a background cache save lock to be released.
+   * Polls the lock file for up to 5 minutes.
+   */
+  private static waitForBackgroundLock(cachePath: string, timeoutMs = 300_000): void {
+    const lockPath = path.join(path.dirname(cachePath), BACKGROUND_LOCK_FILE);
+
+    if (!fs.existsSync(lockPath)) return;
+
+    OrchestratorLogger.log('[LocalCache] Waiting for background cache save to complete...');
+    const start = Date.now();
+    const pollInterval = 1000;
+
+    while (fs.existsSync(lockPath) && Date.now() - start < timeoutMs) {
+      // Check if the PID is still alive
+      try {
+        const pid = Number.parseInt(fs.readFileSync(lockPath, 'utf8').trim(), 10);
+        if (pid > 0) {
+          try {
+            process.kill(pid, 0); // Signal 0 = existence check
+          } catch {
+            // Process is gone, remove stale lock
+            OrchestratorLogger.log(
+              '[LocalCache] Background save process exited, removing stale lock',
+            );
+            try {
+              fs.unlinkSync(lockPath);
+            } catch {}
+            return;
+          }
+        }
+      } catch {
+        // Can't read lock, remove it
+        try {
+          fs.unlinkSync(lockPath);
+        } catch {}
+        return;
+      }
+
+      // Synchronous sleep
+      const buffer = new SharedArrayBuffer(4);
+      const view = new Int32Array(buffer);
+      Atomics.wait(view, 0, 0, pollInterval);
+    }
+
+    // Timeout — remove lock and proceed
+    if (fs.existsSync(lockPath)) {
+      OrchestratorLogger.logWarning(
+        '[LocalCache] Background save lock timed out, removing lock and proceeding',
+      );
+      try {
+        fs.unlinkSync(lockPath);
+      } catch {}
+    }
+  }
+
+  /**
+   * Remove multiple directories in parallel using Promise.all.
+   * Returns paths that were successfully removed.
+   */
+  static async removeDirectoriesParallel(directories: string[]): Promise<string[]> {
+    const existing = directories.filter((dir) => fs.existsSync(dir));
+    if (existing.length === 0) return [];
+
+    const startTime = Date.now();
+    OrchestratorLogger.log(`[LocalCache] Removing ${existing.length} directories in parallel...`);
+
+    const results = await Promise.all(
+      existing.map(async (dir) => {
+        try {
+          await fs.promises.rm(dir, { recursive: true, force: true });
+          return dir;
+        } catch (error: any) {
+          OrchestratorLogger.logWarning(`[LocalCache] Failed to remove ${dir}: ${error.message}`);
+          return null;
+        }
+      }),
+    );
+
+    const removed = results.filter((r): r is string => r !== null);
+    const elapsed = Date.now() - startTime;
+    OrchestratorLogger.log(
+      `[LocalCache] Parallel removal complete: ${removed.length}/${existing.length} in ${elapsed}ms`,
+    );
+
+    return removed;
   }
 
   /**
@@ -719,9 +1123,7 @@ export class LocalCacheService {
 
       let removedCount = 0;
 
-      for (let i = 0; i < entries.length; i++) {
-        const entry = entries[i];
-        // Never remove entries if we'd drop below minCacheEntries
+      for (const entry of entries) {
         const remaining = entries.length - removedCount;
         if (minCacheEntries > 0 && remaining <= minCacheEntries) {
           break;

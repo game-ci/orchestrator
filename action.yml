@@ -435,6 +435,14 @@ inputs:
     required: false
     default: 'tar'
     description: 'Local Library cache mode: tar, copy-directory, or move-directory. move-directory is intended for same-volume Windows self-hosted runners.'
+  upmOfflineEnabled:
+    required: false
+    default: 'false'
+    description: 'When UPM fingerprint matches cached state, set UPM_OFFLINE=1 to skip network package resolution.'
+  backgroundCacheSave:
+    required: false
+    default: 'false'
+    description: 'Save cache directory copies in a detached background process to avoid blocking the pipeline.'
 
   # ─── Child workspaces ──────────────────────────────────────────────
   childWorkspacesEnabled:
@@ -780,6 +788,8 @@ runs:
         INPUT_LOCALCACHEFALLBACK: ${{ inputs.localCacheFallback }}
         INPUT_LOCALCACHEFALLBACKKEYS: ${{ inputs.localCacheFallbackKeys }}
         INPUT_LOCALCACHEMODE: ${{ inputs.localCacheMode }}
+        INPUT_UPMOFFLINEENABLED: ${{ inputs.upmOfflineEnabled }}
+        INPUT_BACKGROUNDCACHESAVE: ${{ inputs.backgroundCacheSave }}
         INPUT_CHILDWORKSPACESENABLED: ${{ inputs.childWorkspacesEnabled }}
         INPUT_CHILDWORKSPACENAME: ${{ inputs.childWorkspaceName }}
         INPUT_CHILDWORKSPACECACHEROOT: ${{ inputs.childWorkspaceCacheRoot }}
