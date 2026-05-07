@@ -382,7 +382,8 @@ The correct sequence is:
 | `1`                             | Unity-handled error (compile error, build failure, licensing failure, exception caught by Unity)                  |
 | `-1` (or `4294967295`)          | Native crash — Unity's own crash handler ran, or the process was killed by the OS                                 |
 | `-1073741819` (or `3221225477`) | Access violation (STATUS_ACCESS_VIOLATION) — native memory corruption or null dereference                         |
-| `1073741845` (or `0xC0000095`)  | OOM or stack overflow — check for YAML OOM on large assets, Win32 heap exhaustion                                 |
+| `3221225495` (or `0xC0000017`)  | STATUS_NO_MEMORY — check for YAML OOM on large assets, Win32 heap exhaustion                                     |
+| `3221225725` (or `0xC00000FD`)  | STATUS_STACK_OVERFLOW — deep recursion or infinite loop in native code                                            |
 
 Exit code alone is not sufficient for routing. Always combine with log content and runtime duration.
 

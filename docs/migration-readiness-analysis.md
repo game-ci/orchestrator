@@ -35,7 +35,7 @@ This document analyses what GameClient CI functionality the orchestrator already
 | Crash-evidence gating       | None                                 | KEEP     | 12-pattern Library nuke gate                                                 |
 | Editor.log preservation     | None                                 | KEEP     | Post-mortem diagnosis before next launch overwrites it                       |
 
-**Summary:** 10 capabilities can retire immediately, 1 can simplify, 14 must be retained or added to the orchestrator before migration is complete.
+**Summary:** 10 capabilities can retire immediately, 1 can simplify, 13 must be retained or added to the orchestrator before migration is complete.
 
 ---
 
