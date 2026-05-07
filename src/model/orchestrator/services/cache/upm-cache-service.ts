@@ -28,11 +28,21 @@ export class UpmCacheService {
     const hash = crypto.createHash('sha256');
 
     if (fs.existsSync(manifestPath)) {
-      hash.update(fs.readFileSync(manifestPath, 'utf8'));
+      hash.update(
+        fs
+          .readFileSync(manifestPath, 'utf8')
+          .replace(/\r\n/g, '\n')
+          .replace(/^\xEF\xBB\xBF/, ''),
+      );
     }
 
     if (fs.existsSync(lockPath)) {
-      hash.update(fs.readFileSync(lockPath, 'utf8'));
+      hash.update(
+        fs
+          .readFileSync(lockPath, 'utf8')
+          .replace(/\r\n/g, '\n')
+          .replace(/^\xEF\xBB\xBF/, ''),
+      );
     }
 
     return hash.digest('hex');
@@ -87,6 +97,11 @@ export class UpmCacheService {
       }
 
       if (cachedFingerprint === currentFingerprint) {
+        // NOTE: UPM_OFFLINE is a custom flag consumed by the orchestrator's own
+        // build scripts / container hooks — it is NOT a built-in Unity env var.
+        // Unity itself does not read this variable; our entrypoint scripts
+        // translate it into the appropriate --upmNoResolve CLI flag or
+        // upm-config offline setting before launching the editor.
         process.env.UPM_OFFLINE = '1';
         OrchestratorLogger.log(
           `[UpmCache] Fingerprint match (${currentFingerprint.slice(0, 12)}...), UPM_OFFLINE=1`,

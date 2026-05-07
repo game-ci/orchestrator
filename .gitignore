@@ -8,6 +8,7 @@ coverage/
 .vscode/
 *.tgz
 temp/
+$LOG_FILE
 
 # yarn 4 (berry)
 .pnp.*

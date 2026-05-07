@@ -227,7 +227,7 @@ const config = {
     return Number(getInput('minCacheEntries')) || 0;
   },
   get upmOfflineEnabled() {
-    return getBool('upmOfflineEnabled', true);
+    return getBool('upmOfflineEnabled');
   },
   get backgroundCacheSave() {
     return getBool('backgroundCacheSave');
@@ -681,8 +681,8 @@ export function createPlugin(): OrchestratorPlugin {
           await LocalCacheService.garbageCollect(cacheRoot, retentionDays, config.minCacheEntries);
         }
 
-        // Save UPM fingerprint alongside cache
-        if (config.upmOfflineEnabled) {
+        // Save UPM fingerprint alongside cache (only on successful builds)
+        if (config.upmOfflineEnabled && exitCode === 0) {
           const { UpmCacheService } =
             await import('./model/orchestrator/services/cache/upm-cache-service');
           const projectFullPath = path.join(ws, coreParams.projectPath);

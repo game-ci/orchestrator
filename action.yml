@@ -437,7 +437,7 @@ inputs:
     description: 'Local Library cache mode: tar, copy-directory, or move-directory. move-directory is intended for same-volume Windows self-hosted runners.'
   upmOfflineEnabled:
     required: false
-    default: 'true'
+    default: 'false'
     description: 'When UPM fingerprint matches cached state, set UPM_OFFLINE=1 to skip network package resolution.'
   backgroundCacheSave:
     required: false

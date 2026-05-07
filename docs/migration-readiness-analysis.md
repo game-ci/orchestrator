@@ -60,7 +60,7 @@ interface UnityRunDiagnostics {
   guidErrors: boolean;
   packageCacheCorrupt: boolean;
   importCompleted: boolean; // ArtifactDB timestamp advanced
-  oом: boolean;
+  oom: boolean;
   accessTokenUnavailable: boolean;
 }
 ```

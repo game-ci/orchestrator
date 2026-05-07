@@ -865,14 +865,16 @@ export class LocalCacheService {
     ].join(' ');
 
     try {
-      // Write lock file before spawning
+      // Write lock file before spawning to close the race window
       fs.mkdirSync(path.dirname(lockPath), { recursive: true });
+      fs.writeFileSync(lockPath, 'pending', 'utf8');
 
       const child = spawn(process.execPath, ['-e', script], {
         detached: true,
         stdio: 'ignore',
       });
 
+      // Update lock with actual PID for monitoring
       fs.writeFileSync(lockPath, String(child.pid), 'utf8');
       child.unref();
 
