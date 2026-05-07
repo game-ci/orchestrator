@@ -117,6 +117,7 @@ chmod +x ${builderPath}`;
 
       return `export GIT_DISCOVERY_ACROSS_FILESYSTEM=1
 ${cloneBuilderCommands}
+export CACHE_KEY="${Orchestrator.buildParameters.cacheKey}"
 echo "log start" >> /home/job-log.txt
 echo "CACHE_KEY=$CACHE_KEY"
 ${
@@ -129,6 +130,7 @@ ${
     return `export GIT_DISCOVERY_ACROSS_FILESYSTEM=1
 mkdir -p "$(dirname "$LOG_FILE")"
 echo "log start" >> "$LOG_FILE"
+export CACHE_KEY="${Orchestrator.buildParameters.cacheKey}"
 echo "CACHE_KEY=$CACHE_KEY"`;
   }
 
