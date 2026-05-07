@@ -386,6 +386,60 @@ inputs:
     default: 'true'
     description: 'Add -disable-assembly-updater to batchmode launches to prevent ApiUpdater from destabilizing CI sessions.'
 
+  # ─── Unity diagnostic log collection ──────────────────────────────
+  collectUnityLogs:
+    required: false
+    default: 'false'
+    description: >
+      Collect Unity-internal logs (Editor.log, Unity.Licensing.Client.log,
+      Unity.Entitlements.Audit.log, services-config.json, Unity Hub logs,
+      crash dumps, build report, bee_backend.log, IL2CPP output, project
+      version, package manifest, etc.) into <workspace>/Logs/UnityDiagnostics/
+      after the build so they can be uploaded as artifacts and shared with
+      Unity support. See also: collectUnityLogsOnSuccess, unityLogCategories.
+  collectUnityLogsOnSuccess:
+    required: false
+    default: 'true'
+    description: >
+      When false, only collect Unity logs on non-zero exit codes. Default
+      true so successful builds also publish diagnostic artifacts (useful
+      for licensing audits and Unity support tickets).
+  unityLogCategories:
+    required: false
+    default: ''
+    description: >
+      Comma-separated subset of categories to collect (default = all
+      non-sensitive). Categories: editor-log, editor-prev-log,
+      licensing-client, entitlements-audit, services-config, unity-hub-info,
+      unity-hub-error, editor-crash, build-report, bee-backend, player-log,
+      test-results, il2cpp-output, project-version, package-manifest,
+      macos-crash-report, windows-event-log.
+  unityLogsIncludeSensitive:
+    required: false
+    default: 'false'
+    description: >
+      Include sensitive categories (e.g. license-file). NEVER enable in
+      public CI artifacts. Off by default.
+  unityLogsOutputDir:
+    required: false
+    default: ''
+    description: >
+      Override the output directory for collected Unity logs. Default is
+      <workspace>/Logs/UnityDiagnostics/.
+  streamUnityLogs:
+    required: false
+    default: 'false'
+    description: >
+      Live-tail Unity log files during the build and forward each new line
+      to the GitHub Actions log. Useful for long builds where you want to
+      see compile/import progress without waiting for the build to finish.
+  streamUnityLogPaths:
+    required: false
+    default: ''
+    description: >
+      Comma-separated list of files to live-tail. Defaults to the standard
+      <project>/Builds/Logs/Editor.log path that unity-builder configures.
+
   # ─── Build archive ─────────────────────────────────────────────────
   buildArchiveEnabled:
     required: false
@@ -795,6 +849,13 @@ runs:
         INPUT_ACCELERATORMODE: ${{ inputs.acceleratorMode }}
         INPUT_TESTRESULTCLEANUP: ${{ inputs.testResultCleanup }}
         INPUT_DISABLEASSEMBLYUPDATER: ${{ inputs.disableAssemblyUpdater }}
+        INPUT_COLLECTUNITYLOGS: ${{ inputs.collectUnityLogs }}
+        INPUT_COLLECTUNITYLOGSONSUCCESS: ${{ inputs.collectUnityLogsOnSuccess }}
+        INPUT_UNITYLOGCATEGORIES: ${{ inputs.unityLogCategories }}
+        INPUT_UNITYLOGSINCLUDESENSITIVE: ${{ inputs.unityLogsIncludeSensitive }}
+        INPUT_UNITYLOGSOUTPUTDIR: ${{ inputs.unityLogsOutputDir }}
+        INPUT_STREAMUNITYLOGS: ${{ inputs.streamUnityLogs }}
+        INPUT_STREAMUNITYLOGPATHS: ${{ inputs.streamUnityLogPaths }}
         INPUT_BUILDARCHIVEENABLED: ${{ inputs.buildArchiveEnabled }}
         INPUT_BUILDARCHIVEPATH: ${{ inputs.buildArchivePath }}
         INPUT_BUILDARCHIVERETENTION: ${{ inputs.buildArchiveRetention }}

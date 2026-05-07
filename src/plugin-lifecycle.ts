@@ -143,6 +143,27 @@ const config = {
   get enableBuildDiagnostics() {
     return getBool('enableBuildDiagnostics');
   },
+  get collectUnityLogs() {
+    return getBool('collectUnityLogs');
+  },
+  get collectUnityLogsOnSuccess() {
+    return getBool('collectUnityLogsOnSuccess', true);
+  },
+  get unityLogCategories() {
+    return getInput('unityLogCategories');
+  },
+  get unityLogsIncludeSensitive() {
+    return getBool('unityLogsIncludeSensitive');
+  },
+  get unityLogsOutputDir() {
+    return getInput('unityLogsOutputDir');
+  },
+  get streamUnityLogs() {
+    return getBool('streamUnityLogs');
+  },
+  get streamUnityLogPaths() {
+    return getInput('streamUnityLogPaths');
+  },
   get enableUnityRetry() {
     return getBool('enableUnityRetry');
   },
@@ -339,6 +360,7 @@ export function createPlugin(): OrchestratorPlugin {
   // State that needs to persist between beforeLocalBuild / afterLocalBuild
   let childWorkspaceConfig: any;
   let localCacheState: { cacheRoot: string; cacheKey: string } | undefined;
+  let unityLogTail: { stop: () => void } | undefined;
 
   return {
     async initialize(params, ws) {
@@ -677,9 +699,75 @@ export function createPlugin(): OrchestratorPlugin {
         core.info(`[Sync] Applying sync strategy: ${syncStrategy}`);
         await this.applySyncStrategy(ws);
       }
+
+      // ── Live Unity log streaming ───────────────────────────────
+      if (config.streamUnityLogs) {
+        const { UnityLogTailService } =
+          await import('./model/orchestrator/services/output/unity-log-tail-service');
+        const projectFullPath = path.join(ws, coreParams.projectPath);
+        const explicit = (config.streamUnityLogPaths || '')
+          .split(',')
+          .map((s) => s.trim())
+          .filter(Boolean);
+        const defaults = [
+          path.join(projectFullPath, 'Builds', 'Logs', 'Editor.log'),
+          path.join(projectFullPath, 'Logs', 'UnityDiagnostics', 'editor-log', 'Editor.log'),
+        ];
+        const filesToTail = explicit.length > 0 ? explicit : defaults;
+        const tail = new UnityLogTailService({
+          files: filesToTail,
+          onLine: (_filePath, line) => core.info(line),
+        });
+        tail.start();
+        unityLogTail = tail;
+        core.info(`[UnityLogs] Live log streaming started for: ${filesToTail.join(', ')}`);
+      }
     },
 
     async afterLocalBuild(ws: string, exitCode: number): Promise<void> {
+      // ── Stop live log streaming ───────────────────────────────
+      if (unityLogTail) {
+        try {
+          unityLogTail.stop();
+        } catch (error: any) {
+          core.warning(`[UnityLogs] Failed to stop log tail: ${error.message}`);
+        }
+        unityLogTail = undefined;
+      }
+
+      // ── Unity log collection (Editor.log, licensing, audit, services-config, …) ──
+      if (config.collectUnityLogs && (exitCode !== 0 || config.collectUnityLogsOnSuccess)) {
+        try {
+          const { UnityLogCollectorService } =
+            await import('./model/orchestrator/services/output/unity-log-collector-service');
+          const result = UnityLogCollectorService.collect({
+            workspace: ws,
+            projectPath: coreParams.projectPath || '',
+            outputDir: config.unityLogsOutputDir || undefined,
+            categories: UnityLogCollectorService.parseCategories(config.unityLogCategories),
+            includeSensitive: config.unityLogsIncludeSensitive,
+          });
+          core.setOutput('unityLogsPath', result.outputDir);
+          core.setOutput('unityLogsManifest', result.manifestPath);
+          core.info(
+            `[UnityLogs] ${result.collected.length} item(s), ${result.totalBytes} bytes → ${result.outputDir}`,
+          );
+
+          // Auto-register a 'unity-logs' output type so the artifact upload
+          // step picks the diagnostics directory up alongside the build.
+          OutputTypeRegistry.registerType({
+            name: 'unity-logs',
+            defaultPath:
+              path.relative(coreParams.projectPath || '.', result.outputDir) ||
+              './Logs/UnityDiagnostics/',
+            description: 'Unity Editor / licensing / audit / services-config logs',
+            builtIn: false,
+          });
+        } catch (error: any) {
+          core.warning(`[UnityLogs] collection failed: ${error.message}`);
+        }
+      }
+
       // ── Build diagnostics ─────────────────────────────────────
       if (config.enableBuildDiagnostics && exitCode !== 0) {
         const { UnityBuildDiagnosticsService } =

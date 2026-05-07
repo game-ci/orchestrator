@@ -65,6 +65,30 @@ export { HotRunnerService } from './model/orchestrator/services/hot-runner';
 export { OutputService } from './model/orchestrator/services/output/output-service';
 export { OutputTypeRegistry } from './model/orchestrator/services/output/output-type-registry';
 export { ArtifactUploadHandler } from './model/orchestrator/services/output/artifact-upload-handler';
+export { Logs } from './model/orchestrator/services/output/logs-facade';
+export type {
+  LogsCollectOptions,
+  LogsTailHandle,
+} from './model/orchestrator/services/output/logs-facade';
+export { UnityLogCollectorService } from './model/orchestrator/services/output/unity-log-collector-service';
+export type {
+  UnityLogCollectionOptions,
+  UnityLogCollectionResult,
+  UnityLogCollectionResultItem,
+} from './model/orchestrator/services/output/unity-log-collector-service';
+export { UnityLogTailService } from './model/orchestrator/services/output/unity-log-tail-service';
+export type { UnityLogTailOptions } from './model/orchestrator/services/output/unity-log-tail-service';
+export {
+  UNITY_LOG_PATHS,
+  getUnityLogPath,
+  listAllUnityLogCategories,
+  listSafeUnityLogCategories,
+} from './model/orchestrator/services/output/unity-log-paths';
+export type {
+  UnityLogCategory,
+  UnityLogPathDefinition,
+  UnityLogPlatform,
+} from './model/orchestrator/services/output/unity-log-paths';
 export { IncrementalSyncService } from './model/orchestrator/services/sync';
 
 // Advanced services (lazy-loaded by unity-builder plugin interface)
