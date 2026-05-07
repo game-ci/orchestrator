@@ -23,6 +23,7 @@ export function createBuildParametersFromCliOptions(options: Record<string, any>
   bp.customImage = options.customImage || '';
   bp.unitySerial = options.unitySerial || process.env.UNITY_SERIAL || '';
   bp.unityLicensingServer = options.unityLicensingServer || '';
+  bp.unityLicensingToolset = options.unityLicensingToolset || '';
   bp.skipActivation = options.skipActivation || 'false';
   bp.runnerTempPath = options.runnerTempPath || process.env.RUNNER_TEMP || '';
   bp.targetPlatform = options.targetPlatform || 'StandaloneLinux64';

@@ -24,6 +24,7 @@ class BuildParameters {
   customImage!: string;
   unitySerial!: string;
   unityLicensingServer!: string;
+  unityLicensingToolset!: string;
   skipActivation!: string;
   runnerTempPath!: string;
   targetPlatform!: string;
@@ -203,6 +204,7 @@ class BuildParameters {
     p.customImage = Input.customImage || Input.getInput('image') || '';
     p.unitySerial = '';
     p.unityLicensingServer = '';
+    p.unityLicensingToolset = '';
     p.skipActivation = '';
     p.runnerTempPath = process.env.RUNNER_TEMP || '';
     p.manualExit = Input.manualExit;

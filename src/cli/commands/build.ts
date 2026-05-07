@@ -204,6 +204,13 @@ const buildCommand: CommandModule<object, BuildArguments> = {
         description: 'The Unity licensing server address',
         default: '',
       })
+      .option('unity-licensing-toolset', {
+        alias: 'unityLicensingToolset',
+        type: 'string',
+        description:
+          'Toolset identifier for Unity floating-license servers that host multiple toolsets. Empty by default.',
+        default: '',
+      })
       .option('container-registry-repository', {
         alias: 'containerRegistryRepository',
         type: 'string',

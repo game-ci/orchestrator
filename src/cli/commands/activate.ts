@@ -6,6 +6,7 @@ interface ActivateArguments extends CliArguments {
   unityVersion?: string;
   unitySerial?: string;
   unityLicensingServer?: string;
+  unityLicensingToolset?: string;
 }
 
 const activateCommand: CommandModule<object, ActivateArguments> = {
@@ -23,6 +24,13 @@ const activateCommand: CommandModule<object, ActivateArguments> = {
         alias: 'unityLicensingServer',
         type: 'string',
         description: 'The Unity licensing server address for floating licenses',
+        default: '',
+      })
+      .option('unity-licensing-toolset', {
+        alias: 'unityLicensingToolset',
+        type: 'string',
+        description:
+          'Toolset identifier for floating-license servers that host multiple toolsets. Empty by default.',
         default: '',
       })
       .env('UNITY')

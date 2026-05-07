@@ -65,6 +65,7 @@ export interface CliArguments {
   customJob?: string;
 
   unityLicensingServer?: string;
+  unityLicensingToolset?: string;
 
   cacheUnityInstallationOnMac?: boolean;
   unityHubVersionOnMac?: string;

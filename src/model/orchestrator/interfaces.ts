@@ -113,6 +113,7 @@ export interface OrchestratorConfig {
   // Authentication
   unitySerial?: string;
   unityLicensingServer?: string;
+  unityLicensingToolset?: string;
   skipActivation?: string;
   runnerTempPath?: string;
   manualExit?: boolean;
