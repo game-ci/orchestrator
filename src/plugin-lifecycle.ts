@@ -9,6 +9,30 @@
  *   const { createPlugin } = await import('@game-ci/orchestrator');
  *   const plugin = createPlugin();
  *   await plugin.initialize(coreParams, workspace);
+ *
+ * ── Engine-agnostic contract ─────────────────────────────────────────
+ *
+ * `coreParams: Record<string, any>` is intentionally opaque. The host
+ * (unity-builder today, @game-ci/cli in the future) passes its full
+ * BuildParameters object through. This plugin only reads:
+ *
+ *   - Generic build context: targetPlatform, projectPath, buildPath,
+ *     buildGuid, branch, gitSha, customParameters, gitPrivateToken,
+ *     runnerTempPath, providerStrategy, cacheRetentionDays, testResultPath
+ *   - Plugin-owned config (read directly from env/inputs via getInput, NOT
+ *     from coreParams): everything in the `config` object below
+ *
+ * The plugin MUST NOT depend on engine-specific keys like `unitySerial` /
+ * `unityLicensingServer` / `unityLicensingToolset` / `skipActivation`.
+ * Those keys may be present in coreParams (the host put them there for
+ * downstream consumers like the build container's env vars) but the
+ * orchestrator plugin treats them as opaque pass-through.
+ *
+ * Future state — see https://github.com/game-ci/orchestrator/issues/25:
+ * eventually @game-ci/cli becomes the top-level entry. cli composes
+ * unity-builder (Unity runtime) and orchestrator (dispatch) and supplies
+ * the same coreParams shape. Because the contract is opaque, no plugin
+ * change is needed to support the future caller.
  */
 
 import * as core from '@actions/core';

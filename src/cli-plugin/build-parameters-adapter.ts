@@ -21,9 +21,11 @@ export function createBuildParametersFromCliOptions(options: Record<string, any>
   // ── identity / build settings ─────────────────────────────────────
   bp.editorVersion = options.engineVersion || options.editorVersion || options.unityVersion || '';
   bp.customImage = options.customImage || '';
-  bp.unitySerial = options.unitySerial || process.env.UNITY_SERIAL || '';
-  bp.unityLicensingServer = options.unityLicensingServer || '';
-  bp.skipActivation = options.skipActivation || 'false';
+  // Engine-specific licensing fields (unitySerial, unityLicensingServer,
+  // unityLicensingToolset, skipActivation, ...) are not assigned here.
+  // They flow opaquely through BuildParameters' index signature when the host
+  // populates them; orchestrator does not read them.
+  // See https://github.com/game-ci/orchestrator/issues/25
   bp.runnerTempPath = options.runnerTempPath || process.env.RUNNER_TEMP || '';
   bp.targetPlatform = options.targetPlatform || 'StandaloneLinux64';
   bp.projectPath = options.projectPath || '.';

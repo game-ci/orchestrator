@@ -87,8 +87,15 @@ describe('CLI commands', () => {
       expect(options['chown-files-to']).toBeDefined();
 
       expect(options['provider-strategy']).toBeDefined();
-      expect(options['skip-activation']).toBeDefined();
-      expect(options['unity-licensing-server']).toBeDefined();
+
+      // Engine-specific licensing flags are intentionally NOT defined on
+      // orchestrator's build command — orchestrator is engine-agnostic.
+      // Hosts (unity-builder action, @game-ci/cli) own those flags and pass
+      // them through to the build container as environment variables.
+      // See https://github.com/game-ci/orchestrator/issues/25
+      expect(options['skip-activation']).toBeUndefined();
+      expect(options['unity-licensing-server']).toBeUndefined();
+      expect(options['unity-licensing-toolset']).toBeUndefined();
     });
 
     it('sets correct default values', () => {

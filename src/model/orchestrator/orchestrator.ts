@@ -470,6 +470,12 @@ class Orchestrator {
 
   private static async updateStatusWithBuildParameters() {
     const content = { ...Orchestrator.buildParameters };
+    // Defensive scrub of well-known secret keys before posting to GitHub Checks.
+    // unity* keys are no longer typed on BuildParameters but may still be
+    // present via the host's opaque pluginConfig (BuildParameters has a
+    // [key: string]: any index signature). Scrubbing by key name is safe.
+    // Future: generalize to a configurable secret-key allowlist.
+    // See https://github.com/game-ci/orchestrator/issues/25
     content.gitPrivateToken = ``;
     content.unitySerial = ``;
     content.unityEmail = ``;
