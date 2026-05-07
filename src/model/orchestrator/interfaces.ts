@@ -111,9 +111,11 @@ export interface OrchestratorConfig {
   garbageMaxAge: number;
 
   // Authentication
-  unitySerial?: string;
-  unityLicensingServer?: string;
-  skipActivation?: string;
+  // ── Note ───────────────────────────────────────────────────────────
+  // Engine-specific licensing fields (e.g. unitySerial, unityLicensingServer,
+  // unityLicensingToolset, skipActivation) are NOT declared here. They ride
+  // opaquely inside the host's plugin-config dict; orchestrator does not read
+  // them and must not name them. See https://github.com/game-ci/orchestrator/issues/25
   runnerTempPath?: string;
   manualExit?: boolean;
   enableGpu?: boolean;

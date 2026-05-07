@@ -55,7 +55,6 @@ export interface CliArguments {
   cacheKey?: string;
   watchToEnd?: string;
   allowDirtyBuild?: boolean;
-  skipActivation?: string;
   cloneDepth?: string;
 
   readInputFromOverrideList?: string;
@@ -64,7 +63,10 @@ export interface CliArguments {
   preBuildSteps?: string;
   customJob?: string;
 
-  unityLicensingServer?: string;
+  // Note: engine-specific fields (skipActivation, unityLicensingServer, ...)
+  // are NOT declared here. They flow through the [key: string] index
+  // signature below to the plugin's opaque config dict. Orchestrator does not
+  // read them. See https://github.com/game-ci/orchestrator/issues/25
 
   cacheUnityInstallationOnMac?: boolean;
   unityHubVersionOnMac?: string;

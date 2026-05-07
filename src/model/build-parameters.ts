@@ -7,6 +7,16 @@
  *
  * During Phase 3 of the extraction plan this will be replaced by a proper
  * lean interface supplied by the host (unity-builder or CLI).
+ *
+ * ── Engine-agnostic boundary ─────────────────────────────────────────
+ *
+ * Orchestrator's typed surfaces must NOT carry engine-specific vocabulary
+ * (Unity-licensing fields, etc.). The plugin contract is opaque
+ * (Record<string, any>) — hosts pass their full config through, plugins
+ * pull what they need. Engine-specific concerns ride in the dict
+ * untouched by orchestrator.
+ *
+ * Tracking issue: https://github.com/game-ci/orchestrator/issues/25
  */
 
 import * as core from '@actions/core';
@@ -22,9 +32,6 @@ class BuildParameters {
   // ── identity ────────────────────────────────────────────────────────
   editorVersion!: string;
   customImage!: string;
-  unitySerial!: string;
-  unityLicensingServer!: string;
-  skipActivation!: string;
   runnerTempPath!: string;
   targetPlatform!: string;
   projectPath!: string;
@@ -201,9 +208,6 @@ class BuildParameters {
     p.buildVersion = '1.0.0';
     p.androidVersionCode = '';
     p.customImage = Input.customImage || Input.getInput('image') || '';
-    p.unitySerial = '';
-    p.unityLicensingServer = '';
-    p.skipActivation = '';
     p.runnerTempPath = process.env.RUNNER_TEMP || '';
     p.manualExit = Input.manualExit;
     p.enableGpu = Input.enableGpu;
