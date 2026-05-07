@@ -118,7 +118,7 @@ const config = {
     return getBool('unityProcessCleanup');
   },
   get enableBuildDiagnostics() {
-    return getBool('enableBuildDiagnostics', true);
+    return getBool('enableBuildDiagnostics');
   },
   get enableUnityRetry() {
     return getBool('enableUnityRetry');
@@ -127,7 +127,7 @@ const config = {
     return getNumber('unityRetryMaxAttempts', 3);
   },
   get licensingStaggerDelay() {
-    return getBool('licensingStaggerDelay', true);
+    return getBool('licensingStaggerDelay');
   },
   get profileFingerprintEnabled() {
     return getBool('profileFingerprintEnabled');
@@ -136,16 +136,16 @@ const config = {
     return getNumber('workerCount', 0);
   },
   get ilppCleanupEnabled() {
-    return getBool('ilppCleanupEnabled', true);
+    return getBool('ilppCleanupEnabled');
   },
   get acceleratorMode() {
     return (getInput('acceleratorMode') || 'enabled') as 'enabled' | 'disabled' | 'download-only';
   },
   get testResultCleanup() {
-    return getBool('testResultCleanup', true);
+    return getBool('testResultCleanup');
   },
   get disableAssemblyUpdater() {
-    return getBool('disableAssemblyUpdater', true);
+    return getBool('disableAssemblyUpdater');
   },
 
   // Build archive
@@ -307,8 +307,10 @@ export function createPlugin(): OrchestratorPlugin {
       coreParams = params;
       workspace = ws;
 
-      // Always configure git environment for CI reliability
-      BuildReliabilityService.configureGitEnvironment();
+      // Configure git environment for CI reliability (opt-in)
+      if (getBool('configureGitEnvironment')) {
+        BuildReliabilityService.configureGitEnvironment();
+      }
     },
 
     canHandleBuild(): boolean {
