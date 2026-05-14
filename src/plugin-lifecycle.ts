@@ -127,6 +127,15 @@ const config = {
   get testSuiteEvent() {
     return getInput('testSuiteEvent');
   },
+  get testFilterRefs() {
+    return getInput('testFilterRefs');
+  },
+  get testFilterInjection() {
+    return getInput('testFilterInjection');
+  },
+  get testFilterInjectionPath() {
+    return getInput('testFilterInjectionPath');
+  },
 
   // Hot runner
   get hotRunnerEnabled() {
@@ -409,10 +418,12 @@ export function createPlugin(): OrchestratorPlugin {
       // ── Test workflow ──────────────────────────────────────────
       if (config.testSuitePath) {
         core.info('[TestWorkflow] Test suite path detected, using test workflow engine');
-        const results = await TestWorkflowService.executeTestSuite(
-          config.testSuitePath,
-          coreParams as any,
-        );
+        const results = await TestWorkflowService.executeTestSuite(config.testSuitePath, {
+          ...(coreParams as any),
+          testFilterRefs: config.testFilterRefs,
+          testFilterInjection: config.testFilterInjection,
+          testFilterInjectionPath: config.testFilterInjectionPath,
+        });
 
         let totalFailed = 0;
         for (const result of results || []) {

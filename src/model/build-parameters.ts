@@ -156,6 +156,9 @@ class BuildParameters {
 
   // ── test workflow ───────────────────────────────────────────────────
   testSuitePath!: string;
+  testFilterRefs!: string;
+  testFilterInjection!: string;
+  testFilterInjectionPath!: string;
 
   // ── preflight ───────────────────────────────────────────────────────
   // Path to the preflight suite YAML. Empty string disables preflight.
@@ -256,6 +259,10 @@ class BuildParameters {
     p.engine = Input.getInput('engine') || 'unity';
     p.enginePlugin = Input.getInput('enginePlugin') || '';
     p.preflightSuite = Input.getInput('preflightSuite') || '';
+    p.testSuitePath = Input.getInput('testSuitePath') || '';
+    p.testFilterRefs = Input.getInput('testFilterRefs') || '';
+    p.testFilterInjection = Input.getInput('testFilterInjection') || '';
+    p.testFilterInjectionPath = Input.getInput('testFilterInjectionPath') || '';
 
     // Initialize the engine plugin (Unity is built-in, others require enginePlugin source)
     initEngine(p.engine, p.enginePlugin || undefined);

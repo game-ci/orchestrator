@@ -1,11 +1,10 @@
 import fs from 'node:fs';
 import YAML from 'yaml';
-import { TaxonomyDimension, TaxonomyDefinition } from './test-workflow-types';
+import { ResolvedTestFilter, TaxonomyDimension, TaxonomyDefinition } from './test-workflow-types';
 
 /**
- * Manages test taxonomy dimensions and builds filter arguments for
- * the Unity test runner CLI. Supports comma-separated value lists,
- * regex patterns (/pattern/), and hierarchical dot-notation matching.
+ * Manages taxonomy dimensions and compiles resolved category/name filters into
+ * Unity test runner CLI arguments.
  */
 export class TaxonomyFilterService {
   /**
@@ -57,71 +56,36 @@ export class TaxonomyFilterService {
   }
 
   /**
-   * Convert a filter map to Unity test runner CLI args (--testFilter).
+   * Convert resolved orchestrator filters to Unity CLI args.
    *
-   * Each filter dimension becomes a category expression. Multiple values in one
-   * dimension are OR'd; multiple dimensions are AND'd. The result is a single
-   * --testFilter string suitable for passing to Unity's test runner CLI.
-   *
-   * Regex patterns (values wrapped in /.../) are converted to category regex
-   * expressions supported by the Unity test runner.
+   * Category filters are emitted via `-testCategory`, which Unity documents as
+   * the category-selection argument. Test name / regex filters are emitted via
+   * `-testFilter`. Negated entries are prefixed with `!`.
    */
-  static buildFilterArgs(filters: Record<string, string>): string {
-    if (!filters || Object.keys(filters).length === 0) {
-      return '';
+  static buildFilterArgs(filter: ResolvedTestFilter): string[] {
+    if (!filter) {
+      return [];
     }
 
-    const categoryExpressions: string[] = [];
+    const args: string[] = [];
+    const categoryTokens = [
+      ...filter.categories.include,
+      ...filter.categories.exclude.map((value) => `!${value}`),
+    ];
+    const nameTokens = [
+      ...filter.names.include,
+      ...filter.names.exclude.map((value) => `!${value}`),
+    ];
 
-    for (const [dimension, valueSpec] of Object.entries(filters)) {
-      const expression = TaxonomyFilterService.buildDimensionExpression(dimension, valueSpec);
-      if (expression) {
-        categoryExpressions.push(expression);
-      }
+    if (categoryTokens.length > 0) {
+      args.push(`-testCategory "${categoryTokens.join(';')}"`);
     }
 
-    if (categoryExpressions.length === 0) {
-      return '';
+    if (nameTokens.length > 0) {
+      args.push(`-testFilter "${nameTokens.join(';')}"`);
     }
 
-    // Unity test runner uses --testFilter with category expressions
-    // Multiple dimensions are AND'd by joining with ';'
-    const filterString = categoryExpressions.join(';');
-    return `--testFilter "${filterString}"`;
-  }
-
-  /**
-   * Build a filter expression for a single taxonomy dimension.
-   */
-  private static buildDimensionExpression(dimension: string, valueSpec: string): string {
-    if (!valueSpec || valueSpec.trim() === '') {
-      return '';
-    }
-
-    const trimmed = valueSpec.trim();
-
-    // Check if the value is a regex pattern: /pattern/
-    if (trimmed.startsWith('/') && trimmed.endsWith('/') && trimmed.length > 2) {
-      const pattern = trimmed.slice(1, -1);
-      return `${dimension}=~${pattern}`;
-    }
-
-    // Comma-separated values: OR'd together
-    const values = trimmed
-      .split(',')
-      .map((v) => v.trim())
-      .filter((v) => v.length > 0);
-
-    if (values.length === 0) {
-      return '';
-    }
-
-    if (values.length === 1) {
-      return `${dimension}=${values[0]}`;
-    }
-
-    // Multiple values: use pipe-separated OR syntax
-    return `${dimension}=${values.join('|')}`;
+    return args;
   }
 
   /**

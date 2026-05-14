@@ -1,6 +1,7 @@
 export interface TestSuiteDefinition {
   name: string;
   description?: string;
+  filterSets?: Record<string, TestFilterDefinition>;
   runs: TestRunDefinition[];
 }
 
@@ -11,8 +12,46 @@ export interface TestRunDefinition {
   playMode?: boolean;
   builtClient?: boolean;
   builtClientPath?: string;
-  filters?: Record<string, string>; // dimension -> comma-separated values or /regex/
+  filterRefs?: string[];
+  filters?: LegacyTaxonomyFilters | TestFilterDefinition;
   timeout?: number;
+}
+
+export type LegacyTaxonomyFilters = Record<string, string>;
+
+export interface TestFilterDefinition {
+  extends?: string[];
+  categories?: TestCategoryFilterDefinition;
+  names?: TestNameFilterDefinition;
+}
+
+export interface TestCategoryFilterDefinition {
+  include?: string[];
+  exclude?: string[];
+  taxonomy?: Record<string, string | string[]>;
+}
+
+export interface TestNameFilterDefinition {
+  include?: string[];
+  exclude?: string[];
+  regex?: string[];
+}
+
+export interface TestFilterInjectionDefinition {
+  refs?: string[];
+  filters?: LegacyTaxonomyFilters | TestFilterDefinition;
+  filterSets?: Record<string, TestFilterDefinition>;
+}
+
+export interface ResolvedTestFilter {
+  categories: {
+    include: string[];
+    exclude: string[];
+  };
+  names: {
+    include: string[];
+    exclude: string[];
+  };
 }
 
 export interface TaxonomyDimension {

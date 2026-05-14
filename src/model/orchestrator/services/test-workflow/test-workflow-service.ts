@@ -4,9 +4,15 @@ import path from 'node:path';
 import * as core from '@actions/core';
 import BuildParameters from '../../../build-parameters';
 import { TestSuiteParser } from './test-suite-parser';
+import { TestFilterResolutionService } from './test-filter-resolution-service';
 import { TaxonomyFilterService } from './taxonomy-filter-service';
 import { TestResultReporter } from './test-result-reporter';
-import { TestRunDefinition, TestResult } from './test-workflow-types';
+import {
+  TestFilterInjectionDefinition,
+  TestRunDefinition,
+  TestResult,
+  TestSuiteDefinition,
+} from './test-workflow-types';
 
 const execAsync = promisify(exec);
 
@@ -29,6 +35,21 @@ export class TestWorkflowService {
     core.info(`[TestWorkflow] Loading test suite from: ${suitePath}`);
 
     const suite = TestSuiteParser.parseSuiteFile(suitePath);
+    const parsedInjection = TestFilterResolutionService.parseInjection(
+      parameters.testFilterInjection,
+      parameters.testFilterInjectionPath,
+    );
+    const injectedRefs = String(parameters.testFilterRefs || '')
+      .split(',')
+      .map((value) => value.trim())
+      .filter(Boolean);
+    const effectiveInjection: TestFilterInjectionDefinition | undefined =
+      parsedInjection || injectedRefs.length > 0
+        ? {
+            ...parsedInjection,
+            refs: [...(parsedInjection?.refs || []), ...injectedRefs],
+          }
+        : undefined;
     core.info(`[TestWorkflow] Suite '${suite.name}' loaded with ${suite.runs.length} run(s)`);
 
     if (suite.description) {
@@ -48,7 +69,9 @@ export class TestWorkflowService {
 
       // Execute runs within a group concurrently
       const groupResults = await Promise.all(
-        group.map((run) => TestWorkflowService.executeTestRun(run, parameters)),
+        group.map((run) =>
+          TestWorkflowService.executeTestRun(suite, run, parameters, effectiveInjection),
+        ),
       );
 
       allResults.push(...groupResults);
@@ -92,12 +115,14 @@ export class TestWorkflowService {
    * Node.js event loop.
    */
   static async executeTestRun(
+    suite: TestSuiteDefinition,
     run: TestRunDefinition,
     parameters: BuildParameters,
+    injection?: TestFilterInjectionDefinition,
   ): Promise<TestResult> {
     core.info(`[TestWorkflow] Starting run: '${run.name}'`);
 
-    const unityArguments = TestWorkflowService.buildUnityArgs(run, parameters);
+    const unityArguments = TestWorkflowService.buildUnityArgs(suite, run, parameters, injection);
     const timeoutMs = (run.timeout ?? 600) * 1000;
 
     core.info(`[TestWorkflow] Unity args: ${unityArguments}`);
@@ -192,7 +217,12 @@ export class TestWorkflowService {
   /**
    * Build Unity CLI arguments for a test run based on its configuration.
    */
-  static buildUnityArgs(run: TestRunDefinition, parameters: BuildParameters): string {
+  static buildUnityArgs(
+    suite: TestSuiteDefinition,
+    run: TestRunDefinition,
+    parameters: BuildParameters,
+    injection?: TestFilterInjectionDefinition,
+  ): string {
     const unityArguments: string[] = ['-batchmode', '-nographics'];
 
     // Project path
@@ -219,12 +249,10 @@ export class TestWorkflowService {
       unityArguments.push('-runTests', '-testPlatform EditMode');
     }
 
-    // Apply taxonomy filters
-    if (run.filters && Object.keys(run.filters).length > 0) {
-      const filterArguments = TaxonomyFilterService.buildFilterArgs(run.filters);
-      if (filterArguments) {
-        unityArguments.push(filterArguments);
-      }
+    const resolvedFilter = TestFilterResolutionService.resolveForRun(suite, run, injection);
+    const filterArguments = TaxonomyFilterService.buildFilterArgs(resolvedFilter);
+    if (filterArguments.length > 0) {
+      unityArguments.push(...filterArguments);
     }
 
     // Target platform
