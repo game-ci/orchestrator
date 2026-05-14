@@ -1,6 +1,10 @@
 import fs from 'node:fs';
 import YAML from 'yaml';
-import { TestSuiteDefinition, TestRunDefinition } from './test-workflow-types';
+import {
+  TestFilterDefinition,
+  TestSuiteDefinition,
+  TestRunDefinition,
+} from './test-workflow-types';
 
 /**
  * Parses and validates YAML-based test suite definition files.
@@ -34,6 +38,7 @@ export class TestSuiteParser {
     const suite: TestSuiteDefinition = {
       name: parsed.name,
       description: parsed.description,
+      filterSets: TestSuiteParser.parseFilterSets(parsed.filterSets),
       runs: parsed.runs.map((run: any) => TestSuiteParser.parseRun(run)),
     };
 
@@ -84,14 +89,18 @@ export class TestSuiteParser {
       run.builtClientPath = String(raw.builtClientPath);
     }
 
+    if (raw.filterRefs !== undefined) {
+      if (!Array.isArray(raw.filterRefs)) {
+        throw new Error(`Run '${raw.name}': 'filterRefs' must be an array of strings`);
+      }
+      run.filterRefs = raw.filterRefs.map((value: unknown) => String(value));
+    }
+
     if (raw.filters !== undefined) {
       if (typeof raw.filters !== 'object' || Array.isArray(raw.filters)) {
         throw new Error(`Run '${raw.name}': 'filters' must be a key-value object`);
       }
-      run.filters = {};
-      for (const [key, value] of Object.entries(raw.filters)) {
-        run.filters[key] = String(value);
-      }
+      run.filters = TestSuiteParser.parseFilterDefinition(raw.filters, `Run '${raw.name}'`);
     }
 
     if (raw.timeout !== undefined) {
@@ -103,6 +112,113 @@ export class TestSuiteParser {
     }
 
     return run;
+  }
+
+  private static parseFilterSets(raw: any): Record<string, TestFilterDefinition> | undefined {
+    if (raw === undefined) {
+      return undefined;
+    }
+
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
+      throw new Error(`Test suite 'filterSets' must be an object`);
+    }
+
+    const parsed: Record<string, TestFilterDefinition> = {};
+    for (const [name, value] of Object.entries(raw)) {
+      if (!value || typeof value !== 'object' || Array.isArray(value)) {
+        throw new Error(`Filter set '${name}' must be an object`);
+      }
+      parsed[name] = TestSuiteParser.parseFilterDefinition(value, `Filter set '${name}'`);
+    }
+
+    return parsed;
+  }
+
+  private static parseFilterDefinition(
+    raw: Record<string, any>,
+    context: string,
+  ): Record<string, string> | TestFilterDefinition {
+    const isExtendedFormat =
+      raw.categories !== undefined || raw.names !== undefined || raw.extends !== undefined;
+
+    if (!isExtendedFormat) {
+      const legacy: Record<string, string> = {};
+      for (const [key, value] of Object.entries(raw)) {
+        legacy[key] = Array.isArray(value) ? value.map(String).join(',') : String(value);
+      }
+
+      return legacy;
+    }
+
+    const parsed: TestFilterDefinition = {};
+
+    if (raw.extends !== undefined) {
+      if (!Array.isArray(raw.extends)) {
+        throw new Error(`${context}: 'extends' must be an array of strings`);
+      }
+      parsed.extends = raw.extends.map((value: unknown) => String(value));
+    }
+
+    if (raw.categories !== undefined) {
+      if (!raw.categories || typeof raw.categories !== 'object' || Array.isArray(raw.categories)) {
+        throw new Error(`${context}: 'categories' must be an object`);
+      }
+      parsed.categories = {};
+      if (raw.categories.include !== undefined) {
+        if (!Array.isArray(raw.categories.include)) {
+          throw new Error(`${context}: categories.include must be an array`);
+        }
+        parsed.categories.include = raw.categories.include.map((value: unknown) => String(value));
+      }
+      if (raw.categories.exclude !== undefined) {
+        if (!Array.isArray(raw.categories.exclude)) {
+          throw new Error(`${context}: categories.exclude must be an array`);
+        }
+        parsed.categories.exclude = raw.categories.exclude.map((value: unknown) => String(value));
+      }
+      if (raw.categories.taxonomy !== undefined) {
+        if (
+          !raw.categories.taxonomy ||
+          typeof raw.categories.taxonomy !== 'object' ||
+          Array.isArray(raw.categories.taxonomy)
+        ) {
+          throw new Error(`${context}: categories.taxonomy must be an object`);
+        }
+        parsed.categories.taxonomy = {};
+        for (const [dimension, value] of Object.entries(raw.categories.taxonomy)) {
+          parsed.categories.taxonomy[dimension] = Array.isArray(value)
+            ? value.map((entry: unknown) => String(entry))
+            : String(value);
+        }
+      }
+    }
+
+    if (raw.names !== undefined) {
+      if (!raw.names || typeof raw.names !== 'object' || Array.isArray(raw.names)) {
+        throw new Error(`${context}: 'names' must be an object`);
+      }
+      parsed.names = {};
+      if (raw.names.include !== undefined) {
+        if (!Array.isArray(raw.names.include)) {
+          throw new Error(`${context}: names.include must be an array`);
+        }
+        parsed.names.include = raw.names.include.map((value: unknown) => String(value));
+      }
+      if (raw.names.exclude !== undefined) {
+        if (!Array.isArray(raw.names.exclude)) {
+          throw new Error(`${context}: names.exclude must be an array`);
+        }
+        parsed.names.exclude = raw.names.exclude.map((value: unknown) => String(value));
+      }
+      if (raw.names.regex !== undefined) {
+        if (!Array.isArray(raw.names.regex)) {
+          throw new Error(`${context}: names.regex must be an array`);
+        }
+        parsed.names.regex = raw.names.regex.map((value: unknown) => String(value));
+      }
+    }
+
+    return parsed;
   }
 
   /**

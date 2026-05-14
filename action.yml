@@ -624,6 +624,18 @@ inputs:
   testSuiteEvent:
     required: false
     default: ''
+  testFilterRefs:
+    required: false
+    default: ''
+    description: 'Comma-separated suite filter preset names to inject into every test run.'
+  testFilterInjection:
+    required: false
+    default: ''
+    description: 'Inline YAML or JSON filter overlay injected into every test run. Supports refs, filters, and filterSets.'
+  testFilterInjectionPath:
+    required: false
+    default: ''
+    description: 'Path to a YAML or JSON test filter overlay file injected into every test run.'
   testTaxonomyPath:
     required: false
     default: ''
@@ -914,6 +926,9 @@ runs:
         INPUT_PREFLIGHTSUITE: ${{ inputs.preflightSuite }}
         INPUT_TESTSUITEPATH: ${{ inputs.testSuitePath }}
         INPUT_TESTSUITEEVENT: ${{ inputs.testSuiteEvent }}
+        INPUT_TESTFILTERREFS: ${{ inputs.testFilterRefs }}
+        INPUT_TESTFILTERINJECTION: ${{ inputs.testFilterInjection }}
+        INPUT_TESTFILTERINJECTIONPATH: ${{ inputs.testFilterInjectionPath }}
         INPUT_TESTTAXONOMYPATH: ${{ inputs.testTaxonomyPath }}
         INPUT_TESTRESULTFORMAT: ${{ inputs.testResultFormat }}
         INPUT_TESTRESULTPATH: ${{ inputs.testResultPath }}

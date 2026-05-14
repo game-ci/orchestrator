@@ -10,11 +10,17 @@ import {
   type Mocked,
 } from 'vitest';
 import fs from 'node:fs';
+import { TestFilterResolutionService } from './test-filter-resolution-service';
 import { TestSuiteParser } from './test-suite-parser';
 import { TaxonomyFilterService } from './taxonomy-filter-service';
 import { TestResultReporter } from './test-result-reporter';
 import { TestWorkflowService } from './test-workflow-service';
-import { TestSuiteDefinition, TestResult, TestRunDefinition } from './test-workflow-types';
+import {
+  ResolvedTestFilter,
+  TestSuiteDefinition,
+  TestResult,
+  TestRunDefinition,
+} from './test-workflow-types';
 
 vi.mock('node:fs');
 vi.mock('@actions/core');
@@ -63,6 +69,36 @@ runs:
       expect(suite.runs[0].filters?.Maturity).toBe('Trusted');
       expect(suite.runs[0].timeout).toBe(300);
       expect(suite.runs[1].needs).toEqual(['fast']);
+    });
+
+    it('should parse preset-based filters and run references', () => {
+      const yaml = `
+name: pull-request
+filterSets:
+  smoke:
+    categories:
+      include: [Smoke]
+      taxonomy:
+        Maturity: [Trusted]
+    names:
+      regex: ['^Gameplay\\\\.']
+runs:
+  - name: fast
+    editMode: true
+    filterRefs: [smoke]
+    filters:
+      categories:
+        exclude: [Quarantined]
+`;
+      mockFs.existsSync.mockReturnValue(true);
+      mockFs.readFileSync.mockReturnValue(yaml);
+
+      const suite = TestSuiteParser.parseSuiteFile('/path/to/suite.yml');
+
+      expect(suite.filterSets?.smoke.categories?.include).toEqual(['Smoke']);
+      expect(suite.filterSets?.smoke.categories?.taxonomy?.Maturity).toEqual(['Trusted']);
+      expect(suite.runs[0].filterRefs).toEqual(['smoke']);
+      expect((suite.runs[0].filters as any).categories.exclude).toEqual(['Quarantined']);
     });
 
     it('should throw when file does not exist', () => {
@@ -292,33 +328,53 @@ extensible_groups:
   });
 
   describe('buildFilterArgs', () => {
-    it('should return empty string for empty filters', () => {
-      expect(TaxonomyFilterService.buildFilterArgs({})).toBe('');
+    it('should return no args for empty filters', () => {
+      const filter: ResolvedTestFilter = {
+        categories: { include: [], exclude: [] },
+        names: { include: [], exclude: [] },
+      };
+      expect(TaxonomyFilterService.buildFilterArgs(filter)).toEqual([]);
     });
 
-    it('should build single-value filter', () => {
-      const result = TaxonomyFilterService.buildFilterArgs({ Maturity: 'Trusted' });
-      expect(result).toBe('--testFilter "Maturity=Trusted"');
+    it('should build category args', () => {
+      const filter: ResolvedTestFilter = {
+        categories: { include: ['Maturity=Trusted'], exclude: [] },
+        names: { include: [], exclude: [] },
+      };
+      const result = TaxonomyFilterService.buildFilterArgs(filter);
+      expect(result).toEqual(['-testCategory "Maturity=Trusted"']);
     });
 
-    it('should build multi-value filter with pipe separator', () => {
-      const result = TaxonomyFilterService.buildFilterArgs({ Scope: 'Unit,Integration' });
-      expect(result).toBe('--testFilter "Scope=Unit|Integration"');
+    it('should build included and excluded category args', () => {
+      const filter: ResolvedTestFilter = {
+        categories: { include: ['Smoke', 'Maturity=Trusted'], exclude: ['Quarantined'] },
+        names: { include: [], exclude: [] },
+      };
+      const result = TaxonomyFilterService.buildFilterArgs(filter);
+      expect(result).toEqual(['-testCategory "Smoke;Maturity=Trusted;!Quarantined"']);
     });
 
-    it('should build regex filter', () => {
-      const result = TaxonomyFilterService.buildFilterArgs({ Maturity: '/Trusted|Adolescent/' });
-      expect(result).toBe('--testFilter "Maturity=~Trusted|Adolescent"');
+    it('should build name and regex filters via testFilter', () => {
+      const filter: ResolvedTestFilter = {
+        categories: { include: [], exclude: [] },
+        names: {
+          include: ['Gameplay.FastSuite', '^Gameplay\\.Combat\\.'],
+          exclude: ['Flaky.Test'],
+        },
+      };
+      const result = TaxonomyFilterService.buildFilterArgs(filter);
+      expect(result).toEqual([
+        '-testFilter "Gameplay.FastSuite;^Gameplay\\.Combat\\.;!Flaky.Test"',
+      ]);
     });
 
-    it('should AND multiple dimensions with semicolon', () => {
-      const result = TaxonomyFilterService.buildFilterArgs({
-        Maturity: 'Trusted',
-        Scope: 'Unit',
-      });
-      expect(result).toContain(';');
-      expect(result).toContain('Maturity=Trusted');
-      expect(result).toContain('Scope=Unit');
+    it('should emit both category and name filters when present', () => {
+      const filter: ResolvedTestFilter = {
+        categories: { include: ['Smoke'], exclude: [] },
+        names: { include: ['Gameplay.FastSuite'], exclude: [] },
+      };
+      const result = TaxonomyFilterService.buildFilterArgs(filter);
+      expect(result).toEqual(['-testCategory "Smoke"', '-testFilter "Gameplay.FastSuite"']);
     });
   });
 
@@ -383,6 +439,61 @@ extensible_groups:
       );
       expect(match).toBe(true);
     });
+  });
+});
+
+describe('TestFilterResolutionService', () => {
+  it('should resolve preset refs, run filters, and injected filters together', () => {
+    const suite: TestSuiteDefinition = {
+      name: 'suite',
+      filterSets: {
+        smoke: {
+          categories: {
+            include: ['Smoke'],
+            taxonomy: { Maturity: ['Trusted'] },
+          },
+        },
+      },
+      runs: [
+        {
+          name: 'fast',
+          editMode: true,
+          filterRefs: ['smoke'],
+          filters: {
+            categories: {
+              taxonomy: { Scope: ['Unit'] },
+            },
+          },
+        },
+      ],
+    };
+
+    const resolved = TestFilterResolutionService.resolveForRun(suite, suite.runs[0], {
+      filters: {
+        categories: { exclude: ['Quarantined'] },
+        names: { regex: ['^Gameplay\\.'] },
+      },
+    });
+
+    expect(resolved.categories.include).toEqual(['Smoke', 'Maturity=Trusted', 'Scope=Unit']);
+    expect(resolved.categories.exclude).toEqual(['Quarantined']);
+    expect(resolved.names.include).toEqual(['^Gameplay\\.']);
+  });
+
+  it('should parse injection documents', () => {
+    mockFs.existsSync.mockReturnValue(true);
+    mockFs.readFileSync.mockReturnValue(`
+refs: [smoke]
+filters:
+  categories:
+    exclude: [Quarantined]
+`);
+
+    const parsed = TestFilterResolutionService.parseInjection('', '/filters.yml');
+
+    expect(parsed?.refs).toEqual(['smoke']);
+    expect(parsed).toBeDefined();
+    expect(((parsed as any).filters as any).categories.exclude).toEqual(['Quarantined']);
   });
 });
 
@@ -527,6 +638,10 @@ describe('TestResultReporter', () => {
 
 describe('TestWorkflowService', () => {
   describe('buildUnityArgs', () => {
+    const suite: TestSuiteDefinition = {
+      name: 'suite',
+      runs: [],
+    };
     const baseParams = {
       projectPath: '/project',
       targetPlatform: 'StandaloneLinux64',
@@ -537,7 +652,7 @@ describe('TestWorkflowService', () => {
     it('should build EditMode args', () => {
       const run: TestRunDefinition = { name: 'edit', editMode: true };
 
-      const args = TestWorkflowService.buildUnityArgs(run, baseParams);
+      const args = TestWorkflowService.buildUnityArgs(suite, run, baseParams);
 
       expect(args).toContain('-batchmode');
       expect(args).toContain('-nographics');
@@ -549,7 +664,7 @@ describe('TestWorkflowService', () => {
     it('should build PlayMode args', () => {
       const run: TestRunDefinition = { name: 'play', playMode: true };
 
-      const args = TestWorkflowService.buildUnityArgs(run, baseParams);
+      const args = TestWorkflowService.buildUnityArgs(suite, run, baseParams);
 
       expect(args).toContain('-testPlatform PlayMode');
     });
@@ -561,7 +676,7 @@ describe('TestWorkflowService', () => {
         builtClientPath: './Builds/Linux',
       };
 
-      const args = TestWorkflowService.buildUnityArgs(run, baseParams);
+      const args = TestWorkflowService.buildUnityArgs(suite, run, baseParams);
 
       expect(args).toContain('-testPlatform StandalonePlayer');
       expect(args).toContain('-builtPlayerPath');
@@ -575,16 +690,47 @@ describe('TestWorkflowService', () => {
         filters: { Maturity: 'Trusted', Scope: 'Unit,Integration' },
       };
 
-      const args = TestWorkflowService.buildUnityArgs(run, baseParams);
+      const args = TestWorkflowService.buildUnityArgs(suite, run, baseParams);
 
-      expect(args).toContain('--testFilter');
+      expect(args).toContain('-testCategory');
       expect(args).toContain('Maturity=Trusted');
+      expect(args).toContain('Scope=Unit');
+      expect(args).toContain('Scope=Integration');
+    });
+
+    it('should include injected preset and inline filters', () => {
+      const suiteWithPresets: TestSuiteDefinition = {
+        name: 'suite',
+        filterSets: {
+          smoke: {
+            categories: {
+              include: ['Smoke'],
+            },
+          },
+        },
+        runs: [],
+      };
+      const run: TestRunDefinition = {
+        name: 'filtered',
+        editMode: true,
+        filterRefs: ['smoke'],
+      };
+
+      const args = TestWorkflowService.buildUnityArgs(suiteWithPresets, run, baseParams, {
+        filters: {
+          categories: { exclude: ['Quarantined'] },
+          names: { include: ['Gameplay.FastSuite'] },
+        },
+      });
+
+      expect(args).toContain('-testCategory "Smoke;!Quarantined"');
+      expect(args).toContain('-testFilter "Gameplay.FastSuite"');
     });
 
     it('should include build target', () => {
       const run: TestRunDefinition = { name: 'test', editMode: true };
 
-      const args = TestWorkflowService.buildUnityArgs(run, baseParams);
+      const args = TestWorkflowService.buildUnityArgs(suite, run, baseParams);
 
       expect(args).toContain('-buildTarget StandaloneLinux64');
     });

@@ -157,6 +157,9 @@ export function createBuildParametersFromCliOptions(options: Record<string, any>
 
   // ── test workflow ─────────────────────────────────────────────────
   bp.testSuitePath = options.testSuitePath || '';
+  bp.testFilterRefs = options.testFilterRefs || '';
+  bp.testFilterInjection = options.testFilterInjection || '';
+  bp.testFilterInjectionPath = options.testFilterInjectionPath || '';
 
   // ── artifact / output ─────────────────────────────────────────────
   bp.artifactCustomTypes = options.artifactCustomTypes || '';
