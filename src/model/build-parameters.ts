@@ -157,6 +157,12 @@ class BuildParameters {
   // ── test workflow ───────────────────────────────────────────────────
   testSuitePath!: string;
 
+  // ── preflight ───────────────────────────────────────────────────────
+  // Path to the preflight suite YAML. Empty string disables preflight.
+  // The literal string 'default' runs the built-in fallback suite when
+  // no .game-ci/preflight-suite.yml exists.
+  preflightSuite!: string;
+
   // ── artifact / output ───────────────────────────────────────────────
   artifactCustomTypes!: string;
   artifactOutputTypes!: string;
@@ -249,6 +255,7 @@ class BuildParameters {
     p.gitPrivateToken = Input.getInput('gitPrivateToken') || process.env.GIT_PRIVATE_TOKEN || '';
     p.engine = Input.getInput('engine') || 'unity';
     p.enginePlugin = Input.getInput('enginePlugin') || '';
+    p.preflightSuite = Input.getInput('preflightSuite') || '';
 
     // Initialize the engine plugin (Unity is built-in, others require enginePlugin source)
     initEngine(p.engine, p.enginePlugin || undefined);
