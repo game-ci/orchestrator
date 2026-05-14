@@ -61,6 +61,20 @@ export type {
   UnityRecoveryDecision,
 } from './model/orchestrator/services/reliability';
 export { TestWorkflowService } from './model/orchestrator/services/test-workflow';
+export {
+  PreflightService,
+  builtInChecks,
+  listBuiltInCheckIds,
+  listBuiltInChecks,
+} from './model/orchestrator/services/preflight';
+export type {
+  PreflightCheck,
+  PreflightCategory,
+  PreflightScope,
+  PreflightSuiteDefinition,
+  PreflightResult,
+  PreflightSuiteResult,
+} from './model/orchestrator/services/preflight';
 export { HotRunnerService } from './model/orchestrator/services/hot-runner';
 export { OutputService } from './model/orchestrator/services/output/output-service';
 export { OutputTypeRegistry } from './model/orchestrator/services/output/output-type-registry';

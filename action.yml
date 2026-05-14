@@ -605,6 +605,17 @@ inputs:
     required: false
     default: ''
 
+  # ─── Preflight ─────────────────────────────────────────────────────
+  preflightSuite:
+    required: false
+    default: ''
+    description: >
+      Path to YAML preflight suite definition file. Preflight runs fast,
+      no-engine validation checks before the build dispatch and fails fast
+      on the first failure. Set to "default" to run the built-in fallback
+      suite when no .game-ci/preflight-suite.yml exists. Empty disables
+      preflight entirely.
+
   # ─── Test workflow ─────────────────────────────────────────────────
   testSuitePath:
     required: false
@@ -900,6 +911,7 @@ runs:
         INPUT_ARTIFACTCOMPRESSION: ${{ inputs.artifactCompression }}
         INPUT_ARTIFACTRETENTIONDAYS: ${{ inputs.artifactRetentionDays }}
         INPUT_ARTIFACTCUSTOMTYPES: ${{ inputs.artifactCustomTypes }}
+        INPUT_PREFLIGHTSUITE: ${{ inputs.preflightSuite }}
         INPUT_TESTSUITEPATH: ${{ inputs.testSuitePath }}
         INPUT_TESTSUITEEVENT: ${{ inputs.testSuiteEvent }}
         INPUT_TESTTAXONOMYPATH: ${{ inputs.testTaxonomyPath }}

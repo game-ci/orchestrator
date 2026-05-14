@@ -7,6 +7,7 @@ import path from 'node:path';
 import Orchestrator from '../orchestrator';
 import { ContainerHookService } from '../services/hooks/container-hook-service';
 import { CacheCheckpointService } from '../services/cache/cache-checkpoint-service';
+import { PreflightService } from '../services/preflight';
 import { getEngine } from '../../engine';
 
 export class BuildAutomationWorkflow implements WorkflowInterface {
@@ -28,6 +29,12 @@ export class BuildAutomationWorkflow implements WorkflowInterface {
 
     output += await ContainerHookService.RunPreBuildSteps(orchestratorStepState);
     OrchestratorLogger.logWithTime('Configurable pre build step(s) time');
+
+    // Preflight gate: fast no-engine validation before any expensive build
+    // dispatch. Fail-fast -- a failing preflight check aborts the build with
+    // a clear error instead of paying minutes/hours of build cost.
+    await BuildAutomationWorkflow.runPreflight();
+
     OrchestratorLogger.log(baseImage);
     OrchestratorLogger.logLine(` `);
     OrchestratorLogger.logLine('Starting build automation job');
@@ -49,6 +56,37 @@ export class BuildAutomationWorkflow implements WorkflowInterface {
     OrchestratorLogger.log(`Orchestrator finished running standard build automation`);
 
     return output;
+  }
+
+  /**
+   * Load and execute the configured preflight suite. Skips silently when
+   * `preflightSuite` is empty (preserves behaviour for callers that have
+   * not opted in). On failure, throws and aborts the build automation.
+   */
+  private static async runPreflight(): Promise<void> {
+    const suitePath = Orchestrator.buildParameters?.preflightSuite;
+
+    // Empty string or undefined -> opt-out. Use 'default' to run the
+    // built-in fallback suite when no .game-ci/preflight-suite.yml exists.
+    if (!suitePath) {
+      OrchestratorLogger.log('Preflight: skipped (no preflightSuite configured)');
+      return;
+    }
+
+    OrchestratorLogger.log(`Preflight: running suite '${suitePath}'`);
+    const suite = PreflightService.loadSuite(suitePath === 'default' ? undefined : suitePath);
+    const results = await PreflightService.executeSuite(suite);
+    PreflightService.reportResults(results);
+    OrchestratorLogger.logWithTime('Preflight time');
+
+    if (!results.passed) {
+      const failedAt = results.failedAt ?? -1;
+      const failedCheck = failedAt >= 0 ? results.results[failedAt] : undefined;
+      const detail = failedCheck
+        ? `check '${failedCheck.checkId}': ${failedCheck.error ?? 'no error message'}`
+        : 'unknown failure';
+      throw new Error(`Preflight suite '${suite.name}' failed at ${detail}`);
+    }
   }
 
   private static get BuildWorkflow() {
