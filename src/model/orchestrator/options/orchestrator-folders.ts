@@ -133,20 +133,34 @@ export class OrchestratorFolders {
    */
   public static cloneBuilderScript(dest: string): string {
     const repoName = Orchestrator.buildParameters.orchestratorRepoName;
+    // Clean $CLONE_DEST before every clone attempt. The if/elif/else chain
+    // below can leave $CLONE_DEST partially populated if an earlier clone
+    // started but did not complete (network blip, broken pipe, auth probe
+    // race against `git ls-remote --heads ... 2>/dev/null`). A subsequent
+    // clone variant against the now-non-empty directory fails with:
+    //   fatal: destination path '...' already exists and is not an empty
+    //   directory.
+    // `rm -rf ... 2>/dev/null || true` is idempotent on a fresh dir and
+    // safe to invoke repeatedly. Confirmed failure mode in downstream
+    // run 25998432649 (frostebite/GameClient, 2026-05-17): 6.5-minute
+    // container lifetime spent in the retry loop before the final clone
+    // fatalled on the partial-populate from earlier attempts.
     return `BRANCH="${Orchestrator.buildParameters.orchestratorBranch}"
 REPO="${OrchestratorFolders.unityBuilderRepoUrl}"
 REPO_PLAIN="https://github.com/${repoName}.git"
 CLONE_DEST="${dest}"
+_clean_clone_dest() { rm -rf "$CLONE_DEST" 2>/dev/null || true; mkdir -p "$CLONE_DEST" 2>/dev/null || true; }
 if [ -n "$(git ls-remote --heads "$REPO" "$BRANCH" 2>/dev/null)" ]; then
+  _clean_clone_dest
   git clone -q -b "$BRANCH" "$REPO" "$CLONE_DEST"
-elif git clone -q -b main "$REPO" "$CLONE_DEST" 2>/dev/null; then
+elif _clean_clone_dest && git clone -q -b main "$REPO" "$CLONE_DEST" 2>/dev/null; then
   echo "Cloned default branch from $REPO"
 else
   echo "Authenticated clone failed; retrying without credentials"
   git config --global --unset-all http.https://github.com/.extraHeader 2>/dev/null || true
-  git clone -q -b "$BRANCH" "$REPO_PLAIN" "$CLONE_DEST" 2>/dev/null \\
-    || git clone -q -b main "$REPO_PLAIN" "$CLONE_DEST" 2>/dev/null \\
-    || git clone -q "$REPO_PLAIN" "$CLONE_DEST"
+  ( _clean_clone_dest && git clone -q -b "$BRANCH" "$REPO_PLAIN" "$CLONE_DEST" 2>/dev/null ) \\
+    || ( _clean_clone_dest && git clone -q -b main "$REPO_PLAIN" "$CLONE_DEST" 2>/dev/null ) \\
+    || ( _clean_clone_dest && git clone -q "$REPO_PLAIN" "$CLONE_DEST" )
 fi`;
   }
 
