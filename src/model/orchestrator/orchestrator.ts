@@ -57,7 +57,7 @@ class Orchestrator {
       );
     }
     await Orchestrator.setupSelectedBuildPlatform();
-    Orchestrator.defaultSecrets = TaskParameterSerializer.readDefaultSecrets();
+    Orchestrator.defaultSecrets = TaskParameterSerializer.readDefaultSecrets(buildParameters);
     Orchestrator.orchestratorEnvironmentVariables =
       TaskParameterSerializer.createOrchestratorEnvironmentVariables(buildParameters);
     if (GitHub.githubInputEnabled) {

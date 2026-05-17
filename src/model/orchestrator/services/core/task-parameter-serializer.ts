@@ -175,14 +175,37 @@ export class TaskParameterSerializer {
     return array;
   }
 
-  public static readDefaultSecrets(): OrchestratorSecret[] {
+  public static readDefaultSecrets(buildParameters?: BuildParameters): OrchestratorSecret[] {
     let array = new Array();
     array = TaskParameterSerializer.tryAddInput(array, 'UNITY_SERIAL');
     array = TaskParameterSerializer.tryAddInput(array, 'UNITY_EMAIL');
     array = TaskParameterSerializer.tryAddInput(array, 'UNITY_PASSWORD');
 
     // array = TaskParameterSerializer.tryAddInput(array, 'UNITY_LICENSE');
-    array = TaskParameterSerializer.tryAddInput(array, 'GIT_PRIVATE_TOKEN');
+    // GIT_PRIVATE_TOKEN resolution order:
+    //   1. buildParameters.gitPrivateToken (CLI flag --git-private-token /
+    //      --gitPrivateToken parsed into buildParameters by build-parameters.ts:258
+    //      and build-parameters-adapter.ts:74)
+    //   2. process.env.GIT_PRIVATE_TOKEN (existing env-only path)
+    //
+    // Without the buildParameters branch, the CLI flag is parsed and stored
+    // on buildParameters but NEVER reaches the container env, because this
+    // serializer (which is what populates the container's `-e VAR=...` flags)
+    // only consults process.env. Downstream consumers with the token only in
+    // the CLI flag see the container start with an empty GIT_PRIVATE_TOKEN,
+    // the generated start.sh auth block short-circuits, and the in-container
+    // `git ls-remote`/`git clone` against private repos fails silently
+    // (stderr suppressed via `2>/dev/null`). Confirmed downstream failure:
+    // https://github.com/frostebite/GameClient/issues/11
+    if (buildParameters?.gitPrivateToken) {
+      array = TaskParameterSerializer.tryAddValue(
+        array,
+        'GIT_PRIVATE_TOKEN',
+        buildParameters.gitPrivateToken,
+      );
+    } else {
+      array = TaskParameterSerializer.tryAddInput(array, 'GIT_PRIVATE_TOKEN');
+    }
 
     return array;
   }
@@ -196,6 +219,22 @@ export class TaskParameterSerializer {
 
   private static tryAddInput(array: OrchestratorSecret[], key: string): OrchestratorSecret[] {
     const value = TaskParameterSerializer.getValue(key);
+    if (value !== undefined && value !== '' && value !== 'null') {
+      array.push({
+        ParameterKey: key,
+        EnvironmentVariable: key,
+        ParameterValue: value,
+      });
+    }
+
+    return array;
+  }
+
+  private static tryAddValue(
+    array: OrchestratorSecret[],
+    key: string,
+    value: string | undefined,
+  ): OrchestratorSecret[] {
     if (value !== undefined && value !== '' && value !== 'null') {
       array.push({
         ParameterKey: key,

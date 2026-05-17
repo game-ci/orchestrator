@@ -208,5 +208,71 @@ describe('TaskParameterSerializer', () => {
         process.env.UNITY_SERIAL = originalSerial;
       }
     });
+
+    it('reads GIT_PRIVATE_TOKEN from buildParameters when provided', () => {
+      const originalToken = process.env.GIT_PRIVATE_TOKEN;
+      delete process.env.GIT_PRIVATE_TOKEN;
+
+      const buildParameters = { gitPrivateToken: 'cli-flag-token-value' } as any;
+      const secrets = TaskParameterSerializer.readDefaultSecrets(buildParameters);
+
+      const tokenSecret = secrets.find((s) => s.ParameterKey === 'GIT_PRIVATE_TOKEN');
+      expect(tokenSecret).toBeDefined();
+      expect(tokenSecret?.ParameterValue).toBe('cli-flag-token-value');
+      expect(tokenSecret?.EnvironmentVariable).toBe('GIT_PRIVATE_TOKEN');
+
+      if (originalToken !== undefined) {
+        process.env.GIT_PRIVATE_TOKEN = originalToken;
+      }
+    });
+
+    it('prefers buildParameters.gitPrivateToken over process.env.GIT_PRIVATE_TOKEN', () => {
+      const originalToken = process.env.GIT_PRIVATE_TOKEN;
+      process.env.GIT_PRIVATE_TOKEN = 'env-token';
+
+      const buildParameters = { gitPrivateToken: 'cli-flag-token' } as any;
+      const secrets = TaskParameterSerializer.readDefaultSecrets(buildParameters);
+
+      const tokenSecret = secrets.find((s) => s.ParameterKey === 'GIT_PRIVATE_TOKEN');
+      expect(tokenSecret?.ParameterValue).toBe('cli-flag-token');
+
+      if (originalToken !== undefined) {
+        process.env.GIT_PRIVATE_TOKEN = originalToken;
+      } else {
+        delete process.env.GIT_PRIVATE_TOKEN;
+      }
+    });
+
+    it('falls back to process.env.GIT_PRIVATE_TOKEN when buildParameters.gitPrivateToken is empty', () => {
+      const originalToken = process.env.GIT_PRIVATE_TOKEN;
+      process.env.GIT_PRIVATE_TOKEN = 'env-token';
+
+      const buildParameters = { gitPrivateToken: '' } as any;
+      const secrets = TaskParameterSerializer.readDefaultSecrets(buildParameters);
+
+      const tokenSecret = secrets.find((s) => s.ParameterKey === 'GIT_PRIVATE_TOKEN');
+      expect(tokenSecret?.ParameterValue).toBe('env-token');
+
+      if (originalToken !== undefined) {
+        process.env.GIT_PRIVATE_TOKEN = originalToken;
+      } else {
+        delete process.env.GIT_PRIVATE_TOKEN;
+      }
+    });
+
+    it('omits GIT_PRIVATE_TOKEN when neither buildParameters nor env has a value', () => {
+      const originalToken = process.env.GIT_PRIVATE_TOKEN;
+      delete process.env.GIT_PRIVATE_TOKEN;
+
+      const buildParameters = {} as any;
+      const secrets = TaskParameterSerializer.readDefaultSecrets(buildParameters);
+
+      const tokenSecret = secrets.find((s) => s.ParameterKey === 'GIT_PRIVATE_TOKEN');
+      expect(tokenSecret).toBeUndefined();
+
+      if (originalToken !== undefined) {
+        process.env.GIT_PRIVATE_TOKEN = originalToken;
+      }
+    });
   });
 });

@@ -145,6 +145,47 @@ describe('OrchestratorFolders', () => {
     });
   });
 
+  describe('cloneBuilderScript', () => {
+    it('includes the _clean_clone_dest helper definition', () => {
+      const script = OrchestratorFolders.cloneBuilderScript('/data/builder');
+      expect(script).toContain('_clean_clone_dest()');
+      expect(script).toContain('rm -rf "$CLONE_DEST"');
+      expect(script).toContain('mkdir -p "$CLONE_DEST"');
+    });
+
+    it('cleans CLONE_DEST before the primary clone attempt', () => {
+      const script = OrchestratorFolders.cloneBuilderScript('/data/builder');
+      // The primary branch (after the ls-remote success guard) must call
+      // _clean_clone_dest immediately before the clone so a re-entry
+      // against a stale dir starts fresh.
+      const lines = script.split('\n').map((l) => l.trim());
+      const lsRemoteLineIndex = lines.findIndex((l) => l.startsWith('if [ -n "$(git ls-remote'));
+      const primaryCloneIndex = lines.findIndex(
+        (l, index) =>
+          index > lsRemoteLineIndex && l.startsWith('git clone -q -b "$BRANCH" "$REPO"'),
+      );
+      const cleanIndex = lines.findIndex(
+        (l, index) =>
+          index > lsRemoteLineIndex && index < primaryCloneIndex && l === '_clean_clone_dest',
+      );
+      expect(cleanIndex).toBeGreaterThan(lsRemoteLineIndex);
+      expect(cleanIndex).toBeLessThan(primaryCloneIndex);
+    });
+
+    it('chains _clean_clone_dest before each unauthenticated fallback clone', () => {
+      const script = OrchestratorFolders.cloneBuilderScript('/data/builder');
+      // Every variant in the unauth-fallback chain must clean first.
+      // Three || -chained variants, each wrapped in ( _clean_clone_dest && git clone ... ).
+      const matches = script.match(/_clean_clone_dest && git clone -q/g) || [];
+      expect(matches.length).toBeGreaterThanOrEqual(3);
+    });
+
+    it('preserves the authenticated-clone-failed log message', () => {
+      const script = OrchestratorFolders.cloneBuilderScript('/data/builder');
+      expect(script).toContain('Authenticated clone failed; retrying without credentials');
+    });
+  });
+
   describe('purgeRemoteCaching', () => {
     it('returns false when env var is not set', () => {
       const original = process.env.PURGE_REMOTE_BUILDER_CACHE;
