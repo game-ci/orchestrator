@@ -22,6 +22,26 @@ function Write-Warn($Message) {
     Write-Host $Message
 }
 
+# Find the newest release that actually has the Windows asset attached.
+# If the upstream release-cli workflow's Windows build leg fails, the
+# release will exist with zero assets attached (the upload job has
+# `needs: build-binaries` without a failure-tolerant `if`). In that
+# case, falling back to the most recent release that does have the
+# asset is preferable to a hard failure for installers downstream.
+# An explicit GAME_CI_VERSION still overrides this behaviour.
+function Get-LatestVersionWithAsset($Repo, $AssetName) {
+    $Releases = Invoke-RestMethod "https://api.github.com/repos/$Repo/releases?per_page=20"
+    foreach ($r in $Releases) {
+        if ($r.draft) { continue }
+        $hasAsset = $false
+        foreach ($a in $r.assets) {
+            if ($a.name -eq $AssetName) { $hasAsset = $true; break }
+        }
+        if ($hasAsset) { return $r }
+    }
+    return $null
+}
+
 # Determine version
 if ($env:GAME_CI_VERSION) {
     $Version = $env:GAME_CI_VERSION
@@ -31,6 +51,25 @@ if ($env:GAME_CI_VERSION) {
     try {
         $Release = Invoke-RestMethod "https://api.github.com/repos/$Repo/releases/latest"
         $Version = $Release.tag_name
+        # Pre-flight: confirm the latest release actually has the
+        # Windows asset. If not, scan recent releases and fall back to
+        # the newest one that does, warning the user explicitly.
+        $hasAsset = $false
+        foreach ($a in $Release.assets) {
+            if ($a.name -eq $AssetName) { $hasAsset = $true; break }
+        }
+        if (-not $hasAsset) {
+            Write-Warn "Latest release $Version has no $AssetName asset (release workflow may have failed)."
+            $Fallback = Get-LatestVersionWithAsset $Repo $AssetName
+            if ($null -eq $Fallback) {
+                Write-Host "error: No recent release has $AssetName attached." -ForegroundColor Red
+                Write-Host "       Check https://github.com/$Repo/releases" -ForegroundColor Red
+                exit 1
+            }
+            $Version = $Fallback.tag_name
+            Write-Warn "Falling back to $Version (newest release with $AssetName attached)."
+            Write-Warn "Set GAME_CI_VERSION to pin a specific release once upstream is fixed."
+        }
     } catch {
         Write-Host "error: Could not determine latest version. Check https://github.com/$Repo/releases" -ForegroundColor Red
         exit 1
