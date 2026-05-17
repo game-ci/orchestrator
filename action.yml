@@ -690,6 +690,16 @@ inputs:
   skipCache:
     default: 'false'
     required: false
+  skipInContainerClone:
+    description: >-
+      When true, skip the in-container git clone and reuse a pre-hydrated workspace
+      bind-mounted by the caller. The caller must ensure the repository (with .git/,
+      submodules, and LFS objects hydrated as needed) is present at the orchestrator
+      workspace path before the container starts. Intended for self-hosted runners
+      that use private LFS backends or other host-side credentials/config that cannot
+      be replicated inside the container.
+    default: 'false'
+    required: false
   maxCacheEntries:
     description: 'Max cache tar entries to retain per folder'
     default: '2'
@@ -945,6 +955,7 @@ runs:
         INPUT_CACHEKEY: ${{ inputs.cacheKey }}
         INPUT_SKIPLFS: ${{ inputs.skipLfs }}
         INPUT_SKIPCACHE: ${{ inputs.skipCache }}
+        INPUT_SKIPINCONTAINERCLONE: ${{ inputs.skipInContainerClone }}
         INPUT_MAXCACHEENTRIES: ${{ inputs.maxCacheEntries }}
         INPUT_MINCACHEENTRIES: ${{ inputs.minCacheEntries }}
         INPUT_GCTIMEOUTMINUTES: ${{ inputs.gcTimeoutMinutes }}

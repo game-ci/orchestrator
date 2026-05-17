@@ -337,6 +337,17 @@ export function configureOrchestratorOptions(yargs: any): void {
     default: false,
   });
 
+  yargs.option('skipInContainerClone', {
+    description:
+      'Skip the in-container git clone and reuse a pre-hydrated workspace bind-mounted by the caller. ' +
+      'The caller must ensure the repository (with .git/, submodules, and LFS objects hydrated as needed) ' +
+      'is present at the orchestrator workspace path before the container starts. Intended for self-hosted ' +
+      'runners that use private LFS backends or other host-side credentials/config that cannot be replicated ' +
+      'inside the container.',
+    type: 'boolean',
+    default: false,
+  });
+
   // --- Shared builder / cleanup ---
   yargs.option('useSharedBuilder', {
     description: 'Use shared builder mode',

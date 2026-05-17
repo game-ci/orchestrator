@@ -351,6 +351,38 @@ export class RemoteClient {
     await OrchestratorSystem.Run(
       `mkdir -p ${OrchestratorFolders.ToLinuxFolder(OrchestratorFolders.cacheFolderForCacheKeyFull)}`,
     );
+
+    // skipInContainerClone: the caller has already hydrated the workspace on the
+    // host (clone, submodules, LFS via host-side credentials and any private
+    // transfer-agent configuration) and bind-mounted it into the container at
+    // OrchestratorFolders.repoPathAbsolute. The orchestrator must NOT run a
+    // fresh `git clone` (it would require re-authenticating private remotes
+    // and re-configuring LFS inside the container, which is exactly what
+    // self-hosted users with private LFS backends cannot do). It must also
+    // NOT run any submodule init or LFS hydration steps for the same reason.
+    //
+    // Contract: when this flag is set, the caller guarantees that
+    // ${repoPathAbsolute}/.git exists and the working tree is at the desired
+    // gitSha. We chdir into it and return; the caller owns workspace state.
+    if (Orchestrator.buildParameters.skipInContainerClone) {
+      RemoteClientLogger.log(
+        `skipInContainerClone=true -- reusing pre-hydrated workspace at ${OrchestratorFolders.repoPathAbsolute}`,
+      );
+      if (!fs.existsSync(path.join(OrchestratorFolders.repoPathAbsolute, `.git`))) {
+        throw new Error(
+          `skipInContainerClone=true but no .git directory found at ${OrchestratorFolders.repoPathAbsolute}. ` +
+            `The caller is responsible for bind-mounting a hydrated workspace at this path before the container starts.`,
+        );
+      }
+      process.chdir(OrchestratorFolders.repoPathAbsolute);
+      await RemoteClient.sizeOfFolder(
+        'repo (pre-hydrated, skipInContainerClone)',
+        OrchestratorFolders.repoPathAbsolute,
+      );
+
+      return;
+    }
+
     await RemoteClient.cloneRepoWithoutLFSFiles();
 
     // Initialize submodules from profile if configured

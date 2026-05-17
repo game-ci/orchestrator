@@ -66,6 +66,7 @@ class BuildParameters {
   finalHooks!: string[];
   skipLfs!: boolean;
   skipCache!: boolean;
+  skipInContainerClone!: boolean;
   lockedWorkspace!: string;
   cacheSaveOnFailure!: boolean;
   cacheSaveOnFailureFilter!: string;
@@ -240,6 +241,7 @@ class BuildParameters {
     p.finalHooks = [];
     p.skipLfs = false;
     p.skipCache = false;
+    p.skipInContainerClone = false;
     p.lockedWorkspace = '';
     p.cacheSaveOnFailure = false;
     p.cacheSaveOnFailureFilter = 'all';

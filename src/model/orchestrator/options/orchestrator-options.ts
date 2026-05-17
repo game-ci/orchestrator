@@ -357,6 +357,9 @@ class OrchestratorOptions {
   static get skipLfs(): boolean {
     return OrchestratorOptions.getInput(`skipLfs`) === `true`;
   }
+  static get skipInContainerClone(): boolean {
+    return OrchestratorOptions.getInput(`skipInContainerClone`) === `true`;
+  }
   static get skipCache(): boolean {
     return OrchestratorOptions.getInput(`skipCache`) === `true`;
   }
