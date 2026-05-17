@@ -136,8 +136,8 @@ export class OrchestratorFolders {
     // Clean $CLONE_DEST before every clone attempt. The if/elif/else chain
     // below can leave $CLONE_DEST partially populated if an earlier clone
     // started but did not complete (network blip, broken pipe, auth probe
-    // race against `git ls-remote --heads ... 2>/dev/null`). A subsequent
-    // clone variant against the now-non-empty directory fails with:
+    // race against `git ls-remote --heads ...`). A subsequent clone variant
+    // against the now-non-empty directory fails with:
     //   fatal: destination path '...' already exists and is not an empty
     //   directory.
     // `rm -rf ... 2>/dev/null || true` is idempotent on a fresh dir and
@@ -145,18 +145,83 @@ export class OrchestratorFolders {
     // run 25998432649 (frostebite/GameClient, 2026-05-17): 6.5-minute
     // container lifetime spent in the retry loop before the final clone
     // fatalled on the partial-populate from earlier attempts.
+    //
+    // Auth fallback semantics (fixed 2026-05-17, downstream issue #11):
+    //
+    // Previously, every probe and clone redirected stderr to /dev/null and
+    // the `else` branch silently dropped the http.extraHeader credentials
+    // and retried with unauthenticated URLs. For private repos with
+    // GIT_PRIVATE_TOKEN set, the unauth retry CANNOT succeed -- git fails
+    // with `fatal: could not read Username for 'https://github.com': No
+    // such device or address` (no TTY in container). The cumulative
+    // ~3-minute timeout chain produced a misleading "Build failed with
+    // exit code 128" with no diagnostic on what actually failed in the
+    // authenticated probe. Downstream evidence: GameClient diagnostic run
+    // 26000379491 (2026-05-17) -- DNS, HTTPS, PAT length, extraHeader all
+    // verified correct via a parallel manual diagnostic; the only failure
+    // is this template's swallowing of the actual ls-remote error.
+    //
+    // The fix:
+    //  1. Surface stderr from the ls-remote probe to the job log (no more
+    //     `2>/dev/null` on the probe) so the actual failure class (auth?
+    //     network? DNS?) is visible.
+    //  2. Add a bounded retry-with-backoff on the authenticated path (3
+    //     attempts, 2s + 4s sleeps) so transient network blips do not
+    //     misclassify as auth failures.
+    //  3. Gate the unauthenticated fallback on GIT_PRIVATE_TOKEN being
+    //     ABSENT. When the token is set we know the repo is private; the
+    //     unauth retry is wrong by construction and only masks the real
+    //     auth failure with a misleading TTY-prompt error. When the token
+    //     is absent the repo is assumed public and the existing chain is
+    //     preserved (no behaviour change for that case).
     return `BRANCH="${Orchestrator.buildParameters.orchestratorBranch}"
 REPO="${OrchestratorFolders.unityBuilderRepoUrl}"
 REPO_PLAIN="https://github.com/${repoName}.git"
 CLONE_DEST="${dest}"
 _clean_clone_dest() { rm -rf "$CLONE_DEST" 2>/dev/null || true; mkdir -p "$CLONE_DEST" 2>/dev/null || true; }
-if [ -n "$(git ls-remote --heads "$REPO" "$BRANCH" 2>/dev/null)" ]; then
+# Authenticated ls-remote probe with bounded retry-with-backoff. Stderr is
+# surfaced to the job log on each attempt so the actual failure class
+# (auth / network / DNS / transient) is visible. Empty output on success
+# is acceptable -- only the exit code is consulted.
+_probe_authenticated() {
+  local attempt=1
+  local max_attempts=3
+  while [ $attempt -le $max_attempts ]; do
+    if git ls-remote --heads "$REPO" "$BRANCH" >/dev/null 2>&1; then
+      return 0
+    fi
+    if [ $attempt -lt $max_attempts ]; then
+      local backoff=$((attempt * 2))
+      echo "[clone] ls-remote probe attempt $attempt/$max_attempts failed -- retrying in \${backoff}s. Stderr from this attempt:"
+      git ls-remote --heads "$REPO" "$BRANCH" 2>&1 | sed 's/^/[clone-stderr] /' || true
+      sleep $backoff
+    else
+      echo "[clone] ls-remote probe attempt $attempt/$max_attempts failed -- giving up. Final stderr:"
+      git ls-remote --heads "$REPO" "$BRANCH" 2>&1 | sed 's/^/[clone-stderr] /' || true
+    fi
+    attempt=$((attempt + 1))
+  done
+  return 1
+}
+if _probe_authenticated; then
   _clean_clone_dest
   git clone -q -b "$BRANCH" "$REPO" "$CLONE_DEST"
 elif _clean_clone_dest && git clone -q -b main "$REPO" "$CLONE_DEST" 2>/dev/null; then
   echo "Cloned default branch from $REPO"
+elif [ -n "$GIT_PRIVATE_TOKEN" ]; then
+  # GIT_PRIVATE_TOKEN is set -> repo is private. Unauthenticated fallback
+  # CANNOT succeed (git prompts for a username with no TTY available and
+  # fails with "could not read Username for 'https://github.com'"). Fail
+  # loudly here so the real auth failure is the visible error, not the
+  # misleading downstream TTY-prompt error. Stderr from a final authenticated
+  # clone attempt is captured for diagnosis.
+  echo "[clone] FATAL: authenticated clone failed against private repo (GIT_PRIVATE_TOKEN is set). Final stderr from authenticated clone attempt:"
+  _clean_clone_dest
+  git clone -b "$BRANCH" "$REPO" "$CLONE_DEST" 2>&1 | sed 's/^/[clone-stderr] /' || true
+  echo "[clone] Skipping unauthenticated fallback because GIT_PRIVATE_TOKEN is set (private repo). Inspect the [clone-stderr] lines above to diagnose the auth failure (token scope, token expiry, repo access, network, or DNS)."
+  exit 1
 else
-  echo "Authenticated clone failed; retrying without credentials"
+  echo "Authenticated clone failed; retrying without credentials (GIT_PRIVATE_TOKEN is not set -- assuming public repo)"
   git config --global --unset-all http.https://github.com/.extraHeader 2>/dev/null || true
   ( _clean_clone_dest && git clone -q -b "$BRANCH" "$REPO_PLAIN" "$CLONE_DEST" 2>/dev/null ) \\
     || ( _clean_clone_dest && git clone -q -b main "$REPO_PLAIN" "$CLONE_DEST" 2>/dev/null ) \\
