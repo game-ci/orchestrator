@@ -155,20 +155,22 @@ describe('OrchestratorFolders', () => {
 
     it('cleans CLONE_DEST before the primary clone attempt', () => {
       const script = OrchestratorFolders.cloneBuilderScript('/data/builder');
-      // The primary branch (after the ls-remote success guard) must call
-      // _clean_clone_dest immediately before the clone so a re-entry
-      // against a stale dir starts fresh.
+      // The primary branch (after the authenticated probe success guard)
+      // must call _clean_clone_dest immediately before the clone so a
+      // re-entry against a stale dir starts fresh.
       const lines = script.split('\n').map((l) => l.trim());
-      const lsRemoteLineIndex = lines.findIndex((l) => l.startsWith('if [ -n "$(git ls-remote'));
+      const probeGuardIndex = lines.findIndex((l) => l.startsWith('if _probe_authenticated'));
       const primaryCloneIndex = lines.findIndex(
         (l, index) =>
-          index > lsRemoteLineIndex && l.startsWith('git clone -q -b "$BRANCH" "$REPO"'),
+          index > probeGuardIndex && l.startsWith('git clone -q -b "$BRANCH" "$REPO" "$CLONE_DEST"'),
       );
       const cleanIndex = lines.findIndex(
         (l, index) =>
-          index > lsRemoteLineIndex && index < primaryCloneIndex && l === '_clean_clone_dest',
+          index > probeGuardIndex && index < primaryCloneIndex && l === '_clean_clone_dest',
       );
-      expect(cleanIndex).toBeGreaterThan(lsRemoteLineIndex);
+      expect(probeGuardIndex).toBeGreaterThanOrEqual(0);
+      expect(primaryCloneIndex).toBeGreaterThan(probeGuardIndex);
+      expect(cleanIndex).toBeGreaterThan(probeGuardIndex);
       expect(cleanIndex).toBeLessThan(primaryCloneIndex);
     });
 
@@ -180,9 +182,77 @@ describe('OrchestratorFolders', () => {
       expect(matches.length).toBeGreaterThanOrEqual(3);
     });
 
-    it('preserves the authenticated-clone-failed log message', () => {
+    it('preserves the authenticated-clone-failed log message on the unauthenticated fallback branch', () => {
       const script = OrchestratorFolders.cloneBuilderScript('/data/builder');
+      // The legacy message only appears on the public-repo fallback path
+      // (GIT_PRIVATE_TOKEN unset). The private-repo path now fails loudly
+      // with a different message (covered by its own test below).
       expect(script).toContain('Authenticated clone failed; retrying without credentials');
+    });
+
+    // -------------------------------------------------------------------
+    // Auth fallback fix (downstream issue #11, 2026-05-17)
+    // -------------------------------------------------------------------
+
+    it('uses a bounded retry-with-backoff probe instead of a single inline ls-remote', () => {
+      const script = OrchestratorFolders.cloneBuilderScript('/data/builder');
+      // The old script used `if [ -n "$(git ls-remote --heads ... 2>/dev/null)" ]`
+      // as the only probe. The fixed script wraps the probe in a function with
+      // bounded retry-with-backoff so transient ls-remote failures do not
+      // immediately cascade into the (misleading) auth-failure fallback.
+      expect(script).toContain('_probe_authenticated()');
+      expect(script).toContain('max_attempts=3');
+      expect(script).toContain('if _probe_authenticated; then');
+    });
+
+    it('surfaces ls-remote stderr to the job log on each retry attempt', () => {
+      const script = OrchestratorFolders.cloneBuilderScript('/data/builder');
+      // The previous script swallowed stderr (`2>/dev/null`), hiding the
+      // actual failure class (auth / network / DNS). The fix surfaces
+      // stderr with a [clone-stderr] prefix for triage.
+      expect(script).toContain('[clone-stderr]');
+      expect(script).toContain("git ls-remote --heads \"$REPO\" \"$BRANCH\" 2>&1");
+    });
+
+    it('fails loudly on private repos when authenticated clone fails (does NOT try unauthenticated)', () => {
+      const script = OrchestratorFolders.cloneBuilderScript('/data/builder');
+      // When GIT_PRIVATE_TOKEN is set the repo is private; unauthenticated
+      // fallback CANNOT succeed (git prompts for a username with no TTY
+      // available). The fix gates the unauth chain on GIT_PRIVATE_TOKEN
+      // being absent and fails loudly with the captured authenticated
+      // clone stderr when the token is set.
+      expect(script).toContain('elif [ -n "$GIT_PRIVATE_TOKEN" ]; then');
+      expect(script).toContain('FATAL: authenticated clone failed against private repo');
+      expect(script).toContain('Skipping unauthenticated fallback because GIT_PRIVATE_TOKEN is set');
+      // The fatal branch must end with `exit 1` -- a script that fails to
+      // clone the builder MUST not continue execution against an empty
+      // /data/builder.
+      const lines = script.split('\n').map((l) => l.trim());
+      const fatalBranchStart = lines.findIndex(
+        (l) => l === 'elif [ -n "$GIT_PRIVATE_TOKEN" ]; then',
+      );
+      const exitIndex = lines.findIndex(
+        (l, index) => index > fatalBranchStart && l === 'exit 1',
+      );
+      const elseIndex = lines.findIndex(
+        (l, index) => index > fatalBranchStart && l === 'else',
+      );
+      expect(exitIndex).toBeGreaterThan(fatalBranchStart);
+      expect(exitIndex).toBeLessThan(elseIndex);
+    });
+
+    it('still attempts the unauthenticated fallback chain when GIT_PRIVATE_TOKEN is absent (public-repo case)', () => {
+      const script = OrchestratorFolders.cloneBuilderScript('/data/builder');
+      // The else branch (public-repo case) must still unset extraHeader and
+      // run the three-variant unauthenticated fallback. This preserves
+      // behaviour for public repos.
+      expect(script).toContain(
+        'Authenticated clone failed; retrying without credentials (GIT_PRIVATE_TOKEN is not set -- assuming public repo)',
+      );
+      expect(script).toContain('git config --global --unset-all http.https://github.com/.extraHeader');
+      // Three unauthenticated variants on REPO_PLAIN.
+      const unauthCloneMatches = script.match(/git clone -q (?:-b [^ ]+ )?"\$REPO_PLAIN"/g) || [];
+      expect(unauthCloneMatches.length).toBeGreaterThanOrEqual(3);
     });
   });
 
