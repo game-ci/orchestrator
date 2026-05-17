@@ -14,8 +14,33 @@ import { OrchestratorStepParameters } from '../../options/orchestrator-step-para
 export class ContainerHookService {
   static GetContainerHooksFromFiles(hookLifecycle: string): ContainerHook[] {
     const results: ContainerHook[] = [];
+    const gameCiCustomStepsPath = path.join(process.cwd(), `game-ci`, `container-hooks`);
+
+    // The hooks directory is optional -- it only exists when a project ships
+    // custom container hooks. Absence is the common case, not an error. Probe
+    // with existsSync before readdirSync so the (benign) missing-directory
+    // case does not generate noise in CI logs.
+    //
+    // Without this gate, a project without container hooks produces ENOENT
+    // stack traces logged twice per orchestrate invocation (once for the
+    // `before` lifecycle call from `RunPreBuildSteps`, once for `after` from
+    // `RunPostBuildSteps`), muddying every CI log with what is effectively
+    // normal-operation diagnostics. Downstream evidence:
+    // https://github.com/frostebite/GameClient/issues/11
+    //
+    // Identical defect class to the one fixed in PR #33 for
+    // `CommandHookService.GetCustomHooksFromFiles`. That PR closed the
+    // command-hooks path but missed this parallel container-hooks call site;
+    // this PR closes the matching gap.
+    //
+    // The try/catch is retained for true I/O faults during readdir/readFile
+    // (permission denied, disk error, malformed YAML) -- those are real
+    // problems worth logging.
+    if (!fs.existsSync(gameCiCustomStepsPath)) {
+      return results;
+    }
+
     try {
-      const gameCiCustomStepsPath = path.join(process.cwd(), `game-ci`, `container-hooks`);
       const files = fs.readdirSync(gameCiCustomStepsPath);
       for (const file of files) {
         if (!OrchestratorOptions.containerHookFiles.includes(file.replace(`.yaml`, ``))) {
