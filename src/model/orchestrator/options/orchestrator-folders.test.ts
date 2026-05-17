@@ -162,7 +162,8 @@ describe('OrchestratorFolders', () => {
       const probeGuardIndex = lines.findIndex((l) => l.startsWith('if _probe_authenticated'));
       const primaryCloneIndex = lines.findIndex(
         (l, index) =>
-          index > probeGuardIndex && l.startsWith('git clone -q -b "$BRANCH" "$REPO" "$CLONE_DEST"'),
+          index > probeGuardIndex &&
+          l.startsWith('git clone -q -b "$BRANCH" "$REPO" "$CLONE_DEST"'),
       );
       const cleanIndex = lines.findIndex(
         (l, index) =>
@@ -211,7 +212,7 @@ describe('OrchestratorFolders', () => {
       // actual failure class (auth / network / DNS). The fix surfaces
       // stderr with a [clone-stderr] prefix for triage.
       expect(script).toContain('[clone-stderr]');
-      expect(script).toContain("git ls-remote --heads \"$REPO\" \"$BRANCH\" 2>&1");
+      expect(script).toContain('git ls-remote --heads "$REPO" "$BRANCH" 2>&1');
     });
 
     it('fails loudly on private repos when authenticated clone fails (does NOT try unauthenticated)', () => {
@@ -223,7 +224,9 @@ describe('OrchestratorFolders', () => {
       // clone stderr when the token is set.
       expect(script).toContain('elif [ -n "$GIT_PRIVATE_TOKEN" ]; then');
       expect(script).toContain('FATAL: authenticated clone failed against private repo');
-      expect(script).toContain('Skipping unauthenticated fallback because GIT_PRIVATE_TOKEN is set');
+      expect(script).toContain(
+        'Skipping unauthenticated fallback because GIT_PRIVATE_TOKEN is set',
+      );
       // The fatal branch must end with `exit 1` -- a script that fails to
       // clone the builder MUST not continue execution against an empty
       // /data/builder.
@@ -231,12 +234,8 @@ describe('OrchestratorFolders', () => {
       const fatalBranchStart = lines.findIndex(
         (l) => l === 'elif [ -n "$GIT_PRIVATE_TOKEN" ]; then',
       );
-      const exitIndex = lines.findIndex(
-        (l, index) => index > fatalBranchStart && l === 'exit 1',
-      );
-      const elseIndex = lines.findIndex(
-        (l, index) => index > fatalBranchStart && l === 'else',
-      );
+      const exitIndex = lines.findIndex((l, index) => index > fatalBranchStart && l === 'exit 1');
+      const elseIndex = lines.findIndex((l, index) => index > fatalBranchStart && l === 'else');
       expect(exitIndex).toBeGreaterThan(fatalBranchStart);
       expect(exitIndex).toBeLessThan(elseIndex);
     });
@@ -249,7 +248,9 @@ describe('OrchestratorFolders', () => {
       expect(script).toContain(
         'Authenticated clone failed; retrying without credentials (GIT_PRIVATE_TOKEN is not set -- assuming public repo)',
       );
-      expect(script).toContain('git config --global --unset-all http.https://github.com/.extraHeader');
+      expect(script).toContain(
+        'git config --global --unset-all http.https://github.com/.extraHeader',
+      );
       // Three unauthenticated variants on REPO_PLAIN.
       const unauthCloneMatches = script.match(/git clone -q (?:-b [^ ]+ )?"\$REPO_PLAIN"/g) || [];
       expect(unauthCloneMatches.length).toBeGreaterThanOrEqual(3);
