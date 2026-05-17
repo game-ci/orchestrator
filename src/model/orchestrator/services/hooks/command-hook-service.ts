@@ -47,8 +47,28 @@ echo "---${buildParameters.logId}"`;
     const results: CommandHook[] = [];
 
     // RemoteClientLogger.log(`GetCustomHookFiles: ${hookLifecycle}`);
+    const gameCiCustomHooksPath = path.join(process.cwd(), `game-ci`, `command-hooks`);
+
+    // The hooks directory is optional -- it only exists when a project ships
+    // custom command hooks. Absence is the common case, not an error. Probe
+    // with existsSync before readdirSync so the (benign) missing-directory
+    // case does not generate noise in CI logs.
+    //
+    // Without this gate, a project without hooks produces ENOENT stack traces
+    // logged twice per orchestrate invocation (once for the `before`
+    // lifecycle call from `ApplyHooksToCommands`, once for `after`),
+    // muddying every CI log with what is effectively normal-operation
+    // diagnostics. Downstream evidence:
+    // https://github.com/frostebite/GameClient/issues/11
+    //
+    // The try/catch is retained for true I/O faults during readdir/readFile
+    // (permission denied, disk error, malformed YAML) -- those are real
+    // problems worth logging.
+    if (!fs.existsSync(gameCiCustomHooksPath)) {
+      return results;
+    }
+
     try {
-      const gameCiCustomHooksPath = path.join(process.cwd(), `game-ci`, `command-hooks`);
       const files = fs.readdirSync(gameCiCustomHooksPath);
       for (const file of files) {
         if (!OrchestratorOptions.commandHookFiles.includes(file.replace(`.yaml`, ``))) {
