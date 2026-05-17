@@ -14,6 +14,7 @@ import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { CommandHookService } from '../../services/hooks/command-hook-service';
 import { StringKeyValuePair } from '../../../shared-types';
+import { formatHumanReadableSize, summariseCacheDirectory } from './cache-summary';
 
 class LocalDockerOrchestrator implements ProviderInterface {
   public buildParameters!: BuildParameters;
@@ -156,19 +157,25 @@ class LocalDockerOrchestrator implements ProviderInterface {
     }[],
   ) {
     const { workspace } = Action;
-    if (
-      fs.existsSync(
-        `${workspace}/orchestrator-cache/cache/build/build-${buildParameters.buildGuid}.tar${
-          Orchestrator.buildParameters.useCompressionStrategy ? '.lz4' : ''
-        }`,
-      )
-    ) {
-      await OrchestratorSystem.Run(`ls ${workspace}/orchestrator-cache/cache/build/`);
-      await OrchestratorSystem.Run(
-        `rm -r ${workspace}/orchestrator-cache/cache/build/build-${buildParameters.buildGuid}.tar${
-          Orchestrator.buildParameters.useCompressionStrategy ? '.lz4' : ''
+    const buildCacheDir = `${workspace}/orchestrator-cache/cache/build`;
+    const staleTarball = `${buildCacheDir}/build-${buildParameters.buildGuid}.tar${
+      Orchestrator.buildParameters.useCompressionStrategy ? '.lz4' : ''
+    }`;
+    if (fs.existsSync(staleTarball)) {
+      // Diagnostic: list current build-cache entries before removing the
+      // stale tarball. Previously shelled out to `ls`; replaced with a
+      // portable Node fs read so this runs on Windows hosts too. The
+      // shell-out broke local-docker on Windows runners entirely
+      // (frostebite/GameClient run 25997620872, 2026-05-17).
+      const summary = summariseCacheDirectory(buildCacheDir);
+      OrchestratorLogger.log(
+        `[local-docker] build cache entries before stale tarball removal: ${
+          summary.entries.length === 0 ? '(empty)' : summary.entries.join(', ')
         }`,
       );
+      // Remove the stale tarball portably (POSIX `rm -r` is not available
+      // on Windows cmd.exe without external POSIX userland).
+      fs.rmSync(staleTarball, { recursive: true, force: true });
     }
   }
   setupWorkflow(
@@ -296,8 +303,24 @@ find ${sharedFolder} -maxdepth 1 -type f -name "test-*" -exec cp -a {} /github/w
     }
 
     if (fs.existsSync(`${workspace}/orchestrator-cache`)) {
-      await OrchestratorSystem.Run(
-        `ls ${workspace}/orchestrator-cache && du -sh ${workspace}/orchestrator-cache`,
+      // Pre-build cache-inspection diagnostic. Previously shelled out to
+      // `ls ... && du -sh ...`; replaced with portable Node fs operations
+      // so this runs on Windows hosts (cmd.exe cannot satisfy POSIX `ls`,
+      // `du`, or `&&` chaining). The shell-out aborted the orchestrator
+      // ~40ms into build automation on Windows runners, before any
+      // container could start (frostebite/GameClient run 25997620872,
+      // 2026-05-17). Issue evidence:
+      // https://github.com/frostebite/GameClient/issues/11#issuecomment-4471815231
+      const summary = summariseCacheDirectory(`${workspace}/orchestrator-cache`);
+      OrchestratorLogger.log(
+        `[local-docker] orchestrator-cache entries: ${
+          summary.entries.length === 0 ? '(empty)' : summary.entries.join(', ')
+        }`,
+      );
+      OrchestratorLogger.log(
+        `[local-docker] orchestrator-cache total size: ${formatHumanReadableSize(
+          summary.totalSize,
+        )} (${summary.totalSize} bytes)`,
       );
     }
     const exitCode = await Docker.run(
