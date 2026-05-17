@@ -99,6 +99,50 @@ jobs:
         run: ./${{ matrix.binary-name }} version
         shell: bash
 
+      # Smoke-check the image tag produced by `orchestrate --target-platform
+      # StandaloneWindows64` on the freshly-built binary. The ImageTag class
+      # (src/model/image-tag.ts) composes the Docker reference from
+      # editorVersion, the targetPlatformSuffixes lookup, and imageRollingVersion.
+      # When the binary contains the correct compiled `tag` getter, the
+      # output contains `windows-mono-3`. When the regression case ships
+      # (interpolated `${targetPlatform}` directly), the output contains
+      # the literal `StandaloneWindows64-3` instead -- a Docker tag that
+      # does not exist on Docker Hub, producing `docker pull` exit 125 in
+      # every downstream local-docker orchestrator invocation.
+      #
+      # This step fails the release if the regression substring appears,
+      # preventing the broken binary from reaching `create-checksums-and-upload`.
+      # Downstream regression history that motivated this guard:
+      # https://github.com/frostebite/GameClient/issues/11#issuecomment-4471659854
+      #
+      # `--build-method` and `--builds-path` get values that intentionally
+      # do not exist so the build short-circuits before doing real work --
+      # we only care about the image-tag log line emitted in the early
+      # orchestrator setup phase.
+      - name: Verify orchestrate emits expected image tag (windows-x64 native)
+        if: matrix.target == 'windows-x64' && runner.os == 'Windows'
+        shell: bash
+        run: |
+          set +e
+          OUTPUT=$(./${{ matrix.binary-name }} orchestrate \
+            --target-platform StandaloneWindows64 \
+            --unity-version 6000.4.7f1 \
+            --provider-strategy local-docker \
+            --project-path . \
+            --build-method nonexistent.Method \
+            --builds-path nope 2>&1)
+          set -e
+          echo "$OUTPUT"
+          if echo "$OUTPUT" | grep -q 'StandaloneWindows64-3'; then
+            echo "::error::Built binary emits the broken image tag 'StandaloneWindows64-3' -- the ImageTag fix from PR #30 did not land in this binary. Investigate the pkg/build pipeline before publishing."
+            exit 1
+          fi
+          if ! echo "$OUTPUT" | grep -q 'windows-mono-3'; then
+            echo "::error::Built binary did not emit the expected 'windows-mono-3' image tag substring. Either the ImageTag regression returned in a new form, or targetPlatformSuffixes changed without updating this verify step."
+            exit 1
+          fi
+          echo "[verify] image tag check passed -- output contains 'windows-mono-3' and no 'StandaloneWindows64-3'"
+
       - uses: actions/upload-artifact@v4
         with:
           name: binary-${{ matrix.target }}
