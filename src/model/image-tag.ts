@@ -69,7 +69,18 @@ class ImageTag {
   }
 
   get tag(): string {
-    return `${this.editorVersion}-${this.targetPlatform}-${this.imageRollingVersion}`;
+    // Use the targetPlatformSuffixes lookup so the tag matches the actual
+    // image names published on Docker Hub (e.g. `unityci/editor:6000.4.7f1-
+    // windows-mono-3`). Previously this returned `${this.targetPlatform}`
+    // directly, producing tags like `unityci/editor:6000.4.7f1-
+    // StandaloneWindows64-3` that do not exist upstream, so `docker pull`
+    // failed with exit code 125 on every local-docker provider invocation
+    // (downstream frostebite/GameClient run 25995914040, 2026-05-17).
+    // Falls back to lowercased platform if no mapping is registered, matching
+    // the behaviour of `getTargetPlatformToTargetPlatformSuffixMap`.
+    const platformSuffix =
+      ImageTag.targetPlatformSuffixes[this.targetPlatform] || this.targetPlatform.toLowerCase();
+    return `${this.editorVersion}-${platformSuffix}-${this.imageRollingVersion}`;
   }
 
   get image(): string {
