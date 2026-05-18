@@ -195,6 +195,19 @@ export class OrchestratorFolders {
 REPO="${OrchestratorFolders.unityBuilderRepoUrl}"
 REPO_PLAIN="https://github.com/${repoName}.git"
 CLONE_DEST="${dest}"
+# Detect-and-skip-if-present: when the caller has pre-populated the builder
+# destination (typically via a bind-mount from the host) and the compiled
+# entrypoint at $CLONE_DEST/dist/index.js already exists, skip the
+# in-container clone+build entirely. This is backwards-compatible: callers
+# that do not pre-populate $CLONE_DEST see the full clone chain unchanged.
+# Pairs with --skipInContainerClone for self-hosted setups where the host
+# already holds the orchestrator builder dist; in those setups the
+# in-container clone is either redundant (extra network IO) or fatal
+# (private-repo auth when the in-container credentials are intentionally
+# not provisioned). The entire clone block runs in the else branch.
+if [ -f "$CLONE_DEST/dist/index.js" ]; then
+  echo "[clone] Builder dist already present at $CLONE_DEST/dist/index.js -- skipping in-container clone+build (host pre-populated)"
+else
 _clean_clone_dest() { rm -rf "$CLONE_DEST" 2>/dev/null || true; mkdir -p "$CLONE_DEST" 2>/dev/null || true; }
 # Authenticated ls-remote probe with bounded retry-with-backoff. Stderr is
 # surfaced to the job log on each attempt so the actual failure class
@@ -243,6 +256,7 @@ else
   ( _clean_clone_dest && git clone -q -b "$BRANCH" "$REPO_PLAIN" "$CLONE_DEST" 2>/dev/null ) \\
     || ( _clean_clone_dest && git clone -q -b main "$REPO_PLAIN" "$CLONE_DEST" 2>/dev/null ) \\
     || ( _clean_clone_dest && git clone -q "$REPO_PLAIN" "$CLONE_DEST" )
+fi
 fi`;
   }
 
