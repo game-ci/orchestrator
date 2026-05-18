@@ -58,6 +58,8 @@ export function createBuildParametersFromCliOptions(options: Record<string, any>
   bp.finalHooks = options.finalHooks ? String(options.finalHooks).split(',') : [];
   bp.skipLfs = options.skipLfs === true || options.skipLfs === 'true';
   bp.skipCache = options.skipCache === true || options.skipCache === 'true';
+  bp.skipInContainerClone =
+    options.skipInContainerClone === true || options.skipInContainerClone === 'true';
   bp.lockedWorkspace = '';
   bp.cacheSaveOnFailure =
     options.cacheSaveOnFailure === true || options.cacheSaveOnFailure === 'true';

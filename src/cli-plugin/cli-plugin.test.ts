@@ -109,6 +109,25 @@ describe('CLI Plugin Adapter', () => {
       expect(bp.engine).toBe('unity');
     });
 
+    it('maps skipInContainerClone (true) from boolean and string forms', () => {
+      const fromBoolean = createBuildParametersFromCliOptions({ skipInContainerClone: true });
+      expect(fromBoolean.skipInContainerClone).toBe(true);
+
+      const fromString = createBuildParametersFromCliOptions({ skipInContainerClone: 'true' });
+      expect(fromString.skipInContainerClone).toBe(true);
+    });
+
+    it('defaults skipInContainerClone to false when unset or falsy', () => {
+      const unset = createBuildParametersFromCliOptions({});
+      expect(unset.skipInContainerClone).toBe(false);
+
+      const explicitFalse = createBuildParametersFromCliOptions({ skipInContainerClone: false });
+      expect(explicitFalse.skipInContainerClone).toBe(false);
+
+      const stringFalse = createBuildParametersFromCliOptions({ skipInContainerClone: 'false' });
+      expect(stringFalse.skipInContainerClone).toBe(false);
+    });
+
     it('maps provider-specific fields', () => {
       const bp = createBuildParametersFromCliOptions({
         githubActionsRepo: 'owner/repo',

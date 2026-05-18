@@ -45,6 +45,7 @@ export interface OrchestratorConfig {
   useLargePackages: boolean;
   skipCache: boolean;
   skipLfs: boolean;
+  skipInContainerClone: boolean;
   maxRetainedWorkspaces: number; // mutable for retry logic
   maxCacheEntries?: number;
   minCacheEntries?: number;
