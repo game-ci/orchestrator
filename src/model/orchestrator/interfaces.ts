@@ -46,6 +46,7 @@ export interface OrchestratorConfig {
   skipCache: boolean;
   skipLfs: boolean;
   skipInContainerClone: boolean;
+  repoPathOverride?: string;
   maxRetainedWorkspaces: number; // mutable for retry logic
   maxCacheEntries?: number;
   minCacheEntries?: number;

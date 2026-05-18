@@ -360,6 +360,9 @@ class OrchestratorOptions {
   static get skipInContainerClone(): boolean {
     return OrchestratorOptions.getInput(`skipInContainerClone`) === `true`;
   }
+  static get repoPathOverride(): string {
+    return OrchestratorOptions.getInput(`repoPathOverride`) || ``;
+  }
   static get skipCache(): boolean {
     return OrchestratorOptions.getInput(`skipCache`) === `true`;
   }

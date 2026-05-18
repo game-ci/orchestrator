@@ -364,6 +364,25 @@ export class RemoteClient {
     // Contract: when this flag is set, the caller guarantees that
     // ${repoPathAbsolute}/.git exists and the working tree is at the desired
     // gitSha. We chdir into it and return; the caller owns workspace state.
+    // repoPathOverride must be paired with skipInContainerClone. Honouring the
+    // override on the non-skip path would change only the repo location while
+    // leaving the cache and builder paths under the original
+    // uniqueOrchestratorJobFolderAbsolute -- a divergent layout that produces
+    // hard-to-diagnose misconfigurations. Reject the combination loudly at
+    // bootstrap rather than silently producing a broken run.
+    if (
+      Orchestrator.buildParameters.repoPathOverride &&
+      !Orchestrator.buildParameters.skipInContainerClone
+    ) {
+      throw new Error(
+        `repoPathOverride is set ('${Orchestrator.buildParameters.repoPathOverride}') but ` +
+          `skipInContainerClone is false. repoPathOverride is only meaningful when paired with ` +
+          `skipInContainerClone=true, because the override only relocates the repo path and not ` +
+          `the surrounding cache / builder paths. Either set skipInContainerClone=true (so the ` +
+          `caller-owned, bind-mounted workspace is used) or clear repoPathOverride.`,
+      );
+    }
+
     if (Orchestrator.buildParameters.skipInContainerClone) {
       RemoteClientLogger.log(
         `skipInContainerClone=true -- reusing pre-hydrated workspace at ${OrchestratorFolders.repoPathAbsolute}`,

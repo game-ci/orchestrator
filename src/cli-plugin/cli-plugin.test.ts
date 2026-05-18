@@ -128,6 +128,19 @@ describe('CLI Plugin Adapter', () => {
       expect(stringFalse.skipInContainerClone).toBe(false);
     });
 
+    it('maps repoPathOverride from string', () => {
+      const bp = createBuildParametersFromCliOptions({ repoPathOverride: '/data' });
+      expect(bp.repoPathOverride).toBe('/data');
+    });
+
+    it('defaults repoPathOverride to empty string when unset', () => {
+      const unset = createBuildParametersFromCliOptions({});
+      expect(unset.repoPathOverride).toBe('');
+
+      const empty = createBuildParametersFromCliOptions({ repoPathOverride: '' });
+      expect(empty.repoPathOverride).toBe('');
+    });
+
     it('maps provider-specific fields', () => {
       const bp = createBuildParametersFromCliOptions({
         githubActionsRepo: 'owner/repo',

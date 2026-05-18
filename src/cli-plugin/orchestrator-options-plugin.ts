@@ -348,6 +348,20 @@ export function configureOrchestratorOptions(yargs: any): void {
     default: false,
   });
 
+  yargs.option('repoPathOverride', {
+    description:
+      'Override the in-container repository path used by the orchestrator. When set, ' +
+      'OrchestratorFolders.repoPathAbsolute returns this value instead of the default ' +
+      '${uniqueOrchestratorJobFolderAbsolute}/${repositoryFolder} layout. Intended to be paired ' +
+      'with --skipInContainerClone so the caller can point the orchestrator at a pre-hydrated ' +
+      'workspace already bind-mounted at a fixed container path (for example /data, which is the ' +
+      'default local-docker bind-mount target). Empty string preserves the default path. Setting ' +
+      'this without --skipInContainerClone is rejected at bootstrap because it would only affect ' +
+      'the repo path and not the surrounding cache/builder paths, producing a divergent layout.',
+    type: 'string',
+    default: '',
+  });
+
   // --- Shared builder / cleanup ---
   yargs.option('useSharedBuilder', {
     description: 'Use shared builder mode',
