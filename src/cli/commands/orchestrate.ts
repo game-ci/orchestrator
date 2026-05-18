@@ -178,6 +178,29 @@ const orchestrateCommand: CommandModule<object, OrchestrateArguments> = {
             'Custom job instead of the standard build automation (yaml format with keys image, secrets, command)',
           default: '',
         })
+        .option('skip-in-container-clone', {
+          alias: 'skipInContainerClone',
+          type: 'boolean',
+          description:
+            'Skip the in-container git clone and reuse a pre-hydrated workspace bind-mounted by the caller. ' +
+            'The caller must ensure the repository (with .git/, submodules, and LFS objects hydrated as needed) ' +
+            'is present at the orchestrator workspace path before the container starts. Intended for self-hosted ' +
+            'runners that use private LFS backends or other host-side credentials/config that cannot be replicated ' +
+            'inside the container.',
+          default: false,
+        })
+        .option('repo-path-override', {
+          alias: 'repoPathOverride',
+          type: 'string',
+          description:
+            'Override the in-container repository path used by the orchestrator. When set, ' +
+            'OrchestratorFolders.repoPathAbsolute returns this value instead of the default ' +
+            '${uniqueOrchestratorJobFolderAbsolute}/${repositoryFolder} layout. Intended to be paired ' +
+            'with --skip-in-container-clone so the caller can point the orchestrator at a pre-hydrated ' +
+            'workspace already bind-mounted at a fixed container path (for example /data, which is the ' +
+            'default local-docker bind-mount target). Empty string preserves the default path.',
+          default: '',
+        })
         .example(
           'game-ci orchestrate --target-platform StandaloneLinux64 --provider-strategy aws',
           'Build on AWS using the orchestrator',

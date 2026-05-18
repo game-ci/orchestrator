@@ -193,7 +193,11 @@ echo "CACHE_KEY=$CACHE_KEY"`;
     cp -r "${OrchestratorFolders.ToLinuxFolder(path.join(ubuntuPlatformsFolder, 'steps'))}" "/steps"
     chmod -R +x "/entrypoint.sh"
     chmod -R +x "/steps"
-    # Ensure Git LFS files are available inside the container for local-docker runs
+    ${Orchestrator.buildParameters.skipInContainerClone
+      ? `# Skipping in-container Git LFS pull because skipInContainerClone is true.
+    # The caller is responsible for hydrating LFS content on the host before the container starts.
+    echo "Skipping in-container Git LFS pull (skipInContainerClone=true)"`
+      : `# Ensure Git LFS files are available inside the container for local-docker runs
     if [ -d "$GITHUB_WORKSPACE/.git" ]; then
       echo "Ensuring Git LFS content is pulled"
       (cd "$GITHUB_WORKSPACE" \
@@ -204,7 +208,7 @@ echo "CACHE_KEY=$CACHE_KEY"`;
         && git lfs checkout || true)
     else
       echo "Skipping Git LFS pull: no .git directory in workspace"
-    fi
+    fi`}
     # Normalize potential CRLF line endings and create safe stubs for missing tooling
     if command -v sed > /dev/null 2>&1; then
       sed -i 's/\r$//' "/entrypoint.sh" || true
