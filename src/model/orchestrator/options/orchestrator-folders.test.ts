@@ -276,4 +276,68 @@ describe('OrchestratorFolders', () => {
       }
     });
   });
+
+  describe('repoPathOverride', () => {
+    // The Orchestrator mock is hoisted to module scope; mutate its
+    // buildParameters in-place to flip the override on/off per-test and
+    // restore after so the rest of the suite stays on the default layout.
+    let OrchestratorMock: { buildParameters: Record<string, any> };
+
+    beforeAll(async () => {
+      OrchestratorMock = (await import('../orchestrator')).default as {
+        buildParameters: Record<string, any>;
+      };
+    });
+
+    afterEach(() => {
+      delete OrchestratorMock.buildParameters.repoPathOverride;
+    });
+
+    it('returns the override verbatim when set', () => {
+      OrchestratorMock.buildParameters.repoPathOverride = '/data';
+      expect(normalize(OrchestratorFolders.repoPathAbsolute)).toBe('/data');
+    });
+
+    it('cascades the override through projectPathAbsolute', () => {
+      OrchestratorMock.buildParameters.repoPathOverride = '/data';
+      expect(normalize(OrchestratorFolders.projectPathAbsolute)).toBe('/data/test-project');
+    });
+
+    it('cascades the override through libraryFolderAbsolute', () => {
+      OrchestratorMock.buildParameters.repoPathOverride = '/data';
+      expect(normalize(OrchestratorFolders.libraryFolderAbsolute)).toBe(
+        '/data/test-project/Library',
+      );
+    });
+
+    it('cascades the override through projectBuildFolderAbsolute', () => {
+      OrchestratorMock.buildParameters.repoPathOverride = '/data';
+      expect(normalize(OrchestratorFolders.projectBuildFolderAbsolute)).toBe('/data/Builds');
+    });
+
+    it('cascades the override through lfsFolderAbsolute', () => {
+      OrchestratorMock.buildParameters.repoPathOverride = '/data';
+      expect(normalize(OrchestratorFolders.lfsFolderAbsolute)).toBe('/data/.git/lfs');
+    });
+
+    it('falls back to the default layout when override is empty string', () => {
+      OrchestratorMock.buildParameters.repoPathOverride = '';
+      expect(normalize(OrchestratorFolders.repoPathAbsolute)).toBe('/data/test-guid-abc/repo');
+    });
+
+    it('falls back to the default layout when override is unset', () => {
+      delete OrchestratorMock.buildParameters.repoPathOverride;
+      expect(normalize(OrchestratorFolders.repoPathAbsolute)).toBe('/data/test-guid-abc/repo');
+    });
+
+    it('does not affect cacheFolderForCacheKeyFull (cache layout is independent of override)', () => {
+      OrchestratorMock.buildParameters.repoPathOverride = '/data';
+      // Cache paths intentionally stay anchored to uniqueOrchestratorJobFolderAbsolute --
+      // documenting this so a future regression that silently re-routes cache
+      // through the override fires this test.
+      expect(normalize(OrchestratorFolders.cacheFolderForCacheKeyFull)).toBe(
+        '/data/cache/my-cache-key',
+      );
+    });
+  });
 });

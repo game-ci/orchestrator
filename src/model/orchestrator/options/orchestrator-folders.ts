@@ -47,6 +47,23 @@ export class OrchestratorFolders {
   }
 
   public static get repoPathAbsolute(): string {
+    // repoPathOverride: when set, bypass the default
+    //   ${uniqueOrchestratorJobFolderAbsolute}/${repositoryFolder}
+    // layout and return the caller-supplied path verbatim. Intended to be
+    // paired with skipInContainerClone so a pre-hydrated workspace already
+    // bind-mounted at a fixed container path (typically /data, the default
+    // local-docker bind-mount target) can be reused without re-cloning.
+    //
+    // Companion code in RemoteClient.bootstrapRepository enforces that
+    // repoPathOverride is only honoured when skipInContainerClone is also
+    // set, so the divergent cache/builder layout that would result from a
+    // non-skip path is rejected at bootstrap with a loud error rather than
+    // silently producing a misconfigured run.
+    const override = Orchestrator.buildParameters?.repoPathOverride;
+    if (override) {
+      return override;
+    }
+
     return path.join(
       OrchestratorFolders.uniqueOrchestratorJobFolderAbsolute,
       OrchestratorFolders.repositoryFolder,

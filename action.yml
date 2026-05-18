@@ -700,6 +700,19 @@ inputs:
       be replicated inside the container.
     default: 'false'
     required: false
+  repoPathOverride:
+    description: >-
+      Override the in-container repository path used by the orchestrator. When set,
+      OrchestratorFolders.repoPathAbsolute returns this value instead of the default
+      ${uniqueOrchestratorJobFolderAbsolute}/${repositoryFolder} layout. Intended to
+      be paired with skipInContainerClone so the caller can point the orchestrator at
+      a pre-hydrated workspace already bind-mounted at a fixed container path (for
+      example /data, which is the default local-docker bind-mount target). Empty
+      string preserves the default path. Setting this without skipInContainerClone is
+      rejected at bootstrap because it would only affect the repo path and not the
+      surrounding cache/builder paths, producing a divergent layout.
+    default: ''
+    required: false
   maxCacheEntries:
     description: 'Max cache tar entries to retain per folder'
     default: '2'
@@ -956,6 +969,7 @@ runs:
         INPUT_SKIPLFS: ${{ inputs.skipLfs }}
         INPUT_SKIPCACHE: ${{ inputs.skipCache }}
         INPUT_SKIPINCONTAINERCLONE: ${{ inputs.skipInContainerClone }}
+        INPUT_REPOPATHOVERRIDE: ${{ inputs.repoPathOverride }}
         INPUT_MAXCACHEENTRIES: ${{ inputs.maxCacheEntries }}
         INPUT_MINCACHEENTRIES: ${{ inputs.minCacheEntries }}
         INPUT_GCTIMEOUTMINUTES: ${{ inputs.gcTimeoutMinutes }}

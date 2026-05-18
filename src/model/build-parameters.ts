@@ -67,6 +67,7 @@ class BuildParameters {
   skipLfs!: boolean;
   skipCache!: boolean;
   skipInContainerClone!: boolean;
+  repoPathOverride!: string;
   lockedWorkspace!: string;
   cacheSaveOnFailure!: boolean;
   cacheSaveOnFailureFilter!: string;
@@ -242,6 +243,7 @@ class BuildParameters {
     p.skipLfs = false;
     p.skipCache = false;
     p.skipInContainerClone = false;
+    p.repoPathOverride = '';
     p.lockedWorkspace = '';
     p.cacheSaveOnFailure = false;
     p.cacheSaveOnFailureFilter = 'all';
