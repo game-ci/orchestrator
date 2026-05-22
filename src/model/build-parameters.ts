@@ -242,8 +242,9 @@ class BuildParameters {
     p.finalHooks = [];
     p.skipLfs = false;
     p.skipCache = false;
-    p.skipInContainerClone = false;
-    p.repoPathOverride = '';
+    p.skipInContainerClone =
+      Cli.options?.skipInContainerClone ?? Input.getInput('skipInContainerClone') === 'true';
+    p.repoPathOverride = Cli.options?.repoPathOverride ?? Input.getInput('repoPathOverride') ?? '';
     p.lockedWorkspace = '';
     p.cacheSaveOnFailure = false;
     p.cacheSaveOnFailureFilter = 'all';
